@@ -18,7 +18,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
       <div className="flex items-center space-x-1">
         <button
           onClick={onCreateFile}
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           title="New File"
         >
           <svg
@@ -38,7 +38,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
         
         <button
           onClick={onCreateFolder}
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           title="New Folder"
         >
           <svg
@@ -57,7 +57,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
         </button>
         
         <button
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           title="Refresh"
         >
           <svg
@@ -76,7 +76,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
         </button>
         
         <button
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          className="p-1.5 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           title="Collapse All"
         >
           <svg

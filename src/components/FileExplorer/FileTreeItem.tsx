@@ -90,7 +90,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
             onChange={handleRenameChange}
             onBlur={() => setIsRenaming(false)}
             onKeyDown={handleRenameKeyDown}
-            className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
         ) : (
@@ -117,7 +117,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
         {/* Context Menu Actions (icon buttons) */}
         <div className="flex items-center space-x-2">
           <button
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
             onClick={e => {
               e.stopPropagation();
               onCreateNew('file', file.path);
@@ -126,7 +126,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
             ➕📄
           </button>
           <button
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
             onClick={e => {
               e.stopPropagation();
               onCreateNew('folder', file.path);
@@ -135,7 +135,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
             ➕📁
           </button>
           <button
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+            className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
             onClick={e => {
               e.stopPropagation();
               setIsRenaming(true);
@@ -217,7 +217,7 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
         placeholder={`New ${type} name`}
-        className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
         autoFocus
       />
     </form>

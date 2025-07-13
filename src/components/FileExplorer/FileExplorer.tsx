@@ -245,7 +245,7 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
         placeholder={`New ${type} name`}
-        className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
         autoFocus
       />
     </form>

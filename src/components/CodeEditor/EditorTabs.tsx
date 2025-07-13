@@ -127,7 +127,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
         <div className="flex items-center ml-auto px-2">
           <button
             onClick={() => closeAllTabs()}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400"
+            className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400"
             title="Close All Tabs"
           >
             <svg

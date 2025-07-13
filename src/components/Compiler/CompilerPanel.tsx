@@ -110,7 +110,7 @@ const CompilerPanel: React.FC = () => {
               id="autoCompile"
               checked={autoCompile}
               onChange={(e) => setAutoCompile(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
             />
             <label htmlFor="autoCompile" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Auto compile
@@ -125,7 +125,7 @@ const CompilerPanel: React.FC = () => {
                 id="optimization"
                 checked={optimizationEnabled}
                 onChange={(e) => setOptimizationEnabled(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
               />
               <label htmlFor="optimization" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Enable optimization
@@ -191,13 +191,13 @@ const CompilerPanel: React.FC = () => {
 
             {/* Summary */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
+              <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-sm">
                 <div className="text-gray-600 dark:text-gray-400">Contracts</div>
                 <div className="font-medium text-gray-900 dark:text-white">
                   {summary.successfulContracts}/{summary.totalContracts}
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
+              <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-sm">
                 <div className="text-gray-600 dark:text-gray-400">Errors</div>
                 <div className={`font-medium ${summary.totalErrors > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {summary.totalErrors}
@@ -212,7 +212,7 @@ const CompilerPanel: React.FC = () => {
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {compilationResult.errors.map((error, index) => (
                     <div key={index}
-                         className="text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border-l-2 border-red-500">
+                         className="text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded-sm border-l-2 border-red-500">
                       <div className="font-medium text-red-800 dark:text-red-400">
                         {error.type}
                       </div>
@@ -237,7 +237,7 @@ const CompilerPanel: React.FC = () => {
                 <div className="space-y-1 max-h-24 overflow-y-auto">
                   {compilationResult.warnings.map((warning, index) => (
                     <div key={index}
-                         className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border-l-2 border-yellow-500">
+                         className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-sm border-l-2 border-yellow-500">
                       <div className="text-yellow-700 dark:text-yellow-300">
                         {warning.message}
                       </div>
