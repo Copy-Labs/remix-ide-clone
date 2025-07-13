@@ -1,8 +1,8 @@
-import { compilerWorker } from './workers/compilerWorker';
+import * as browserSolc from '@agnostico/browser-solidity-compiler';
 import type { CompilationResult, CompilerError, CompilerWarning, CompiledContract } from '@/types';
 
 /**
- * Service for Solidity compilation using web workers
+ * Service for Solidity compilation using @agnostico/browser-solidity-compiler
  * This service handles all compiler-related operations including:
  * - Loading compiler versions
  * - Compiling Solidity code
@@ -36,11 +36,11 @@ export class CompilerService {
   private async ensureCompilerLoaded(): Promise<void> {
     if (!this.isCompilerLoaded) {
       try {
-        await compilerWorker.sendMessage({
-          action: 'loadVersion',
-          version: this.currentVersion
-        });
+        // Load the compiler version directly using the library
+        await browserSolc.loadVersion(this.currentVersion);
         this.isCompilerLoaded = true;
+
+        console.log(`Compiler version ${this.currentVersion} loaded successfully`);
       } catch (error) {
         console.error('Failed to load compiler version:', error);
         throw new Error(`Failed to load compiler version ${this.currentVersion}`);
@@ -58,14 +58,13 @@ export class CompilerService {
       // Ensure compiler is loaded
       await this.ensureCompilerLoaded();
 
-      // Prepare sources for the worker
+      // Prepare sources for the compiler
       const preparedSources = this.prepareSources(sources);
 
-      // Compile using the worker
-      const output = await compilerWorker.sendMessage({
-        action: 'compile',
+      // Prepare input for the compiler
+      const input = {
+        language: 'Solidity',
         sources: preparedSources,
-        version: this.currentVersion,
         settings: {
           outputSelection: {
             '*': {
@@ -77,7 +76,10 @@ export class CompilerService {
             runs: 200
           }
         }
-      });
+      };
+
+      // Compile directly using the library
+      const output = await browserSolc.compile(input);
 
       // Process compilation result
       return this.processCompilationOutput(output, sources);
@@ -245,8 +247,21 @@ export class CompilerService {
    */
   public async getAvailableVersions(): Promise<string[]> {
     try {
-      return await compilerWorker.sendMessage({
-        action: 'getVersions'
+      // Get versions directly from the library
+      const versions = await browserSolc.getVersions();
+
+      // Sort versions in descending order
+      return versions.sort((a, b) => {
+        const aParts = a.split('.').map(Number);
+        const bParts = b.split('.').map(Number);
+
+        for (let i = 0; i < 3; i++) {
+          if (aParts[i] !== bParts[i]) {
+            return bParts[i] - aParts[i]; // Descending order
+          }
+        }
+
+        return 0;
       });
     } catch (error) {
       console.error('Failed to get compiler versions:', error);
@@ -399,8 +414,10 @@ export class CompilerService {
    * Important to call this when the application is unmounted
    */
   public dispose(): void {
-    // Terminate the worker to free resources
-    compilerWorker.terminate();
+    // Reset compiler loaded state
+    this.isCompilerLoaded = false;
+    // No need to terminate workers as we're using the library directly
+    // The library handles its own cleanup
   }
 }
 

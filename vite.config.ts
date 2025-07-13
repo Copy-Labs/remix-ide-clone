@@ -21,7 +21,7 @@ export default defineConfig({
       'react',
       'react-dom'
     ],
-    exclude: ['solc', '@remix-project/remix-solidity']
+    exclude: ['@agnostico/browser-solidity-compiler']
   },
 
   // Build configuration

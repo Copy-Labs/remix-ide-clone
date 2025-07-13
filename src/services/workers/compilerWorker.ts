@@ -1,4 +1,5 @@
 // src/services/workers/compilerWorker.ts
+import CompilerWorker from './compiler.worker?worker'
 
 // Define the types of messages we can send to the worker
 export type CompilerWorkerInput = {
@@ -34,8 +35,9 @@ export class CompilerWorkerManager {
 
   constructor() {
     // Create the worker from the file in public/workers
-    this.worker = new Worker(new URL('/workers/compiler.js', import.meta.url), { type: 'module' });
+    // this.worker = new Worker(new URL('/workers/compiler.js', import.meta.url), { type: 'module' });
     // this.worker = new Worker(new URL('/workers/compiler.js', import.meta.url));
+    this.worker = new CompilerWorker();
 
     // Set up the message handler
     this.worker.onmessage = (event: MessageEvent<CompilerWorkerOutput>) => {

@@ -13,7 +13,7 @@ A modern, feature-rich clone of Remix IDE built with React, TypeScript, and Zust
 
 ### 🚧 In Development
 - **Monaco Editor**: VS Code-like editing experience with Solidity syntax highlighting
-- **Solidity Compiler**: Client-side compilation with solc-js
+- **Solidity Compiler**: Client-side compilation with @agnostico/browser-solidity-compiler
 - **Web3 Integration**: Deploy and interact with smart contracts
 - **Testing Framework**: Built-in testing capabilities
 - **Plugin System**: Extensible architecture
@@ -31,7 +31,7 @@ A modern, feature-rich clone of Remix IDE built with React, TypeScript, and Zust
 - **Styling**: Tailwind CSS + Headless UI
 - **Editor**: Monaco Editor (VS Code engine)
 - **Build Tool**: Vite
-- **Compilation**: Solc-js (client-side)
+- **Compilation**: @agnostico/browser-solidity-compiler (client-side)
 - **Web3**: Web3.js for blockchain interaction
 - **Testing**: Vitest + React Testing Library
 

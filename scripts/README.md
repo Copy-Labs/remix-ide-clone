@@ -1,46 +1,19 @@
-# Solidity Compiler Setup Script
+# Solidity Compiler Scripts
 
-This directory contains scripts for setting up the Solidity compiler in the Remix IDE clone.
+## Note on Compiler Scripts
 
-## copy-solc.ts
+The scripts `copy-solc.ts` and `copy-solc-js.js` are no longer used in this project. 
 
-The `copy-solc.ts` script downloads Solidity compiler binaries from the official repository and makes them available to the application. It performs the following tasks:
+These scripts were previously used to copy Solidity compiler files from node_modules/solc to the public directory. However, the project now uses the `@agnostico/browser-solidity-compiler` library, which handles loading and using Solidity compilers directly in the browser without needing to copy files.
 
-1. Cleans up any existing compiler files in the `public/solc-bin` directory
-2. Copies the solc.js wrapper from node_modules
-3. Fetches the list of available compiler versions from the official repository
-4. Downloads the specified compiler versions
-5. Creates a versions.json file with the list of available versions
-6. Creates a compiler-loader.js helper script
-7. Updates the compiler.js worker to use local files
+The scripts have been kept for reference but are no longer part of the build process.
 
-### Usage
+## Current Compiler Implementation
 
-To run the script:
+The project now uses `@agnostico/browser-solidity-compiler` which:
 
-```bash
-npx ts-node scripts/copy-solc.ts
-```
+1. Loads compiler versions directly from the Solidity CDN
+2. Provides a simple API for compiling Solidity code
+3. Handles version management automatically
 
-### Troubleshooting
-
-If you encounter errors like:
-
-```
-Failed to load compiler version: NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'http://localhost:3000/solc-bin/soljson-v0.8.26.js' failed to load.
-```
-
-It means the compiler binaries are either missing or corrupted. Run the `copy-solc.ts` script to download the correct compiler files.
-
-### How It Works
-
-The script:
-
-1. Fetches the list of available compiler versions from `https://binaries.soliditylang.org/bin/list.json`
-2. Maps the simple version numbers (e.g., "0.8.26") to their full paths (e.g., "soljson-v0.8.26+commit.8a97fa7a.js")
-3. Downloads the compiler binaries from the correct URLs
-4. Saves them with simplified names (e.g., "soljson-v0.8.26.js") for easier reference in the application
-
-### Adding New Compiler Versions
-
-To add support for new compiler versions, edit the `compilerVersions` array in `copy-solc.ts` and run the script again.
+This change simplifies the build process and reduces the need for custom scripts to manage compiler versions.

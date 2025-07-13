@@ -1,6 +1,7 @@
 // public/workers/compiler.js
 
 // This is the actual web worker that will run in a separate thread
+import * as browserSolc from '@agnostico/browser-solidity-compiler';
 
 // Handle messages from the main thread
 self.onmessage = async function(event) {
@@ -15,7 +16,7 @@ self.onmessage = async function(event) {
                 break;
 
             case 'compile':
-                result = await compileSolidity(sources, settings);
+                result = await compileSolidity(version, sources, settings);
                 break;
 
             case 'getVersions':
@@ -64,23 +65,10 @@ self.onmessage = async function(event) {
 
 async function loadSolcVersion(version) {
     try {
-        // Load from your local public folder
-        const solcUrl = `/solc-bin/soljson-v${version}.js`;
-        console.log("LOAD SOLC VERSION::SOLC URL", solcUrl);
+        console.log("LOAD SOLC VERSION:", version);
 
-        // For module type workers, we need to use fetch + eval instead of importScripts
-        const response = await fetch(solcUrl);
-        console.log("LOAD SOLC VERSION::RESPONSE", response);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch compiler: ${response.status} ${response.statusText}`);
-        }
-
-        const solcCode = await response.text();
-        // This executes the Solidity compiler code
-        eval(solcCode);
-
-        // Initialize the compiler
-        const solc = self.Module;
+        // Load the compiler using the browser-solidity-compiler library
+        await browserSolc.loadVersion(version);
 
         return {
             version,
@@ -93,14 +81,12 @@ async function loadSolcVersion(version) {
 }
 
 // Compile Solidity code
-async function compileSolidity(sources, settings) {
+async function compileSolidity(version, sources, settings) {
     try {
-        // Make sure we have the solc object
-        if (!self.Module) {
-            throw new Error('Solidity compiler not loaded. Call loadVersion first.');
-        }
+        console.log("compileSolidity::args", sources, version, settings);
 
-        const solc = self.Module;
+        // Make sure the compiler is loaded
+        await loadSolcVersion(version);
 
         // Prepare input for the compiler
         const input = {
@@ -119,8 +105,8 @@ async function compileSolidity(sources, settings) {
             }
         };
 
-        // Compile the code
-        const output = JSON.parse(solc.compile(JSON.stringify(input)));
+        // Compile the code using the browser-solidity-compiler library
+        const output = await browserSolc.compile(input);
 
         return output;
     } catch (error) {
@@ -132,26 +118,22 @@ async function compileSolidity(sources, settings) {
 // Get available Solidity compiler versions
 async function getSolcVersions() {
     try {
-        const response = await fetch('https://binaries.soliditylang.org/bin/list.json');
-        const data = await response.json();
+        // Get versions from the browser-solidity-compiler library
+        const versions = await browserSolc.getVersions();
 
-        // Extract and format versions
-        const versions = Object.keys(data.releases)
-            .map(version => version.replace('soljson-v', '').replace('.js', ''))
-            .sort((a, b) => {
-                const aParts = a.split('.').map(Number);
-                const bParts = b.split('.').map(Number);
+        // Sort versions in descending order
+        return versions.sort((a, b) => {
+            const aParts = a.split('.').map(Number);
+            const bParts = b.split('.').map(Number);
 
-                for (let i = 0; i < 3; i++) {
-                    if (aParts[i] !== bParts[i]) {
-                        return bParts[i] - aParts[i]; // Descending order
-                    }
+            for (let i = 0; i < 3; i++) {
+                if (aParts[i] !== bParts[i]) {
+                    return bParts[i] - aParts[i]; // Descending order
                 }
+            }
 
-                return 0;
-            });
-
-        return versions;
+            return 0;
+        });
     } catch (error) {
         console.error('Failed to get compiler versions:', error);
         // Return hardcoded versions if API fails

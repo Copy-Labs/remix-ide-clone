@@ -274,9 +274,14 @@ export const useCompilerStore = create<CompilerStore>()(
   )
 );
 
-// Initialize versions when the store is created
-// This ensures we load the available versions as soon as possible
-useCompilerStore.getState().loadAvailableVersions();
+// Initialize versions and load the default compiler when the store is created
+// This ensures we load the available versions and the compiler is ready for use
+(async () => {
+  const store = useCompilerStore.getState();
+  await store.loadAvailableVersions();
+  // Load the default compiler version to ensure it's ready for use
+  await store.setCompilerVersion(store.compilerVersion);
+})();
 
 // Helper function to integrate with file store
 export const compileCurrentFiles = async () => {
