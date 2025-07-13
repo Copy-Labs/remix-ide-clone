@@ -19,9 +19,10 @@ export default defineConfig({
       'web3',
       'zustand',
       'react',
-      'react-dom'
+      'react-dom',
+      '@agnostico/browser-solidity-compiler'
     ],
-    exclude: ['@agnostico/browser-solidity-compiler']
+    // exclude: ['@agnostico/browser-solidity-compiler']
   },
 
   // Build configuration

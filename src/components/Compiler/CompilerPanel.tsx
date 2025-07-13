@@ -22,6 +22,7 @@ const CompilerPanel: React.FC = () => {
     getSelectedContract,
     getCompilationSummary,
     clearCompilationResults,
+    isContractSizeValid,
   } = useCompilerStore();
 
   const { files, getFileContent } = useFileStore();

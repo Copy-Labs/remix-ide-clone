@@ -1,4 +1,4 @@
-import * as browserSolc from '@agnostico/browser-solidity-compiler';
+import { solidityCompiler, getCompilerVersions } from '@agnostico/browser-solidity-compiler';
 import type { CompilationResult, CompilerError, CompilerWarning, CompiledContract } from '@/types';
 
 /**
@@ -13,10 +13,42 @@ import type { CompilationResult, CompilerError, CompilerWarning, CompiledContrac
 export class CompilerService {
   private static instance: CompilerService;
   private currentVersion: string = '0.8.30';
+  private currentVersionFull: string = '';
+  private versionMap: Map<string, string> = new Map();
   private isCompilerLoaded: boolean = false;
 
   private constructor() {
     // Private constructor for singleton pattern
+    // Note: We don't call initializeVersions here because it's async
+    // It will be called from getInstance
+  }
+
+  /**
+   * Initialize version map and full version string
+   * This is called when the service is created and ensures that
+   * the version map is populated and the full version string is set
+   */
+  public async initializeVersions(): Promise<void> {
+    try {
+      // Load available versions to populate the version map
+      await this.getAvailableVersions();
+
+      // Set the full version string for the current version
+      const fullVersion = this.versionMap.get(this.currentVersion);
+      if (fullVersion) {
+        this.currentVersionFull = fullVersion;
+        console.log(`Initialized full compiler version: ${fullVersion}`);
+      } else {
+        // If not found, use a fallback format
+        this.currentVersionFull = `soljson-v${this.currentVersion}+commit.00000000.js`;
+        console.warn(`Could not find full version for ${this.currentVersion}, using fallback: ${this.currentVersionFull}`);
+      }
+    } catch (error) {
+      console.error('Failed to initialize versions:', error);
+      // Use a fallback format if initialization fails
+      this.currentVersionFull = `soljson-v${this.currentVersion}+commit.00000000.js`;
+      console.warn(`Failed to initialize versions, using fallback: ${this.currentVersionFull}`);
+    }
   }
 
   /**
@@ -32,18 +64,20 @@ export class CompilerService {
   /**
    * Initialize compiler and load specific version
    * This ensures the compiler is loaded before any compilation happens
+   *
+   * Note: The browser-solidity-compiler library doesn't have a separate loadVersion function.
+   * The version is loaded when compiling, so we'll just mark it as loaded here.
    */
   private async ensureCompilerLoaded(): Promise<void> {
     if (!this.isCompilerLoaded) {
       try {
-        // Load the compiler version directly using the library
-        await browserSolc.loadVersion(this.currentVersion);
+        // The library doesn't have a separate loadVersion function
+        // It loads the version when compiling, so we'll just mark it as loaded
         this.isCompilerLoaded = true;
-
-        console.log(`Compiler version ${this.currentVersion} loaded successfully`);
+        console.log(`Compiler version ${this.currentVersion} will be used for compilation`);
       } catch (error) {
-        console.error('Failed to load compiler version:', error);
-        throw new Error(`Failed to load compiler version ${this.currentVersion}`);
+        console.error('Failed to initialize compiler:', error);
+        throw new Error(`Failed to initialize compiler for version ${this.currentVersion}`);
       }
     }
   }
@@ -53,36 +87,60 @@ export class CompilerService {
    * @param sources Record of file paths and their source code
    * @returns CompilationResult containing compilation output or errors
    */
-  public async compile(sources: Record<string, string>): Promise<CompilationResult> {
+  public async compile(sources: Record<string, string>, optimizerSettings?: { enabled: boolean, runs: number }): Promise<CompilationResult> {
     try {
       // Ensure compiler is loaded
       await this.ensureCompilerLoaded();
 
-      // Prepare sources for the compiler
-      const preparedSources = this.prepareSources(sources);
+      // The solidityCompiler function only accepts a single contract body
+      // We need to combine all sources into a single file for compilation
+      // This is a limitation of the current library version
 
-      // Prepare input for the compiler
-      const input = {
-        language: 'Solidity',
-        sources: preparedSources,
-        settings: {
-          outputSelection: {
-            '*': {
-              '*': ['*']
-            }
-          },
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      };
+      // Get the first source file for compilation
+      // In a real-world scenario, you might want to handle multiple files differently
+      const firstSourcePath = Object.keys(sources)[0];
+      const contractBody = sources[firstSourcePath];
 
-      // Compile directly using the library
-      const output = await browserSolc.compile(input);
+      // Prepare version URL as required by the library
+      let versionUrl;
+      if (this.currentVersionFull) {
+        // Use the full version string if available
+        versionUrl = `https://binaries.soliditylang.org/bin/${this.currentVersionFull}`;
+      } else {
+        // Fallback to the old format if full version is not available
+        versionUrl = `https://binaries.soliditylang.org/bin/soljson-v${this.currentVersion}.js`;
+        console.warn("Using fallback version URL format. This may cause compilation errors.");
+      }
 
-      // Process compilation result
-      return this.processCompilationOutput(output, sources);
+      console.log("COMPILE SERVICE::COMPILE::VERSION", versionUrl);
+
+      // Prepare optimizer options
+      const options: any = {};
+
+      // Use provided optimizer settings or defaults
+      if (optimizerSettings?.enabled) {
+        options.optimizer = {
+          enabled: optimizerSettings.enabled,
+          runs: optimizerSettings.runs
+        };
+      }
+
+      console.log("COMPILE SERVICE::COMPILE::OPTIONS", options);
+
+      try {
+        // Compile using the library's solidityCompiler function
+        const output = await solidityCompiler({
+          version: versionUrl,
+          contractBody,
+          options
+        });
+
+        console.log("COMPILE SERVICE::COMPILE::OUTPUT", output);
+        // Process compilation result
+        return this.processCompilationOutput(output, sources);
+      } catch (e) {
+        console.error("COMPILE SERVICE::COMPILE::ERROR", e);
+      }
     } catch (error) {
       console.error('Compilation error:', error);
       return {
@@ -145,8 +203,13 @@ export class CompilerService {
       }
     }
 
-    // Process contracts
-    if (output.contracts) {
+    // Process contracts - handle the specific output format from solidityCompiler
+    if (output.contracts && output.contracts.Compiled_Contracts) {
+      for (const [contractName, contractData] of Object.entries(output.contracts.Compiled_Contracts)) {
+        contracts[contractName] = this.parseContract(contractName, contractData as any, 'Compiled_Contracts');
+      }
+    } else if (output.contracts) {
+      // Fallback to the original processing logic
       for (const [fileName, fileContracts] of Object.entries(output.contracts)) {
         for (const [contractName, contractData] of Object.entries(fileContracts as Record<string, any>)) {
           contracts[contractName] = this.parseContract(contractName, contractData, fileName);
@@ -248,10 +311,27 @@ export class CompilerService {
   public async getAvailableVersions(): Promise<string[]> {
     try {
       // Get versions directly from the library
-      const versions = await browserSolc.getVersions();
+      const versionsData = await getCompilerVersions();
+
+      // According to the library documentation, getCompilerVersions returns an object with:
+      // 1. releases - object mapping version numbers to full version strings with commit hashes
+      // 2. latestRelease - latest release version
+      // 3. builds - all builds including nightly versions
+
+      // Clear the version map
+      this.versionMap.clear();
+
+      // Extract release versions and populate the version map
+      const releases = versionsData.releases || {};
+      const versionNumbers = Object.keys(releases);
+
+      // Store the mapping between version numbers and full version strings
+      versionNumbers.forEach(version => {
+        this.versionMap.set(version, releases[version]);
+      });
 
       // Sort versions in descending order
-      return versions.sort((a, b) => {
+      return versionNumbers.sort((a, b) => {
         const aParts = a.split('.').map(Number);
         const bParts = b.split('.').map(Number);
 
@@ -266,10 +346,19 @@ export class CompilerService {
     } catch (error) {
       console.error('Failed to get compiler versions:', error);
       // Fallback to hardcoded versions if API fails
-      return [
+      const fallbackVersions = [
         '0.8.30', '0.8.29', '0.8.28', '0.8.27', '0.8.26',
         '0.8.25', '0.8.24', '0.8.23', '0.8.22', '0.8.21', '0.8.20'
       ];
+
+      // Clear the version map and add fallback mappings
+      this.versionMap.clear();
+      fallbackVersions.forEach(version => {
+        // Use a placeholder full version string for fallbacks
+        this.versionMap.set(version, `soljson-v${version}+commit.00000000.js`);
+      });
+
+      return fallbackVersions;
     }
   }
 
@@ -285,6 +374,33 @@ export class CompilerService {
     try {
       this.isCompilerLoaded = false;
       this.currentVersion = version;
+
+      // Get the full version string from the version map
+      const fullVersion = this.versionMap.get(version);
+      if (fullVersion) {
+        this.currentVersionFull = fullVersion;
+        console.log(`Full compiler version set to: ${fullVersion}`);
+      } else {
+        // If the version is not in the map, try to load available versions first
+        if (this.versionMap.size === 0) {
+          await this.getAvailableVersions();
+          // Try again after loading versions
+          const fullVersionRetry = this.versionMap.get(version);
+          if (fullVersionRetry) {
+            this.currentVersionFull = fullVersionRetry;
+            console.log(`Full compiler version set to: ${fullVersionRetry}`);
+          } else {
+            // If still not found, use a fallback format
+            this.currentVersionFull = `soljson-v${version}+commit.00000000.js`;
+            console.warn(`Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`);
+          }
+        } else {
+          // If versions are loaded but this one is not found, use a fallback format
+          this.currentVersionFull = `soljson-v${version}+commit.00000000.js`;
+          console.warn(`Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`);
+        }
+      }
+
       await this.ensureCompilerLoaded();
       console.log(`Compiler version set to: ${version}`);
     } catch (error) {
@@ -423,3 +539,13 @@ export class CompilerService {
 
 // Export singleton instance
 export const compilerService = CompilerService.getInstance();
+
+// Initialize the compiler service
+(async () => {
+  try {
+    // Initialize versions to ensure the version map is populated
+    await compilerService.initializeVersions();
+  } catch (error) {
+    console.error('Failed to initialize compiler service:', error);
+  }
+})();

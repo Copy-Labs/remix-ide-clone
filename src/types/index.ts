@@ -64,10 +64,8 @@ export interface CompilationResult {
   success: boolean;
   errors: CompilerError[];
   warnings: CompilerWarning[];
-  contracts: CompiledContract[];
-  sources: SourceMap;
-  version: string;
-  compiledAt: number;
+  contracts: Record<string, CompiledContract>;
+  sources: Record<string, string>;
 }
 
 export interface CompilerError {
@@ -379,6 +377,18 @@ export type UIAction =
   | { type: 'HIDE_NOTIFICATION'; payload: { id: string } }
   | { type: 'SHOW_MODAL'; payload: Omit<Modal, 'id'> }
   | { type: 'HIDE_MODAL'; payload: { id: string } };
+
+// Logging Types
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  component: string;
+  message: string;
+  data?: any;
+  context?: Record<string, any>;
+}
 
 // Utility Types
 export type DeepPartial<T> = {
