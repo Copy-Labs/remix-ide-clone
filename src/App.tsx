@@ -156,7 +156,6 @@ console.log("Result:", result);`;
                   <ErrorBoundary>
                     <MonacoEditor
                       filePath={activeFile}
-                      language={activeFile.endsWith('.sol') ? 'solidity' : 'javascript'}
                       height="100%"
                     />
                   </ErrorBoundary>
