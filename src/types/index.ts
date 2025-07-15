@@ -5,6 +5,7 @@ export interface FileNode {
   path: string;
   type: 'file' | 'folder';
   content?: string;
+  contentInIndexedDB?: boolean; // Flag to indicate if content is stored in IndexedDB
   children?: FileNode[];
   parent?: string;
   isOpen?: boolean;
