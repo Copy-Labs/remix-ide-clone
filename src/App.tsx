@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {Toaster} from 'react-hot-toast';
 import {useFileStore} from './stores/fileStore';
 import {useEditorStore} from './stores/editorStore';
+import PluginPanel from './components/PluginUI/PluginPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import MonacoEditor from './components/CodeEditor/MonacoEditor';
 import CompilerPanel from './components/Compiler/CompilerPanel';
@@ -11,6 +12,7 @@ import FileExplorer from './components/FileExplorer/FileExplorer';
 function App() {
   const {files, activeFile, openTabs, createFile, openFile} = useFileStore();
   const {theme} = useEditorStore();
+  const [showPluginPanel, setShowPluginPanel] = useState(false);
 
   // Initialize sample files on first load
   React.useEffect(() => {
@@ -81,13 +83,25 @@ console.log("Result:", result);`;
                 Modern Solidity Development Environment
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              Files: {Array.from(files.values()).filter(f => f.type === 'file').length}
-            </span>
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-              Open: {openTabs.length}
-            </span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Files: {Array.from(files.values()).filter(f => f.type === 'file').length}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Open: {openTabs.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowPluginPanel(!showPluginPanel)}
+                className={`px-3 py-1 text-sm rounded ${
+                  showPluginPanel 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {showPluginPanel ? 'Hide Plugins' : 'Show Plugins'}
+              </button>
             </div>
           </div>
         </header>
@@ -117,6 +131,15 @@ console.log("Result:", result);`;
               </ErrorBoundary>
             </div>
           </aside>
+
+          {/* Plugin Panel - conditionally rendered */}
+          {showPluginPanel && (
+            <div className="w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+              <ErrorBoundary>
+                <PluginPanel />
+              </ErrorBoundary>
+            </div>
+          )}
 
           {/* Main Content */}
           <main className="flex-1 bg-gray-50 dark:bg-gray-900">
