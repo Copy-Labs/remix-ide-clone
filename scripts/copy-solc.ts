@@ -1,0 +1,319 @@
+/**
+ * Solidity Compiler Build Script
+ *
+ * This script handles copying Solidity compiler files from node_modules/solc
+ * to the public directory so they can be used by the application.
+ *
+ * It includes:
+ * 1. Copying the main solc.js file
+ * 2. Copying specific compiler version files
+ * 3. Generating compiler version list
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+// Setup paths with ES module support
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+const publicDir = path.join(rootDir, 'public');
+const solcBinDir = path.join(publicDir, 'solc-bin');
+
+// Configuration
+const compilerVersions = [
+  '0.8.30', '0.8.29', '0.8.28', '0.8.27', '0.8.26',
+  '0.8.25', '0.8.24', '0.8.23', '0.8.22', '0.8.21', '0.8.20'
+];
+
+/**
+ * Gets the list of available compiler versions from the official repository
+ */
+async function getCompilerList(): Promise<Record<string, string>> {
+  try {
+    // Use node-fetch or similar in a real implementation
+    const result = execSync('curl -s https://binaries.soliditylang.org/bin/list.json', { encoding: 'utf-8' });
+    const data = JSON.parse(result);
+
+    // Create a mapping of version numbers to full paths
+    const versionMap: Record<string, string> = {};
+
+    for (const build of data.builds) {
+      // Extract the simple version (e.g., "0.8.26" from "0.1.1+commit.6ff4cd6")
+      const simpleVersion = build.version;
+      // Store the full path (e.g., "soljson-v0.1.1+commit.6ff4cd6.js")
+      versionMap[simpleVersion] = build.path;
+    }
+
+    return versionMap;
+  } catch (error) {
+    console.error('Failed to fetch compiler list:', error);
+    return {};
+  }
+}
+
+/**
+ * Downloads a specific version of solc from the official repository
+ */
+async function downloadSolcVersion(version: string, versionMap: Record<string, string>): Promise<boolean> {
+  // Get the full path for this version
+  const fullPath = versionMap[version];
+
+  if (!fullPath) {
+    console.error(`❌ Version ${version} not found in the compiler list`);
+    return false;
+  }
+
+  const url = `https://binaries.soliditylang.org/bin/${fullPath}`;
+  const outputPath = path.join(solcBinDir, `soljson-v${version}.js`);
+
+  console.log(`Downloading Solidity compiler v${version} (${fullPath})...`);
+
+  try {
+    // Using curl to download the file
+    execSync(`curl -s -L ${url} -o ${outputPath}`, { stdio: 'inherit' });
+
+    // Verify file was downloaded successfully and contains valid JavaScript
+    if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
+      // Check if the file contains an error message (XML)
+      const fileContent = fs.readFileSync(outputPath, 'utf-8').trim().substring(0, 100);
+      if (fileContent.startsWith('<?xml') || fileContent.includes('<Error>')) {
+        console.error(`❌ Downloaded file for v${version} contains an error response`);
+        fs.unlinkSync(outputPath); // Remove invalid file
+        return false;
+      }
+
+      console.log(`✅ Successfully downloaded v${version}`);
+      return true;
+    } else {
+      console.error(`❌ Downloaded file for v${version} is empty or invalid`);
+      fs.unlinkSync(outputPath); // Remove invalid file
+      return false;
+    }
+  } catch (error) {
+    console.error(`❌ Failed to download v${version}:`, error);
+    // Make sure we don't leave a partial or error file
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+    return false;
+  }
+}
+
+/**
+ * Copies the solc.js wrapper from node_modules
+ */
+function copySolcWrapper(): boolean {
+  try {
+    const solcModulePath = path.join(rootDir, 'node_modules', 'solc', 'solc.js');
+    const outputPath = path.join(solcBinDir, 'solc.js');
+
+    if (!fs.existsSync(solcModulePath)) {
+      console.error('❌ solc module not found. Make sure to install it with: npm install solc');
+      return false;
+    }
+
+    fs.copyFileSync(solcModulePath, outputPath);
+    console.log('✅ Copied solc.js wrapper');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to copy solc.js wrapper:', error);
+    return false;
+  }
+}
+
+/**
+ * Creates a version list file to help the application know which versions are available
+ */
+function createVersionListFile(availableVersions: string[]): void {
+  const versionsFile = path.join(solcBinDir, 'versions.json');
+
+  fs.writeFileSync(
+    versionsFile,
+    JSON.stringify(
+      {
+        versions: availableVersions,
+        lastUpdated: new Date().toISOString()
+      },
+      null,
+      2
+    )
+  );
+
+  console.log(`✅ Created versions list with ${availableVersions.length} versions`);
+}
+
+/**
+ * Creates a simple JavaScript loader for the compiler
+ */
+function createCompilerLoader(): void {
+  const loaderFile = path.join(solcBinDir, 'compiler-loader.js');
+
+  const loaderCode = `
+/**
+ * Solidity Compiler Loader
+ * Generated by copy-solc.ts
+ */
+
+// Load versions list
+async function getAvailableVersions() {
+  try {
+    const response = await fetch('/solc-bin/versions.json');
+    const data = await response.json();
+    return data.versions;
+  } catch (error) {
+    console.error('Failed to load compiler versions:', error);
+    return []; // Return empty array on error
+  }
+}
+
+// Load a specific compiler version
+async function loadSolcVersion(version) {
+  try {
+    // Use importScripts if available (for classic workers)
+    if (typeof importScripts === 'function') {
+      importScripts(\`/solc-bin/soljson-v\${version}.js\`);
+      return {
+        version,
+        loaded: true
+      };
+    } else {
+      // Fallback for module workers or non-worker contexts
+      const response = await fetch(\`/solc-bin/soljson-v\${version}.js\`);
+      const solcCode = await response.text();
+
+      // Use eval to execute the compiler code
+      eval(solcCode);
+
+      return {
+        version,
+        loaded: true
+      };
+    }
+  } catch (error) {
+    console.error('Failed to load compiler version:', error);
+    throw new Error(\`Failed to load compiler version \${version}: \${error.message}\`);
+  }
+}
+
+// Export API
+self.solcLoader = {
+  getAvailableVersions,
+  loadSolcVersion
+};
+  `;
+
+  fs.writeFileSync(loaderFile, loaderCode);
+  console.log('✅ Created compiler loader script');
+}
+
+/**
+ * Updates the compiler.js worker to use the local files
+ */
+function updateCompilerWorker(): void {
+  const workerFile = path.join(publicDir, 'workers', 'compiler.js');
+
+  if (!fs.existsSync(workerFile)) {
+    console.error('❌ compiler.js worker not found');
+    return;
+  }
+
+  let workerCode = fs.readFileSync(workerFile, 'utf-8');
+
+  // Update the worker to use local files
+  workerCode = workerCode.replace(
+    /const solcUrl = `https:\/\/binaries\.soliditylang\.org\/bin\/soljson-v\${version}\.js`;/g,
+    'const solcUrl = `/solc-bin/soljson-v${version}.js`;'
+  );
+
+  fs.writeFileSync(workerFile, workerCode);
+  console.log('✅ Updated compiler.js worker to use local files');
+}
+
+/**
+ * Cleans up existing compiler files
+ */
+function cleanupExistingFiles(): void {
+  console.log('Cleaning up existing compiler files...');
+
+  if (!fs.existsSync(solcBinDir)) {
+    return;
+  }
+
+  // Read all files in the directory
+  const files = fs.readdirSync(solcBinDir);
+
+  // Delete all soljson-v*.js files
+  let deletedCount = 0;
+  for (const file of files) {
+    if (file.startsWith('soljson-v') && file.endsWith('.js')) {
+      fs.unlinkSync(path.join(solcBinDir, file));
+      deletedCount++;
+    }
+  }
+
+  console.log(`Removed ${deletedCount} existing compiler files`);
+}
+
+/**
+ * Main function to run the script
+ */
+async function main(): Promise<void> {
+  console.log('🚀 Starting Solidity compiler setup...');
+
+  // Create the solc-bin directory if it doesn't exist
+  if (!fs.existsSync(solcBinDir)) {
+    fs.mkdirSync(solcBinDir, { recursive: true });
+    console.log(`Created directory: ${solcBinDir}`);
+  } else {
+    // Clean up existing compiler files
+    cleanupExistingFiles();
+  }
+
+  // Copy the solc.js wrapper
+  copySolcWrapper();
+
+  // Get the list of available compiler versions
+  console.log('Fetching list of available compiler versions...');
+  const versionMap = await getCompilerList();
+
+  if (Object.keys(versionMap).length === 0) {
+    console.error('❌ Failed to fetch compiler versions list. Cannot continue.');
+    process.exit(1);
+  }
+
+  console.log(`Found ${Object.keys(versionMap).length} compiler versions in the repository.`);
+
+  // Download all compiler versions
+  const successfulVersions: string[] = [];
+
+  for (const version of compilerVersions) {
+    const success = await downloadSolcVersion(version, versionMap);
+    if (success) {
+      successfulVersions.push(version);
+    }
+  }
+
+  // Create version list file
+  createVersionListFile(successfulVersions);
+
+  // Create compiler loader
+  createCompilerLoader();
+
+  // Update compiler worker
+  updateCompilerWorker();
+
+  console.log(`
+✨ Solidity compiler setup complete!
+📂 ${successfulVersions.length} compiler versions installed in ${solcBinDir}
+📝 Update your worker code to use the local files
+  `);
+}
+
+// Run the script
+main().catch(error => {
+  console.error('Error running copy-solc script:', error);
+  process.exit(1);
+});
