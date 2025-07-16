@@ -25,5 +25,4 @@ dist-ssr
 
 soljson-v*.js
 soljson-v*.wasm
-
 .husky/*
