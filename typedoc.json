@@ -1,0 +1,28 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Remix IDE Clone API Documentation",
+  "entryPointStrategy": "expand",
+  "entryPoints": ["./src"],
+  "out": "docs/api",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "readme": "README.md",
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "default",
+  "categorizeByGroup": true,
+  "categoryOrder": ["Core", "Services", "Stores", "Components", "Utils", "*"],
+  "sort": ["source-order"],
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "visibilityFilters": {
+    "protected": true,
+    "private": false,
+    "inherited": true,
+    "external": false
+  }
+}
