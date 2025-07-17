@@ -22,10 +22,14 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --coverage --reporter=json --reporter=junit --outputFile.json=./coverage/coverage.json --outputFile.junit=./coverage/junit.xml",
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "docs": "typedoc --entryPointStrategy expand --out docs/api src/",
+    "docs:watch": "typedoc --entryPointStrategy expand --out docs/api src/ --watch"
   },
   "dependencies": {
     "@agnostico/browser-solidity-compiler": "^0.2.0",
@@ -37,6 +41,7 @@
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dexie": "^4.0.11",
     "immer": "^10.1.1",
     "lucide-react": "^0.525.0",
     "process": "^0.11.10",

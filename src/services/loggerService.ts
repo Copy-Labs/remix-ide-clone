@@ -1,4 +1,4 @@
-import { LogLevel } from '@/types';
+import type {LogLevel} from '@/types';
 
 /**
  * Logger Service for the application

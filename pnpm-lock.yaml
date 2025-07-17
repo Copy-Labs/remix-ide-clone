@@ -35,6 +35,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      dexie:
+        specifier: ^4.0.11
+        version: 4.0.11
       immer:
         specifier: ^10.1.1
         version: 10.1.1
@@ -1495,6 +1498,12 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
+<<<<<<< HEAD
+  dexie@4.0.11:
+    resolution: {integrity: sha512-SOKO002EqlvBYYKQSew3iymBoN2EQ4BDw/3yprjh7kAfFzjBYkaMNa/pZvcA7HSWlcKSQb9XhPe3wKyQ0x4A8A==}
+
+=======
+>>>>>>> origin/dev
   diffie-hellman@5.0.3:
     resolution: {integrity: sha512-kqag/Nl+f3GwyK25fhUMYj81BUOrZ9IuJsjIcDE5icNM9FJHAVm3VcUDxdLPoQtTuUylWm6ZIknYJwwaPxsUzg==}
 
@@ -4599,6 +4608,8 @@ snapshots:
       acorn-node: 1.8.2
       defined: 1.0.1
       minimist: 1.2.8
+
+  dexie@4.0.11: {}
 
   diffie-hellman@5.0.3:
     dependencies:

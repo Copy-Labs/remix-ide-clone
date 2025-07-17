@@ -2,6 +2,8 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 import Editor, {type OnChange, type OnMount} from '@monaco-editor/react';
 import {useEditorStore} from '@/stores/editorStore.ts';
 import {useFileStore} from '@/stores/fileStore.ts';
+import {useHistoryStore, createInsertTextCommand, createDeleteTextCommand, createReplaceTextCommand, createFormatDocumentCommand} from '@/stores/historyStore';
+import { debug } from '@/services/loggerService';
 
 interface MonacoEditorProps {
   filePath: string;
@@ -40,6 +42,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = (
     getFileContent,
     updateFileContent
   } = useFileStore();
+
+  const { executeCommand } = useHistoryStore();
 
   const fileContent = getFileContent(filePath) || '';
 
@@ -102,13 +106,93 @@ const MonacoEditor: React.FC<MonacoEditorProps> = (
     // Set up keyboard shortcuts
     setupKeyboardShortcuts(editor, monaco);
 
+    // Set up editor change listeners for history tracking
+    setupHistoryTracking(editor, monaco);
+
     // Focus editor
     editor.focus();
+  };
+
+  // Set up history tracking for undo/redo functionality
+  const setupHistoryTracking = (editor: any, monaco: any) => {
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Listen for content changes
+    model.onDidChangeContent((event: any) => {
+      // Skip if we're in the middle of an undo/redo operation
+      if (event.isUndoing || event.isRedoing) return;
+
+      // Process each change
+      event.changes.forEach((change: any) => {
+        const { range, text, rangeLength } = change;
+
+        // Create the appropriate command based on the type of change
+        let command;
+
+        if (rangeLength === 0 && text.length > 0) {
+          // Text insertion
+          command = createInsertTextCommand(
+            editor,
+            new monaco.Position(range.startLineNumber, range.startColumn),
+            text,
+            'Insert text'
+          );
+          debug('MonacoEditor', `Created insert command for file: ${filePath}`);
+        } else if (rangeLength > 0 && text.length === 0) {
+          // Text deletion
+          command = createDeleteTextCommand(
+            editor,
+            new monaco.Range(
+              range.startLineNumber,
+              range.startColumn,
+              range.endLineNumber,
+              range.endColumn
+            ),
+            'Delete text'
+          );
+          debug('MonacoEditor', `Created delete command for file: ${filePath}`);
+        } else if (rangeLength > 0 && text.length > 0) {
+          // Text replacement
+          command = createReplaceTextCommand(
+            editor,
+            new monaco.Range(
+              range.startLineNumber,
+              range.startColumn,
+              range.endLineNumber,
+              range.endColumn
+            ),
+            text,
+            'Replace text'
+          );
+          debug('MonacoEditor', `Created replace command for file: ${filePath}`);
+        }
+
+        // Execute the command if created
+        if (command) {
+          executeCommand(command, filePath).catch((err) => {
+            console.error('Failed to execute editor command:', err);
+          });
+        }
+      });
+    });
+
+    // Override default undo/redo commands to use our history store
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
+      useHistoryStore.getState().undo();
+    });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
+      useHistoryStore.getState().redo();
+    });
   };
 
   // Handle content changes
   const handleEditorChange: OnChange = (value) => {
     if (value !== undefined && !readOnly) {
+      // We still need to update the file content in the store
+      // The history commands handle the undo/redo functionality
+      // but we need to make sure the file content is updated in the store
       updateFileContent(filePath, value);
       onContentChange?.(value);
     }
