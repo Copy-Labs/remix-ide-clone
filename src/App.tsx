@@ -125,7 +125,7 @@ console.log("Result:", result);`;
         {/* Main Layout */}
         <div className="flex h-screen overflow-hidden">
           {/* Sidebar */}
-          <aside className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+          <aside className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-y-scroll">
             {/* File Explorer */}
             <div className="flex-1 border-b border-gray-200 dark:border-gray-700">
               <ErrorBoundary>

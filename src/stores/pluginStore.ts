@@ -3,15 +3,15 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { Plugin, PluginConfig } from '@/types';
 import {
+  disablePlugin,
+  enablePlugin,
+  getAllPlugins,
+  getPlugin,
   registerPlugin,
   unregisterPlugin,
-  getPlugin,
-  getAllPlugins,
-  enablePlugin,
-  disablePlugin,
-  updatePluginConfig
+  updatePluginConfig,
 } from '@/services/pluginService';
-import { debug, info, error } from '@/services/loggerService';
+import { debug, error, info } from '@/services/loggerService';
 
 // Define the store state interface
 interface PluginState {
@@ -79,8 +79,8 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           if (result) {
             set((state) => {
-              state.plugins = state.plugins.filter(p => p.id !== pluginId);
-              state.activePlugins = state.activePlugins.filter(id => id !== pluginId);
+              state.plugins = state.plugins.filter((p) => p.id !== pluginId);
+              state.activePlugins = state.activePlugins.filter((id) => id !== pluginId);
             });
 
             info('PluginStore', `Plugin ${pluginId} unregistered`);
@@ -102,7 +102,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           if (result) {
             set((state) => {
-              const plugin = state.plugins.find(p => p.id === pluginId);
+              const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
                 plugin.enabled = true;
               }
@@ -127,12 +127,12 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           if (result) {
             set((state) => {
-              const plugin = state.plugins.find(p => p.id === pluginId);
+              const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
                 plugin.enabled = false;
               }
               // Also deactivate the plugin if it's active
-              state.activePlugins = state.activePlugins.filter(id => id !== pluginId);
+              state.activePlugins = state.activePlugins.filter((id) => id !== pluginId);
             });
 
             info('PluginStore', `Plugin ${pluginId} disabled`);
@@ -154,7 +154,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           if (result) {
             set((state) => {
-              const plugin = state.plugins.find(p => p.id === pluginId);
+              const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
                 plugin.config = { ...plugin.config, ...config };
               }
@@ -167,7 +167,8 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
         } catch (err) {
           error('PluginStore', `Failed to update plugin ${pluginId} config`, err);
           set((state) => {
-            state.error = err instanceof Error ? err.message : 'Unknown error updating plugin config';
+            state.error =
+              err instanceof Error ? err.message : 'Unknown error updating plugin config';
           });
           return false;
         }
@@ -189,14 +190,16 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
             const savedPlugins = JSON.parse(savedPluginsStr);
 
             // Register each saved plugin
-            const registeredPlugins = savedPlugins.map((plugin: Omit<Plugin, 'api'>) => {
-              try {
-                return registerPlugin(plugin);
-              } catch (err) {
-                error('PluginStore', `Failed to register saved plugin ${plugin.name}`, err);
-                return null;
-              }
-            }).filter(Boolean);
+            const registeredPlugins = savedPlugins
+              .map((plugin: Omit<Plugin, 'api'>) => {
+                try {
+                  return registerPlugin(plugin);
+                } catch (err) {
+                  error('PluginStore', `Failed to register saved plugin ${plugin.name}`, err);
+                  return null;
+                }
+              })
+              .filter(Boolean);
 
             set((state) => {
               state.plugins = registeredPlugins;
@@ -230,9 +233,17 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
           const { plugins, activePlugins } = get();
 
           // Serialize plugins (without the api property which can't be serialized)
-          const serializablePlugins = plugins.map(({ id, name, version, description, author, enabled, config }) => ({
-            id, name, version, description, author, enabled, config
-          }));
+          const serializablePlugins = plugins.map(
+            ({ id, name, version, description, author, enabled, config }) => ({
+              id,
+              name,
+              version,
+              description,
+              author,
+              enabled,
+              config,
+            }),
+          );
 
           localStorage.setItem('plugins', JSON.stringify(serializablePlugins));
           localStorage.setItem('activePlugins', JSON.stringify(activePlugins));
@@ -272,7 +283,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
       deactivatePlugin: (pluginId) => {
         set((state) => {
-          state.activePlugins = state.activePlugins.filter(id => id !== pluginId);
+          state.activePlugins = state.activePlugins.filter((id) => id !== pluginId);
         });
 
         info('PluginStore', `Plugin ${pluginId} deactivated`);
@@ -286,13 +297,13 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
       getActivePlugins: () => {
         const { activePlugins } = get();
-        return getAllPlugins().filter(plugin =>
-          activePlugins.includes(plugin.id) && plugin.enabled
+        return getAllPlugins().filter(
+          (plugin) => activePlugins.includes(plugin.id) && plugin.enabled,
         );
-      }
+      },
     })),
-    { name: 'plugin-store' }
-  )
+    { name: 'plugin-store' },
+  ),
 );
 
 // Initialize the store when the module is imported

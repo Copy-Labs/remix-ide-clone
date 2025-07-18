@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePluginStore } from '@/stores/pluginStore';
 import CollaborationPluginUI from './CollaborationPluginUI';
 import BackupPluginUI from './BackupPluginUI';
@@ -9,7 +9,7 @@ const PluginPanel: React.FC = () => {
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
 
   // Get all enabled plugins
-  const enabledPlugins = plugins.filter(plugin => plugin.enabled);
+  const enabledPlugins = plugins.filter((plugin) => plugin.enabled);
 
   // Handle plugin selection
   const handlePluginSelect = (pluginId: string) => {
@@ -32,7 +32,7 @@ const PluginPanel: React.FC = () => {
 
         {/* Plugin Selection */}
         <div className="space-y-2">
-          {plugins.map(plugin => (
+          {plugins.map((plugin) => (
             <div
               key={plugin.id}
               className="flex items-center justify-between p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
@@ -41,7 +41,9 @@ const PluginPanel: React.FC = () => {
                 className="flex-1 flex items-center"
                 onClick={() => plugin.enabled && handlePluginSelect(plugin.id)}
               >
-                <span className={`mr-2 text-sm font-medium ${plugin.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                <span
+                  className={`mr-2 text-sm font-medium ${plugin.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}
+                >
                   {plugin.name}
                 </span>
               </div>
@@ -70,9 +72,7 @@ const PluginPanel: React.FC = () => {
             {activePluginId === 'collaboration' && (
               <CollaborationPluginUI pluginId={activePluginId} />
             )}
-            {activePluginId === 'backup-sync' && (
-              <BackupPluginUI pluginId={activePluginId} />
-            )}
+            {activePluginId === 'backup-sync' && <BackupPluginUI pluginId={activePluginId} />}
             {activePluginId === 'custom-theme-ui' && (
               <CustomThemePluginUI pluginId={activePluginId} />
             )}

@@ -25,7 +25,7 @@ const CompilerPanel: React.FC = () => {
     isContractSizeValid,
   } = useCompilerStore();
 
-  const { files, getFileContent } = useFileStore();
+  const { files, getFileContent, activeFile } = useFileStore();
 
   // Load available versions when component mounts
   useEffect(() => {
@@ -39,23 +39,27 @@ const CompilerPanel: React.FC = () => {
   const selectedContractData = getSelectedContract();
 
   const handleCompile = async () => {
-    // Get all Solidity files
-    const solidityFiles: Record<string, string> = {};
-
-    Array.from(files.values())
-      .filter(file => file.type === 'file' && file.name.endsWith('.sol'))
-      .forEach(file => {
-        const content = getFileContent(file.path);
-        if (content) {
-          solidityFiles[file.path] = content;
-        }
-      });
-
-    if (Object.keys(solidityFiles).length === 0) {
-      alert('No Solidity files found to compile');
+    // Check if there's an active file
+    if (!activeFile) {
+      alert('No file is currently active. Please open a Solidity file to compile.');
       return;
     }
 
+    // Check if the active file is a Solidity file
+    if (!activeFile.endsWith('.sol')) {
+      alert('The active file is not a Solidity file. Please open a .sol file to compile.');
+      return;
+    }
+
+    // Get the content of the active file
+    const content = await getFileContent(activeFile);
+
+    // Allow compilation of empty files (new files should be compilable)
+    const solidityFiles: Record<string, string> = {
+      [activeFile]: content || ''
+    };
+
+    console.log('Compiling active file:', activeFile, 'with content length:', (content || '').length);
     await compile(solidityFiles);
   };
 

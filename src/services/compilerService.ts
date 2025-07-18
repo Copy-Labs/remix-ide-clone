@@ -89,6 +89,51 @@ export class CompilerService {
    */
   public async compile(sources: Record<string, string>, optimizerSettings?: { enabled: boolean, runs: number }): Promise<CompilationResult> {
     try {
+      // Validate input sources
+      if (!sources || typeof sources !== 'object') {
+        return {
+          success: false,
+          errors: [{
+            severity: 'error',
+            message: 'Invalid input source specified. Sources must be a valid object.',
+            sourceLocation: {
+              file: '',
+              start: 0,
+              end: 0
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0001'
+          }],
+          warnings: [],
+          contracts: {},
+          sources: {}
+        };
+      }
+
+      // Check if sources is empty
+      const sourceKeys = Object.keys(sources);
+      if (sourceKeys.length === 0) {
+        return {
+          success: false,
+          errors: [{
+            severity: 'error',
+            message: 'No source files provided for compilation.',
+            sourceLocation: {
+              file: '',
+              start: 0,
+              end: 0
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0002'
+          }],
+          warnings: [],
+          contracts: {},
+          sources: {}
+        };
+      }
+
       // Ensure compiler is loaded
       await this.ensureCompilerLoaded();
 
@@ -98,8 +143,30 @@ export class CompilerService {
 
       // Get the first source file for compilation
       // In a real-world scenario, you might want to handle multiple files differently
-      const firstSourcePath = Object.keys(sources)[0];
+      const firstSourcePath = sourceKeys[0];
       const contractBody = sources[firstSourcePath];
+
+      // Validate contract body - allow empty strings but reject null/undefined
+      if (contractBody == null || typeof contractBody !== 'string') {
+        return {
+          success: false,
+          errors: [{
+            severity: 'error',
+            message: `Invalid contract content for file: ${firstSourcePath}`,
+            sourceLocation: {
+              file: firstSourcePath,
+              start: 0,
+              end: 0
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0003'
+          }],
+          warnings: [],
+          contracts: {},
+          sources: {}
+        };
+      }
 
       // Prepare version URL as required by the library
       let versionUrl;
@@ -140,6 +207,25 @@ export class CompilerService {
         return this.processCompilationOutput(output, sources);
       } catch (e) {
         console.error("COMPILE SERVICE::COMPILE::ERROR", e);
+        // Return proper error result when solidityCompiler fails
+        return {
+          success: false,
+          errors: [{
+            severity: 'error',
+            message: e instanceof Error ? e.message : 'Solidity compiler error',
+            sourceLocation: {
+              file: firstSourcePath,
+              start: 0,
+              end: 0
+            },
+            type: 'CompilerError',
+            component: 'solidity-compiler',
+            errorCode: '0004'
+          }],
+          warnings: [],
+          contracts: {},
+          sources: {}
+        };
       }
     } catch (error) {
       console.error('Compilation error:', error);
