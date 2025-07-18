@@ -792,10 +792,29 @@ export const useFileStore = create<FileStore>()(
   )
 );
 
-// Initialize with default files
+// Initialize with default files only if no files exist
 (async () => {
   try {
-    await useFileStore.getState().reset();
+    // Wait a bit for the store to be properly initialized and rehydrated
+    setTimeout(async () => {
+      const state = useFileStore.getState();
+
+      // Only initialize default files if no files exist
+      if (state.files.size === 0) {
+        debug('FileStore', 'No existing files found, initializing with default files');
+
+        // Add default files without clearing existing data
+        for (const file of defaultFiles) {
+          if (file.type === 'file') {
+            await state.createFile(file.path, file.content || '');
+          } else {
+            await state.createFolder(file.path);
+          }
+        }
+      } else {
+        debug('FileStore', `Found ${state.files.size} existing files, skipping default initialization`);
+      }
+    }, 1500); // Wait longer than the migration timeout to ensure proper initialization
   } catch (err) {
     console.error('Failed to initialize file store:', err);
   }

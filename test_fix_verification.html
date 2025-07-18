@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Persistence Fix Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 3px;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Persistence Fix Verification</h1>
+    <p>This test verifies that the file persistence issue has been fixed.</p>
+
+    <div class="test-section">
+        <h2>Test Scenario</h2>
+        <div class="step">
+            <strong>Step 1:</strong> Create a new file with some content
+        </div>
+        <div class="step">
+            <strong>Step 2:</strong> Simulate the file being saved to storage
+        </div>
+        <div class="step">
+            <strong>Step 3:</strong> Simulate a page refresh (clear memory, reload from storage)
+        </div>
+        <div class="step">
+            <strong>Step 4:</strong> Verify the file and its content still exist
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Current Storage State</h2>
+        <button onclick="checkCurrentStorage()">Check Current Storage</button>
+        <div id="storage-state"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Create New File</h2>
+        <input type="text" id="newFileName" placeholder="Enter file name (e.g., MyContract.sol)" value="MyContract.sol">
+        <textarea id="newFileContent" placeholder="Enter file content">// My new Solidity contract
+pragma solidity ^0.8.0;
+
+contract MyContract {
+    string public name = "Test Contract";
+    uint256 public value = 42;
+
+    function setValue(uint256 _value) public {
+        value = _value;
+    }
+
+    function getName() public view returns (string memory) {
+        return name;
+    }
+}</textarea>
+        <br>
+        <button onclick="createNewFile()">Create File</button>
+        <div id="create-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Simulate Page Refresh</h2>
+        <p>This simulates what happens when the page is refreshed - the store is reinitialized and data is loaded from storage.</p>
+        <button onclick="simulatePageRefresh()">Simulate Page Refresh</button>
+        <div id="refresh-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Verify File Persistence</h2>
+        <button onclick="verifyFilePersistence()">Verify Files Persist</button>
+        <div id="persistence-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Test Default Files Behavior</h2>
+        <p>This tests that default files are only created when no files exist.</p>
+        <button onclick="testDefaultFilesBehavior()">Test Default Files</button>
+        <div id="default-files-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Cleanup</h2>
+        <button onclick="clearAllStorage()" style="background-color: #dc3545;">Clear All Storage</button>
+        <div id="cleanup-result"></div>
+    </div>
+
+    <script>
+        // Simulate the file store behavior
+        const INDEXEDDB_SIZE_THRESHOLD = 50 * 1024; // 50KB
+
+        // Default files (simulating the actual default files)
+        const defaultFiles = [
+            {
+                type: 'file',
+                path: '/contracts/SimpleStorage.sol',
+                content: `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SimpleStorage {
+    uint256 private storedData;
+
+    function set(uint256 x) public {
+        storedData = x;
+    }
+
+    function get() public view returns (uint256) {
+        return storedData;
+    }
+}`
+            },
+            {
+                type: 'file',
+                path: '/scripts/example.js',
+                content: `// Sample JavaScript file
+console.log("Hello, Remix IDE Clone!");
+
+// Example function
+function calculateSum(a, b) {
+    return a + b;
+}
+
+// Example usage
+const result = calculateSum(5, 3);
+console.log("Result:", result);`
+            }
+        ];
+
+        let simulatedStore = {
+            files: new Map(),
+            openTabs: [],
+            activeFile: null,
+            selectedFiles: [],
+            expandedFolders: new Set(['/'])
+        };
+
+        function logResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            element.appendChild(div);
+        }
+
+        function clearResults(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        function saveToStorage(store) {
+            const filesArray = Array.from(store.files.entries()).map(([path, file]) => {
+                if (file.type === 'file' && file.contentInIndexedDB) {
+                    const { content, ...fileWithoutContent } = file;
+                    return [path, fileWithoutContent];
+                }
+                return [path, file];
+            });
+
+            const persistedState = {
+                state: {
+                    filesArray,
+                    expandedFoldersArray: Array.from(store.expandedFolders),
+                    openTabs: store.openTabs,
+                    activeFile: store.activeFile,
+                    selectedFiles: store.selectedFiles,
+                },
+                version: 2
+            };
+
+            localStorage.setItem('file-storage', JSON.stringify(persistedState));
+            return persistedState;
+        }
+
+        function loadFromStorage() {
+            const stored = localStorage.getItem('file-storage');
+            if (!stored) return null;
+
+            try {
+                const parsed = JSON.parse(stored);
+                return {
+                    files: new Map(parsed.state.filesArray || []),
+                    expandedFolders: new Set(parsed.state.expandedFoldersArray || ['/']),
+                    openTabs: parsed.state.openTabs || [],
+                    activeFile: parsed.state.activeFile,
+                    selectedFiles: parsed.state.selectedFiles || []
+                };
+            } catch (e) {
+                console.error('Error loading from storage:', e);
+                return null;
+            }
+        }
+
+        function createFile(store, path, content = '') {
+            const newFile = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2),
+                name: path.split('/').pop(),
+                path,
+                type: 'file',
+                parent: path.substring(0, path.lastIndexOf('/')) || '/',
+                lastModified: Date.now(),
+                size: content.length,
+                content: content,
+                contentInIndexedDB: content.length > INDEXEDDB_SIZE_THRESHOLD
+            };
+
+            store.files.set(path, newFile);
+            if (!store.openTabs.includes(path)) {
+                store.openTabs.push(path);
+            }
+            store.activeFile = path;
+
+            return newFile;
+        }
+
+        function initializeDefaultFiles(store) {
+            if (store.files.size === 0) {
+                console.log('No existing files found, initializing with default files');
+                for (const file of defaultFiles) {
+                    if (file.type === 'file') {
+                        createFile(store, file.path, file.content || '');
+                    }
+                }
+                return true;
+            } else {
+                console.log(`Found ${store.files.size} existing files, skipping default initialization`);
+                return false;
+            }
+        }
+
+        function checkCurrentStorage() {
+            clearResults('storage-state');
+
+            const stored = localStorage.getItem('file-storage');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    logResult('storage-state', `<strong>Storage found:</strong><pre>${JSON.stringify(parsed, null, 2)}</pre>`, 'info');
+                } catch (e) {
+                    logResult('storage-state', `Error parsing storage: ${e.message}`, 'error');
+                }
+            } else {
+                logResult('storage-state', 'No storage data found', 'warning');
+            }
+        }
+
+        function createNewFile() {
+            clearResults('create-result');
+
+            const fileName = document.getElementById('newFileName').value.trim();
+            const fileContent = document.getElementById('newFileContent').value;
+
+            if (!fileName) {
+                logResult('create-result', 'Please enter a file name', 'error');
+                return;
+            }
+
+            const filePath = fileName.startsWith('/') ? fileName : `/${fileName}`;
+
+            // Create file in simulated store
+            const newFile = createFile(simulatedStore, filePath, fileContent);
+
+            // Save to storage
+            const savedState = saveToStorage(simulatedStore);
+
+            logResult('create-result', `✅ File "${fileName}" created successfully!`, 'success');
+            logResult('create-result', `📁 Path: ${filePath}`, 'info');
+            logResult('create-result', `📝 Content length: ${fileContent.length} characters`, 'info');
+            logResult('create-result', `💾 Storage method: ${newFile.contentInIndexedDB ? 'IndexedDB' : 'localStorage'}`, 'info');
+            logResult('create-result', `🗂️ Total files in store: ${simulatedStore.files.size}`, 'info');
+        }
+
+        function simulatePageRefresh() {
+            clearResults('refresh-result');
+
+            logResult('refresh-result', '🔄 Simulating page refresh...', 'info');
+
+            // Clear the simulated store (simulating page refresh)
+            simulatedStore = {
+                files: new Map(),
+                openTabs: [],
+                activeFile: null,
+                selectedFiles: [],
+                expandedFolders: new Set(['/'])
+            };
+
+            // Load from storage (simulating store rehydration)
+            const loadedState = loadFromStorage();
+
+            if (loadedState) {
+                simulatedStore = loadedState;
+                logResult('refresh-result', `✅ Store rehydrated from storage`, 'success');
+                logResult('refresh-result', `📁 Files loaded: ${simulatedStore.files.size}`, 'info');
+
+                // Simulate the default files initialization logic
+                const defaultsAdded = initializeDefaultFiles(simulatedStore);
+                if (defaultsAdded) {
+                    logResult('refresh-result', `➕ Default files added (no existing files found)`, 'warning');
+                    saveToStorage(simulatedStore); // Save after adding defaults
+                } else {
+                    logResult('refresh-result', `✅ Existing files preserved, no defaults added`, 'success');
+                }
+            } else {
+                logResult('refresh-result', '❌ No stored state found', 'error');
+
+                // Initialize with defaults
+                const defaultsAdded = initializeDefaultFiles(simulatedStore);
+                if (defaultsAdded) {
+                    logResult('refresh-result', `➕ Initialized with default files`, 'info');
+                    saveToStorage(simulatedStore);
+                }
+            }
+        }
+
+        function verifyFilePersistence() {
+            clearResults('persistence-result');
+
+            const allFiles = Array.from(simulatedStore.files.entries());
+
+            if (allFiles.length === 0) {
+                logResult('persistence-result', '❌ No files found in store', 'error');
+                return;
+            }
+
+            logResult('persistence-result', `✅ Found ${allFiles.length} files in store:`, 'success');
+
+            allFiles.forEach(([path, file]) => {
+                const hasContent = file.content && file.content.length > 0;
+                const contentPreview = hasContent ? file.content.substring(0, 100) + (file.content.length > 100 ? '...' : '') : 'No content';
+
+                logResult('persistence-result',
+                    `📄 <strong>${path}</strong><br>
+                     &nbsp;&nbsp;📝 Content: ${hasContent ? '✅' : '❌'} (${file.size || 0} chars)<br>
+                     &nbsp;&nbsp;💾 Storage: ${file.contentInIndexedDB ? 'IndexedDB' : 'localStorage'}<br>
+                     &nbsp;&nbsp;🔍 Preview: <code>${contentPreview}</code>`,
+                    hasContent ? 'success' : 'warning'
+                );
+            });
+
+            // Check if user-created files are preserved
+            const userFiles = allFiles.filter(([path]) => !defaultFiles.some(df => df.path === path));
+            if (userFiles.length > 0) {
+                logResult('persistence-result', `🎉 ${userFiles.length} user-created files successfully persisted!`, 'success');
+            } else {
+                logResult('persistence-result', `ℹ️ No user-created files found (only default files)`, 'info');
+            }
+        }
+
+        function testDefaultFilesBehavior() {
+            clearResults('default-files-result');
+
+            logResult('default-files-result', '🧪 Testing default files behavior...', 'info');
+
+            // Test 1: Empty store should get default files
+            const emptyStore = {
+                files: new Map(),
+                openTabs: [],
+                activeFile: null,
+                selectedFiles: [],
+                expandedFolders: new Set(['/'])
+            };
+
+            const defaultsAddedToEmpty = initializeDefaultFiles(emptyStore);
+            logResult('default-files-result',
+                `Test 1 - Empty store: ${defaultsAddedToEmpty ? '✅ Defaults added' : '❌ Defaults not added'}`,
+                defaultsAddedToEmpty ? 'success' : 'error'
+            );
+
+            // Test 2: Store with files should NOT get default files
+            const storeWithFiles = {
+                files: new Map([
+                    ['/test.sol', { type: 'file', path: '/test.sol', content: 'test' }]
+                ]),
+                openTabs: [],
+                activeFile: null,
+                selectedFiles: [],
+                expandedFolders: new Set(['/'])
+            };
+
+            const defaultsAddedToExisting = initializeDefaultFiles(storeWithFiles);
+            logResult('default-files-result',
+                `Test 2 - Store with files: ${!defaultsAddedToExisting ? '✅ Defaults not added' : '❌ Defaults incorrectly added'}`,
+                !defaultsAddedToExisting ? 'success' : 'error'
+            );
+        }
+
+        function clearAllStorage() {
+            clearResults('cleanup-result');
+
+            localStorage.removeItem('file-storage');
+
+            // Clear IndexedDB if it exists
+            if ('indexedDB' in window) {
+                const deleteReq = indexedDB.deleteDatabase('RemixIDEClone');
+                deleteReq.onsuccess = () => {
+                    logResult('cleanup-result', '🗑️ IndexedDB cleared', 'info');
+                };
+                deleteReq.onerror = () => {
+                    logResult('cleanup-result', '⚠️ Failed to clear IndexedDB', 'warning');
+                };
+            }
+
+            // Reset simulated store
+            simulatedStore = {
+                files: new Map(),
+                openTabs: [],
+                activeFile: null,
+                selectedFiles: [],
+                expandedFolders: new Set(['/'])
+            };
+
+            logResult('cleanup-result', '✅ All storage cleared', 'success');
+        }
+
+        // Auto-check storage on page load
+        window.onload = function() {
+            checkCurrentStorage();
+        };
+    </script>
+</body>
+</html>

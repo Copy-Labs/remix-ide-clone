@@ -87,7 +87,7 @@ console.log("Result:", result);`;
 
   return (
     <ErrorBoundary>
-      <div className={`h-screen overflow-hidden bg-orange-500 dark:bg-gray-900 ${theme === 'dark' ? 'dark' : ''}`}>
+      <div className={`h-screen overflow-hidden dark:bg-gray-900 ${theme === 'dark' ? 'dark' : ''}`}>
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
           <div className="flex items-center justify-between">
@@ -186,10 +186,10 @@ console.log("Result:", result);`;
             )}
 
             {/* Editor Area */}
-            <div className="h-full p-4">
+            <div className="h-full">
               {activeFile ? (
                 <div
-                  className="h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
                   <div className="mb-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                       {files.get(activeFile)?.name}
