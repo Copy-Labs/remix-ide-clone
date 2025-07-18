@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import {Toaster} from 'react-hot-toast';
 import {useFileStore} from './stores/fileStore';
 import {useEditorStore} from './stores/editorStore';
+import {usePluginStore} from './stores/pluginStore';
 import PluginPanel from './components/PluginUI/PluginPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import MonacoEditor from './components/CodeEditor/MonacoEditor';
 import CompilerPanel from './components/Compiler/CompilerPanel';
 import DeploymentPanel from './components/Deployment/DeploymentPanel';
 import FileExplorer from './components/FileExplorer/FileExplorer';
+import { corePlugins } from './plugins';
 
 function App() {
   const {files, activeFile, openTabs, createFile, openFile} = useFileStore();
   const {theme} = useEditorStore();
+  const { registerPlugin } = usePluginStore();
   const [showPluginPanel, setShowPluginPanel] = useState(false);
 
   // Initialize sample files on first load
@@ -68,6 +71,19 @@ console.log("Result:", result);`;
       openFile('/contracts/SimpleStorage.sol');
     }
   }, [files.size, createFile, openFile]);
+
+  // Initialize plugins on first load
+  React.useEffect(() => {
+    // Register all core plugins
+    corePlugins.forEach(plugin => {
+      try {
+        registerPlugin(plugin);
+        console.log(`Plugin registered: ${plugin.name}`);
+      } catch (error) {
+        console.error(`Failed to register plugin ${plugin.name}:`, error);
+      }
+    });
+  }, [registerPlugin]);
 
   return (
     <ErrorBoundary>

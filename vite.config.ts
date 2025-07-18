@@ -1,19 +1,19 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 
   // Web Workers configuration
-  worker: {
+  /*worker: {
     format: 'es',
-  },
+  },*/
 
   // Optimized dependencies
-  optimizeDeps: {
+  /*optimizeDeps: {
     include: [
       'monaco-editor',
       '@monaco-editor/react',
@@ -21,31 +21,35 @@ export default defineConfig({
       'zustand',
       'react',
       'react-dom',
-      '@agnostico/browser-solidity-compiler'
+      '@agnostico/browser-solidity-compiler',
     ],
     // exclude: ['@agnostico/browser-solidity-compiler']
-  },
+  },*/
 
   // Build configuration
-  build: {
+  /*build: {
     target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           monaco: ['monaco-editor', '@monaco-editor/react'],
+          'monaco-editor': ['monaco-editor'],
+          'monaco-editor-react': ['@monaco-editor/react'],
           web3: ['web3'],
-          state: ['zustand', 'immer']
-        }
-      }
+          state: ['zustand', 'immer'],
+        },
+      },
     },
     // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000
-  },
+    chunkSizeWarningLimit: 20000,
+  },*/
 
   // Define global variables
   define: {
     global: 'globalThis',
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+    'process.env': process.env,
   },
 
   // Resolve aliases
@@ -54,6 +58,8 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       buffer: 'buffer',
       process: 'process/browser',
+      // Add this line for Monaco Editor
+      // 'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api',
     },
   },
 
@@ -63,7 +69,7 @@ export default defineConfig({
     open: true,
     fs: {
       // Allow serving files from one level up
-      allow: ['..'],
-    }
+      allow: ['..', 'node_modules'],
+    },
   },
-})
+});
