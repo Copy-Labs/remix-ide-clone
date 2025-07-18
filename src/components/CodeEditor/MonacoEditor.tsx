@@ -146,7 +146,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     setupKeyboardShortcuts(editor, monaco);
 
     // Set up editor change listeners for history tracking
-    setupHistoryTracking(editor, monaco);
+    // Temporarily disable complex history tracking to prevent keystroke recursion
+    // setupHistoryTracking(editor, monaco);
 
     // Focus editor
     editor.focus();
@@ -379,22 +380,30 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   // Handle content changes
   const handleEditorChange: OnChange = useCallback((value): void => {
-    if (value !== undefined && !readOnly && value !== fileContent) {
+    if (value !== undefined && !readOnly) {
       // Update local state immediately for responsive UI
       setFileContent(value);
 
-      // Update the file content in the store asynchronously
-      // The history commands handle the undo/redo functionality
-      // but we need to make sure the file content is updated in the store
-      updateFileContent(filePath, value).catch((error) => {
-        console.error('Failed to update file content:', error);
-        // Revert local state on error
-        setFileContent(fileContent);
-      });
+      // Debounce the file store update to prevent excessive calls
+      const timeoutId = setTimeout(() => {
+        updateFileContent(filePath, value).catch((error) => {
+          console.error('Failed to update file content:', error);
+        });
+      }, 300); // 300ms debounce
+
+      // Store timeout for cleanup
+      const win = window as any;
+      if (!win._updateTimeouts) {
+        win._updateTimeouts = {};
+      }
+      if (win._updateTimeouts[filePath]) {
+        clearTimeout(win._updateTimeouts[filePath]);
+      }
+      win._updateTimeouts[filePath] = timeoutId;
 
       onContentChange?.(value);
     }
-  }, [filePath, fileContent, readOnly, updateFileContent, onContentChange]);
+  }, [filePath, readOnly, updateFileContent, onContentChange]);
 
   // Configure TypeScript/JavaScript language support
   const configureTypeScriptLanguage = (monaco: Monaco): void => {
@@ -888,36 +897,57 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         provideDocumentFormattingEdits: (
           model: monaco.editor.ITextModel,
         ): monaco.languages.TextEdit[] => {
-          // Basic formatting - just add proper indentation
-          const text = model.getValue();
-          const lines = text.split('\n');
-          let indentLevel = 0;
-          const formattedLines = lines.map((line) => {
-            const trimmedLine = line.trim();
+          // Check if model is valid and has content
+          if (!model || !model.getFullModelRange) {
+            console.warn('Model is not available for formatting');
+            return [];
+          }
 
-            // Decrease indent for closing braces
-            if (trimmedLine.startsWith('}')) {
-              indentLevel = Math.max(0, indentLevel - 1);
+          try {
+            // Basic formatting - just add proper indentation
+            const text = model.getValue();
+            if (!text || text.trim().length === 0) {
+              return []; // No formatting needed for empty content
             }
 
-            // Format the line with proper indentation
-            const formattedLine =
-              indentLevel > 0 ? '    '.repeat(indentLevel) + trimmedLine : trimmedLine;
+            const lines = text.split('\n');
+            let indentLevel = 0;
+            const formattedLines = lines.map((line) => {
+              const trimmedLine = line.trim();
 
-            // Increase indent for opening braces
-            if (trimmedLine.endsWith('{')) {
-              indentLevel++;
+              // Decrease indent for closing braces
+              if (trimmedLine.startsWith('}')) {
+                indentLevel = Math.max(0, indentLevel - 1);
+              }
+
+              // Format the line with proper indentation
+              const formattedLine =
+                indentLevel > 0 ? '    '.repeat(indentLevel) + trimmedLine : trimmedLine;
+
+              // Increase indent for opening braces
+              if (trimmedLine.endsWith('{')) {
+                indentLevel++;
+              }
+
+              return formattedLine;
+            });
+
+            const fullRange = model.getFullModelRange();
+            if (!fullRange) {
+              console.warn('Could not get full model range for formatting');
+              return [];
             }
 
-            return formattedLine;
-          });
-
-          return [
-            {
-              range: model.getFullModelRange(),
-              text: formattedLines.join('\n'),
-            },
-          ];
+            return [
+              {
+                range: fullRange,
+                text: formattedLines.join('\n'),
+              },
+            ];
+          } catch (error) {
+            console.error('Error during Solidity formatting:', error);
+            return [];
+          }
         },
       });
     }
@@ -1002,6 +1032,12 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
           clearTimeout(timeoutId);
         });
         delete win._editorTimeouts[filePath];
+      }
+
+      // Clear update timeouts
+      if (win._updateTimeouts && win._updateTimeouts[filePath]) {
+        clearTimeout(win._updateTimeouts[filePath]);
+        delete win._updateTimeouts[filePath];
       }
 
       // Unregister the editor from the store
