@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Persistence Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Persistence Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Check localStorage Content</h2>
+        <button onclick="checkLocalStorage()">Check localStorage</button>
+        <div id="localStorage-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Simulate File Creation</h2>
+        <input type="text" id="fileName" placeholder="Enter file name (e.g., test.sol)" value="test.sol">
+        <textarea id="fileContent" placeholder="Enter file content">// Test Solidity contract
+pragma solidity ^0.8.0;
+
+contract TestContract {
+    string public message = "Hello World";
+}</textarea>
+        <br>
+        <button onclick="simulateFileCreation()">Create File</button>
+        <div id="creation-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Check File Persistence</h2>
+        <button onclick="checkFilePersistence()">Check if Files Persist</button>
+        <div id="persistence-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Clear Storage</h2>
+        <button onclick="clearStorage()">Clear All Storage</button>
+        <div id="clear-result"></div>
+    </div>
+
+    <script>
+        function checkLocalStorage() {
+            const result = document.getElementById('localStorage-result');
+            const fileStorage = localStorage.getItem('file-storage');
+
+            if (fileStorage) {
+                try {
+                    const parsed = JSON.parse(fileStorage);
+                    result.innerHTML = `
+                        <div class="info">Found file-storage in localStorage:</div>
+                        <pre>${JSON.stringify(parsed, null, 2)}</pre>
+                    `;
+                } catch (e) {
+                    result.innerHTML = `<div class="error">Error parsing localStorage: ${e.message}</div>`;
+                }
+            } else {
+                result.innerHTML = '<div class="info">No file-storage found in localStorage</div>';
+            }
+        }
+
+        function simulateFileCreation() {
+            const fileName = document.getElementById('fileName').value;
+            const fileContent = document.getElementById('fileContent').value;
+            const result = document.getElementById('creation-result');
+
+            if (!fileName) {
+                result.innerHTML = '<div class="error">Please enter a file name</div>';
+                return;
+            }
+
+            try {
+                // Simulate the file store structure
+                const filePath = `/${fileName}`;
+                const fileNode = {
+                    id: Date.now().toString(),
+                    name: fileName,
+                    path: filePath,
+                    type: 'file',
+                    parent: '/',
+                    lastModified: Date.now(),
+                    size: fileContent.length,
+                    content: fileContent,
+                    contentInIndexedDB: false
+                };
+
+                // Get existing storage or create new
+                let fileStorage = localStorage.getItem('file-storage');
+                let storageData;
+
+                if (fileStorage) {
+                    storageData = JSON.parse(fileStorage);
+                } else {
+                    storageData = {
+                        state: {
+                            filesArray: [],
+                            expandedFoldersArray: [],
+                            openTabs: [],
+                            activeFile: null,
+                            selectedFiles: []
+                        },
+                        version: 2
+                    };
+                }
+
+                // Add the new file to filesArray
+                storageData.state.filesArray.push([filePath, fileNode]);
+                storageData.state.openTabs.push(filePath);
+                storageData.state.activeFile = filePath;
+
+                // Save back to localStorage
+                localStorage.setItem('file-storage', JSON.stringify(storageData));
+
+                result.innerHTML = `<div class="success">File "${fileName}" created and saved to localStorage</div>`;
+
+            } catch (e) {
+                result.innerHTML = `<div class="error">Error creating file: ${e.message}</div>`;
+            }
+        }
+
+        function checkFilePersistence() {
+            const result = document.getElementById('persistence-result');
+            const fileStorage = localStorage.getItem('file-storage');
+
+            if (!fileStorage) {
+                result.innerHTML = '<div class="error">No file storage found</div>';
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(fileStorage);
+                const filesArray = parsed.state?.filesArray || [];
+
+                if (filesArray.length === 0) {
+                    result.innerHTML = '<div class="info">No files found in storage</div>';
+                    return;
+                }
+
+                let html = '<div class="success">Files found in storage:</div><ul>';
+                filesArray.forEach(([path, file]) => {
+                    html += `<li><strong>${path}</strong> - ${file.type} (${file.size} bytes)`;
+                    if (file.content) {
+                        html += `<br><small>Content: ${file.content.substring(0, 100)}${file.content.length > 100 ? '...' : ''}</small>`;
+                    }
+                    html += '</li>';
+                });
+                html += '</ul>';
+
+                result.innerHTML = html;
+
+            } catch (e) {
+                result.innerHTML = `<div class="error">Error checking persistence: ${e.message}</div>`;
+            }
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('file-storage');
+            // Also clear IndexedDB if it exists
+            if ('indexedDB' in window) {
+                const deleteReq = indexedDB.deleteDatabase('remix-ide-files');
+                deleteReq.onsuccess = () => {
+                    console.log('IndexedDB cleared');
+                };
+            }
+            document.getElementById('clear-result').innerHTML = '<div class="success">Storage cleared</div>';
+        }
+
+        // Auto-check localStorage on page load
+        window.onload = function() {
+            checkLocalStorage();
+            checkFilePersistence();
+        };
+    </script>
+</body>
+</html>
