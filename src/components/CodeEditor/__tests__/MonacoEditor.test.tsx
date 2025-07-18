@@ -392,4 +392,65 @@ describe('MonacoEditor', () => {
     // Component should still be stable after debounce timeout
     expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
   });
+
+  it('handles new file creation without getFullModelRange errors', async () => {
+    // This test ensures that creating new files doesn't cause the getFullModelRange error
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { rerender } = render(
+      <MonacoEditor
+        filePath="/contracts/NewContract1.sol"
+        language="solidity"
+        height="400px"
+      />
+    );
+
+    // Wait for editor to load
+    await waitFor(() => {
+      expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
+    });
+
+    // Switch to another new file (simulating creating multiple new files)
+    rerender(
+      <MonacoEditor
+        filePath="/contracts/NewContract2.sol"
+        language="solidity"
+        height="400px"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
+    });
+
+    // Switch to yet another new file
+    rerender(
+      <MonacoEditor
+        filePath="/contracts/NewContract3.sol"
+        language="solidity"
+        height="400px"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
+    });
+
+    // Wait a bit more to ensure no errors occur during file switching
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // Should not have thrown any errors related to getFullModelRange
+    const errors = consoleSpy.mock.calls.filter(call =>
+      call[0] && call[0].toString().includes('getFullModelRange')
+    );
+    expect(errors.length).toBe(0);
+
+    // Should also not have any TypeError related to null
+    const nullErrors = consoleSpy.mock.calls.filter(call =>
+      call[0] && call[0].toString().includes('Cannot read properties of null')
+    );
+    expect(nullErrors.length).toBe(0);
+
+    consoleSpy.mockRestore();
+  });
 });

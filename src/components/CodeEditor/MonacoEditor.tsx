@@ -1100,6 +1100,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       )}
 
       <Editor
+        key={filePath} // Force recreation of editor instance for each file to prevent model issues
         height={height}
         language={detectedLanguage}
         // path={filePath} // Commented out to prevent re-renders when switching files
