@@ -12,7 +12,7 @@ export const deploymentPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Automate the deployment of your smart contracts to various networks',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     networks: [
       {

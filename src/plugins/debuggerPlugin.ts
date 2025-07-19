@@ -11,7 +11,7 @@ export const debuggerPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Debug your Solidity smart contracts with step-by-step execution',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     showLocalVariables: true,
     showStateVariables: true,

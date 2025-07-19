@@ -11,7 +11,7 @@ export const themePlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Customize the appearance and user interface of the IDE',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     theme: 'default', // default, dark, light, custom
     customTheme: {
@@ -445,24 +445,24 @@ export class ThemePluginImplementation {
         --color-warning: ${theme.colors.warning};
         --color-success: ${theme.colors.success};
         --color-info: ${theme.colors.info};
-        
+
         /* Fonts */
         --font-main: ${theme.fonts.main};
         --font-code: ${theme.fonts.code};
         --font-size: ${theme.fonts.size}px;
-        
+
         /* Spacing */
         --spacing-unit: ${theme.spacing.unit}px;
         --spacing-small: ${theme.spacing.small}px;
         --spacing-medium: ${theme.spacing.medium}px;
         --spacing-large: ${theme.spacing.large}px;
-        
+
         /* Border Radius */
         --border-radius-small: ${theme.borderRadius.small}px;
         --border-radius-medium: ${theme.borderRadius.medium}px;
         --border-radius-large: ${theme.borderRadius.large}px;
       }
-      
+
       /* Custom CSS */
       ${this.config.customCSS}
     `;
@@ -789,7 +789,7 @@ export class ThemePluginImplementation {
         --animation-enabled: ${this.config.animations.enabled ? '1' : '0'};
         --animation-speed: ${speedMap[this.config.animations.speed]};
       }
-      
+
       * {
         transition-duration: var(--animation-speed);
         transition-property: ${this.config.animations.enabled ? 'background-color, color, border-color, box-shadow, transform, opacity' : 'none'};

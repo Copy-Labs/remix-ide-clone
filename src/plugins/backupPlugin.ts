@@ -11,7 +11,7 @@ export const backupPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Backup and synchronize your project files across devices and with cloud storage',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     autoBackup: true,
     backupInterval: 15, // minutes
