@@ -108,6 +108,9 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
               }
             });
 
+            // Save changes to localStorage
+            get().savePlugins();
+
             info('PluginStore', `Plugin ${pluginId} enabled`);
           }
 
@@ -134,6 +137,9 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
               // Also deactivate the plugin if it's active
               state.activePlugins = state.activePlugins.filter((id) => id !== pluginId);
             });
+
+            // Save changes to localStorage
+            get().savePlugins();
 
             info('PluginStore', `Plugin ${pluginId} disabled`);
           }
