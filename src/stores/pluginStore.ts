@@ -188,28 +188,31 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
         });
 
         try {
-          // Load plugins from localStorage
+          // Load saved plugin states from localStorage
           const savedPluginsStr = localStorage.getItem('plugins');
           const savedActivePluginsStr = localStorage.getItem('activePlugins');
 
           if (savedPluginsStr) {
             const savedPlugins = JSON.parse(savedPluginsStr);
 
-            // Register each saved plugin
-            const registeredPlugins = savedPlugins
-              .map((plugin: Omit<Plugin, 'api'>) => {
-                try {
-                  return registerPlugin(plugin);
-                } catch (err) {
-                  error('PluginStore', `Failed to register saved plugin ${plugin.name}`, err);
-                  return null;
-                }
-              })
-              .filter(Boolean);
+            // Create a map of saved plugin states for quick lookup
+            const savedPluginStates = new Map(
+              savedPlugins.map((plugin: any) => [plugin.id, plugin])
+            );
 
+            // Update existing plugins with saved states
             set((state) => {
-              state.plugins = registeredPlugins;
+              state.plugins.forEach((plugin) => {
+                const savedState = savedPluginStates.get(plugin.id);
+                if (savedState) {
+                  // Preserve the saved enabled state and config
+                  plugin.enabled = savedState.enabled;
+                  plugin.config = { ...plugin.config, ...savedState.config };
+                }
+              });
             });
+
+            info('PluginStore', `Loaded states for ${savedPlugins.length} plugins from localStorage`);
           }
 
           if (savedActivePluginsStr) {
@@ -312,15 +315,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
   ),
 );
 
-// Initialize the store when the module is imported
-(() => {
-  // Load plugins from localStorage on initialization
-  setTimeout(() => {
-    usePluginStore.getState().loadPlugins();
-  }, 0);
-
-  // Save plugins to localStorage when the window is about to unload
-  window.addEventListener('beforeunload', () => {
-    usePluginStore.getState().savePlugins();
-  });
-})();
+// Save plugins to localStorage when the window is about to unload
+window.addEventListener('beforeunload', () => {
+  usePluginStore.getState().savePlugins();
+});

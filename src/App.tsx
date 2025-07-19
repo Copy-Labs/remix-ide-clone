@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button.tsx';
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList, BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb.tsx';
@@ -91,30 +90,30 @@ console.log("Result:", result);`;
 
   // Initialize plugins on first load
   React.useEffect(() => {
-    const { loadPlugins, plugins } = usePluginStore.getState();
+    const { loadPlugins } = usePluginStore.getState();
 
-    // First, try to load plugins from localStorage
-    loadPlugins();
-
-    // Then register core plugins if they don't already exist
-    setTimeout(() => {
-      const currentPlugins = usePluginStore.getState().plugins;
-
-      corePlugins.forEach(plugin => {
-        try {
-          // Only register if plugin doesn't already exist
-          const existingPlugin = currentPlugins.find(p => p.id === plugin.id);
-          if (!existingPlugin) {
-            registerPlugin(plugin);
-            console.log(`Plugin registered: ${plugin.name}`);
-          } else {
-            console.log(`Plugin already exists: ${plugin.name}`);
-          }
-        } catch (error) {
-          console.error(`Failed to register plugin ${plugin.name}:`, error);
+    // First, register core plugins
+    corePlugins.forEach(plugin => {
+      try {
+        const currentPlugins = usePluginStore.getState().plugins;
+        // Only register if plugin doesn't already exist
+        const existingPlugin = currentPlugins.find(p => p.id === plugin.id);
+        if (!existingPlugin) {
+          registerPlugin(plugin);
+          console.log(`Plugin registered: ${plugin.name}`);
+        } else {
+          console.log(`Plugin already exists: ${plugin.name}`);
         }
-      });
-    }, 100); // Small delay to ensure loadPlugins completes first
+      } catch (error) {
+        console.error(`Failed to register plugin ${plugin.name}:`, error);
+      }
+    });
+
+    // Then load saved states from localStorage and apply them to the registered plugins
+    setTimeout(() => {
+      loadPlugins();
+      console.log('Plugin states loaded from localStorage');
+    }, 50); // Small delay to ensure plugin registration completes first
   }, [registerPlugin]);
 
   return (
