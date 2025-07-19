@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDeploymentStore } from '@/stores/deploymentStore';
 import { useCompilerStore } from '@/stores/compilerStore';
-import type {CompiledContract} from '@/types';
+import type { CompiledContract } from '@/types';
 import toast from 'react-hot-toast';
 
 const DeploymentPanel: React.FC = () => {
@@ -45,14 +45,14 @@ const DeploymentPanel: React.FC = () => {
 
   // Get the selected deployed contract
   const selectedDeployedContractData = selectedDeployedContract
-    ? Array.from(deployedContracts.values()).find(c => c.address === selectedDeployedContract)
+    ? Array.from(deployedContracts.values()).find((c) => c.address === selectedDeployedContract)
     : null;
 
   // Get constructor inputs from ABI
   const getConstructorInputs = (contract: CompiledContract | null) => {
     if (!contract) return [];
 
-    const constructorAbi = contract.abi.find(item => item.type === 'constructor');
+    const constructorAbi = contract.abi.find((item) => item.type === 'constructor');
     return constructorAbi?.inputs || [];
   };
 
@@ -61,7 +61,7 @@ const DeploymentPanel: React.FC = () => {
     if (!selectedDeployedContractData) return [];
 
     const methodAbi = selectedDeployedContractData.abi.find(
-      item => item.type === 'function' && item.name === methodName
+      (item) => item.type === 'function' && item.name === methodName,
     );
 
     return methodAbi?.inputs || [];
@@ -72,8 +72,8 @@ const DeploymentPanel: React.FC = () => {
     if (!selectedDeployedContractData) return [];
 
     return selectedDeployedContractData.abi
-      .filter(item => item.type === 'function')
-      .map(item => item.name);
+      .filter((item) => item.type === 'function')
+      .map((item) => item.name);
   };
 
   // Check if method is read-only
@@ -81,7 +81,7 @@ const DeploymentPanel: React.FC = () => {
     if (!selectedDeployedContractData) return true;
 
     const methodAbi = selectedDeployedContractData.abi.find(
-      item => item.type === 'function' && item.name === methodName
+      (item) => item.type === 'function' && item.name === methodName,
     );
 
     return methodAbi?.stateMutability === 'view' || methodAbi?.stateMutability === 'pure';
@@ -226,15 +226,13 @@ const DeploymentPanel: React.FC = () => {
     try {
       const parsedArgs = parseMethodArgs();
 
-      const options = isReadMethod(methodName)
-        ? {}
-        : { gas: parseInt(customGasLimit) };
+      const options = isReadMethod(methodName) ? {} : { gas: parseInt(customGasLimit) };
 
       const result = await callContractMethod(
         selectedDeployedContract,
         methodName,
         parsedArgs,
-        options
+        options,
       );
 
       setMethodResult(result);
@@ -269,9 +267,7 @@ const DeploymentPanel: React.FC = () => {
       <div className="p-4 space-y-6">
         {/* Wallet Connection */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-            Wallet Connection
-          </h3>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Wallet Connection</h3>
 
           {!account ? (
             <button
@@ -295,9 +291,7 @@ const DeploymentPanel: React.FC = () => {
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Connected Account
-                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Connected Account</div>
                 <button
                   onClick={handleDisconnectWallet}
                   className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
@@ -310,7 +304,8 @@ const DeploymentPanel: React.FC = () => {
                   {account}
                 </div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Balance: {formatBalance(balance)} {availableNetworks.find(n => n.id === selectedNetwork)?.symbol || 'ETH'}
+                  Balance: {formatBalance(balance)}{' '}
+                  {availableNetworks.find((n) => n.id === selectedNetwork)?.symbol || 'ETH'}
                 </div>
               </div>
 
@@ -320,11 +315,14 @@ const DeploymentPanel: React.FC = () => {
                   Network
                 </label>
                 <select
-                  value={availableNetworks.find(n => n.id === selectedNetwork)?.chainId.toString() || ''}
+                  value={
+                    availableNetworks.find((n) => n.id === selectedNetwork)?.chainId.toString() ||
+                    ''
+                  }
                   onChange={handleNetworkChange}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {availableNetworks.map(network => (
+                  {availableNetworks.map((network) => (
                     <option key={network.id} value={network.chainId.toString()}>
                       {network.name} {network.isTestnet ? '(Testnet)' : ''}
                     </option>
@@ -444,7 +442,7 @@ const DeploymentPanel: React.FC = () => {
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select a contract</option>
-                  {deployedContractsForNetwork.map(contract => (
+                  {deployedContractsForNetwork.map((contract) => (
                     <option key={contract.address} value={contract.address}>
                       {contract.name} ({formatAddress(contract.address)})
                     </option>
@@ -478,7 +476,7 @@ const DeploymentPanel: React.FC = () => {
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select a method</option>
-                      {getAvailableMethods().map(method => (
+                      {getAvailableMethods().map((method) => (
                         <option key={method} value={method}>
                           {method} {isReadMethod(method) ? '(read)' : '(write)'}
                         </option>
