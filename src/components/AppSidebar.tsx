@@ -5,7 +5,6 @@ import {
   GitBranch,
   LucideFile,
   LucidePlay,
-  LucidePlug2,
   LucideRefreshCw,
 } from 'lucide-react';
 
@@ -29,7 +28,6 @@ import FileExplorer from '@/components/FileExplorer/FileExplorer.tsx';
 import ErrorBoundary from '@/components/ErrorBoundary.tsx';
 import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
-import PluginPanel from '@/components/PluginUI/PluginPanel.tsx';
 import GitPanel from '@/components/Git/GitPanel.tsx';
 import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
@@ -87,18 +85,6 @@ const data = {
       component: (
         <ErrorBoundary>
           <GitPanel />
-        </ErrorBoundary>
-      ),
-    },
-    {
-      key: 'plugin',
-      title: 'Plugins',
-      url: '#',
-      icon: LucidePlug2,
-      isActive: false,
-      component: (
-        <ErrorBoundary>
-          <PluginPanel />
         </ErrorBoundary>
       ),
     },

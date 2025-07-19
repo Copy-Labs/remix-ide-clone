@@ -12,6 +12,7 @@ import FileExplorer from './components/FileExplorer/FileExplorer';
 import { corePlugins } from './plugins';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
+import { Button } from '@/components/ui/button.tsx';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,12 +22,17 @@ import {
 } from '@/components/ui/breadcrumb.tsx';
 import { AppSidebar } from './components/AppSidebar';
 import { ThemeProvider } from '@/components/ThemeProvider.tsx';
+import { Settings } from 'lucide-react';
+
+// Define main page views
+type MainView = 'editor' | 'plugins';
 
 function App() {
   const {files, activeFile, openTabs, createFile, openFile} = useFileStore();
   const {theme} = useEditorStore();
   const { registerPlugin } = usePluginStore();
   const [showPluginPanel, setShowPluginPanel] = useState(false);
+  const [mainView, setMainView] = useState<MainView>('editor');
 
   // Initialize sample files on first load
   React.useEffect(() => {
@@ -150,6 +156,27 @@ console.log("Result:", result);`;
               )}
               <div className={'flex items-center justify-end gap-2 w-full'}>
                 <div className="flex items-center space-x-4">
+                  {/* Main View Navigation */}
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant={mainView === 'editor' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMainView('editor')}
+                    >
+                      Editor
+                    </Button>
+                    <Button
+                      variant={mainView === 'plugins' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMainView('plugins')}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Plugin Manager
+                    </Button>
+                  </div>
+
+                  <Separator orientation="vertical" className="h-4" />
+
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       Files: {Array.from(files.values()).filter((f) => f.type === 'file').length}
@@ -162,72 +189,76 @@ console.log("Result:", result);`;
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4">
-              {activeFile ? (
+              {mainView === 'plugins' ? (
                 <div className="h-full">
-                  <div className="p-4">
-                    {/*<h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      {files.get(activeFile)?.name}
-                    </h3>*/}
-                    <Breadcrumb>
-                      <BreadcrumbList>
-                        <BreadcrumbItem className="hidden md:block">
-                          <BreadcrumbPage>{activeFile.split('/')[1]}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          <BreadcrumbPage>{activeFile.split('/')[activeFile.split('/').length-1]}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      </BreadcrumbList>
-                    </Breadcrumb>
-                    {/*<p className="text-sm text-gray-500 dark:text-gray-400">*/}
-                    {/*  {activeFile}*/}
-                    {/*</p>*/}
-                  </div>
-
-                  {/* Monaco Editor */}
-                  <div className="w-full h-[calc(100%-60px)]">
-                    <ErrorBoundary>
-                      <MonacoEditor filePath={activeFile} height="100%" />
-                    </ErrorBoundary>
-                  </div>
+                  <ErrorBoundary>
+                    <PluginPanel />
+                  </ErrorBoundary>
                 </div>
               ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">📝</div>
-                    <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-                      Welcome to Remix IDE Clone
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
-                      Select a file from the explorer to start editing
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto">
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <h3 className="font-medium text-gray-900 dark:text-white mb-2">Features</h3>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                          <li>✅ Modern React + TypeScript</li>
-                          <li>✅ Zustand State Management</li>
-                          <li>✅ Tailwind CSS Styling</li>
-                          <li>✅ Monaco Editor Integration</li>
-                          <li>✅ Solidity Compilation</li>
-                          <li>✅ Web3 Deployment</li>
-                        </ul>
+                <>
+                  {activeFile ? (
+                    <div className="h-full">
+                      <div className="p-4">
+                        <Breadcrumb>
+                          <BreadcrumbList>
+                            <BreadcrumbItem className="hidden md:block">
+                              <BreadcrumbPage>{activeFile.split('/')[1]}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="hidden md:block" />
+                            <BreadcrumbItem>
+                              <BreadcrumbPage>{activeFile.split('/')[activeFile.split('/').length-1]}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                          </BreadcrumbList>
+                        </Breadcrumb>
                       </div>
-                      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                          Quick Start
-                        </h3>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                          <li>1. Open Example.sol</li>
-                          <li>2. Edit the contract</li>
-                          <li>3. Compile with Solidity</li>
-                          <li>4. Deploy to testnet</li>
-                          <li>5. Interact with contract</li>
-                        </ul>
+
+                      {/* Monaco Editor */}
+                      <div className="w-full h-[calc(100%-60px)]">
+                        <ErrorBoundary>
+                          <MonacoEditor filePath={activeFile} height="100%" />
+                        </ErrorBoundary>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">📝</div>
+                        <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+                          Welcome to Remix IDE Clone
+                        </h2>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                          Select a file from the explorer to start editing, or use the Plugin Manager to configure your development environment
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto">
+                          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Features</h3>
+                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                              <li>✅ Modern React + TypeScript</li>
+                              <li>✅ Zustand State Management</li>
+                              <li>✅ Tailwind CSS Styling</li>
+                              <li>✅ Monaco Editor Integration</li>
+                              <li>✅ Solidity Compilation</li>
+                              <li>✅ Web3 Deployment</li>
+                            </ul>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                              Quick Start
+                            </h3>
+                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                              <li>1. Open Example.sol</li>
+                              <li>2. Edit the contract</li>
+                              <li>3. Compile with Solidity</li>
+                              <li>4. Deploy to testnet</li>
+                              <li>5. Interact with contract</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </SidebarInset>

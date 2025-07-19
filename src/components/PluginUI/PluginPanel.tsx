@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePluginStore } from '@/stores/pluginStore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Search, Settings, Zap, Shield, Palette, Code, Bug, Rocket, GitBranch, TestTube } from 'lucide-react';
 import CollaborationPluginUI from './CollaborationPluginUI';
 import BackupPluginUI from './BackupPluginUI';
 import CustomThemePluginUI from './CustomThemePluginUI';
@@ -9,12 +16,49 @@ import DeploymentPluginUI from './DeploymentPluginUI';
 import GitPluginUI from './GitPluginUI';
 import TestingPluginUI from './TestingPluginUI';
 
+// Plugin icon mapping
+const getPluginIcon = (pluginId: string) => {
+  const iconMap: Record<string, React.ComponentType<any>> = {
+    'collaboration': Zap,
+    'backup-sync': Shield,
+    'custom-theme-ui': Palette,
+    'code-analysis': Code,
+    'solidity-debugger': Bug,
+    'deployment-automation': Rocket,
+    'git-integration': GitBranch,
+    'testing-framework': TestTube,
+  };
+  return iconMap[pluginId] || Settings;
+};
+
 const PluginPanel: React.FC = () => {
   const { plugins, enablePlugin, disablePlugin } = usePluginStore();
   const [activePluginId, setActivePluginId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'disabled'>('all');
 
-  // Get all enabled plugins
-  const enabledPlugins = plugins.filter((plugin) => plugin.enabled);
+  // Filter and search plugins
+  const filteredPlugins = useMemo(() => {
+    return plugins.filter((plugin) => {
+      const matchesSearch = plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           plugin.author.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter = filterStatus === 'all' ||
+                           (filterStatus === 'enabled' && plugin.enabled) ||
+                           (filterStatus === 'disabled' && !plugin.enabled);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [plugins, searchQuery, filterStatus]);
+
+  // Get plugin statistics
+  const pluginStats = useMemo(() => {
+    const total = plugins.length;
+    const enabled = plugins.filter(p => p.enabled).length;
+    const disabled = total - enabled;
+    return { total, enabled, disabled };
+  }, [plugins]);
 
   // Handle plugin selection
   const handlePluginSelect = (pluginId: string) => {
@@ -31,87 +75,206 @@ const PluginPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Plugins</h2>
+    <div className="h-full flex flex-col bg-background">
+      {/* Header Section */}
+      <div className="border-b bg-card p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Plugin Manager</h1>
+            <p className="text-muted-foreground">
+              Manage and configure your development plugins
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {pluginStats.total} Total
+            </Badge>
+            <Badge variant="default" className="text-xs">
+              {pluginStats.enabled} Active
+            </Badge>
+          </div>
+        </div>
 
-        {/* Plugin Selection */}
-        <div className="space-y-2">
-          {plugins.map((plugin) => (
-            <div
-              key={plugin.id}
-              className="flex items-center justify-between p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+        {/* Search and Filter Section */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search plugins by name, description, or author..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={filterStatus === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('all')}
             >
-              <div
-                className="flex-1 flex items-center"
-                onClick={() => plugin.enabled && handlePluginSelect(plugin.id)}
-              >
-                <span
-                  className={`mr-2 text-sm font-medium ${plugin.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}
-                >
-                  {plugin.name}
-                </span>
-              </div>
-
-              <div className="flex items-center">
-                {/* Toggle switch */}
-                <label className="inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={plugin.enabled}
-                    onChange={() => handleTogglePlugin(plugin.id, plugin.enabled)}
-                  />
-                  <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-          ))}
+              All
+            </Button>
+            <Button
+              variant={filterStatus === 'enabled' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('enabled')}
+            >
+              Enabled
+            </Button>
+            <Button
+              variant={filterStatus === 'disabled' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterStatus('disabled')}
+            >
+              Disabled
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Plugin Content */}
-      <div className="flex-1 overflow-auto">
-        {activePluginId && (
-          <div className="h-full">
-            {activePluginId === 'collaboration' && (
-              <CollaborationPluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'backup-sync' && <BackupPluginUI pluginId={activePluginId} />}
-            {activePluginId === 'custom-theme-ui' && (
-              <CustomThemePluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'code-analysis' && (
-              <AnalysisPluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'solidity-debugger' && (
-              <DebuggerPluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'deployment-automation' && (
-              <DeploymentPluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'git-integration' && (
-              <GitPluginUI pluginId={activePluginId} />
-            )}
-            {activePluginId === 'testing-framework' && (
-              <TestingPluginUI pluginId={activePluginId} />
-            )}
-          </div>
-        )}
+      <div className="flex-1 flex">
+        {/* Plugin List Section */}
+        <div className="w-1/2 border-r bg-card/50">
+          <div className="p-4">
+            {filteredPlugins.length === 0 ? (
+              <div className="text-center py-12">
+                <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No plugins found</h3>
+                <p className="text-muted-foreground">
+                  {searchQuery ? 'Try adjusting your search terms' : 'No plugins match the current filter'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredPlugins.map((plugin) => {
+                  const IconComponent = getPluginIcon(plugin.id);
+                  const isActive = activePluginId === plugin.id;
 
-        {!activePluginId && (
-          <div className="h-full flex items-center justify-center p-4">
-            <div className="text-center">
-              <div className="text-4xl mb-4">🔌</div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No Plugin Selected
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Select a plugin from the list above to view its interface
-              </p>
-            </div>
+                  return (
+                    <Card
+                      key={plugin.id}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        isActive ? 'ring-2 ring-primary shadow-md' : ''
+                      } ${!plugin.enabled ? 'opacity-60' : ''}`}
+                      onClick={() => plugin.enabled && handlePluginSelect(plugin.id)}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${
+                              plugin.enabled 
+                                ? 'bg-primary/10 text-primary' 
+                                : 'bg-muted text-muted-foreground'
+                            }`}>
+                              <IconComponent className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-base">{plugin.name}</CardTitle>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge
+                                  variant={plugin.enabled ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {plugin.enabled ? 'Enabled' : 'Disabled'}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  v{plugin.version}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <CardAction>
+                            <Switch
+                              checked={plugin.enabled}
+                              onCheckedChange={() => handleTogglePlugin(plugin.id, plugin.enabled)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </CardAction>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <CardDescription className="text-sm line-clamp-2">
+                          {plugin.description}
+                        </CardDescription>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                          <span className="text-xs text-muted-foreground">
+                            by {plugin.author}
+                          </span>
+                          {plugin.enabled && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePluginSelect(plugin.id);
+                              }}
+                            >
+                              {isActive ? 'Hide' : 'Configure'}
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Plugin Content Section */}
+        <div className="flex-1 bg-background">
+          {activePluginId ? (
+            <div className="h-full">
+              {activePluginId === 'collaboration' && (
+                <CollaborationPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'backup-sync' && <BackupPluginUI pluginId={activePluginId} />}
+              {activePluginId === 'custom-theme-ui' && (
+                <CustomThemePluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'code-analysis' && (
+                <AnalysisPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'solidity-debugger' && (
+                <DebuggerPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'deployment-automation' && (
+                <DeploymentPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'git-integration' && (
+                <GitPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'testing-framework' && (
+                <TestingPluginUI pluginId={activePluginId} />
+              )}
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center p-8">
+              <div className="text-center max-w-md">
+                <div className="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Settings className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">
+                  Select a Plugin to Configure
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  Choose an enabled plugin from the list to view its configuration options and settings.
+                </p>
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span>Enable plugins using the toggle switches</span>
+                  </div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span>Click on enabled plugins to configure them</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
