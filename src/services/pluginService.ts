@@ -1,4 +1,4 @@
-import { info, error, debug, warn } from './loggerService';
+import { debug, error, info, warn } from './loggerService';
 import type { Plugin, PluginAPI, PluginConfig } from '@/types';
 import { useFileStore } from '@/stores/fileStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -10,7 +10,7 @@ import { useDeploymentStore } from '@/stores/deploymentStore';
  */
 class PluginService {
   private static instance: PluginService;
-  private plugins: Map<string, Plugin> = new Map();
+  private plugins = new Map<string, Plugin>();
 
   private constructor() {
     debug('PluginService', 'PluginService initialized');
@@ -40,16 +40,20 @@ class PluginService {
     const api = this.createPluginAPI(plugin.id);
 
     // Create complete plugin object with explicit mutable properties
-    const completePlugin: Plugin = {
-      id: plugin.id,
-      name: plugin.name,
-      version: plugin.version,
-      description: plugin.description,
-      author: plugin.author,
-      enabled: plugin.enabled,
-      config: { ...plugin.config },
-      api
-    };
+    // Use Object.assign to ensure the object is mutable and not frozen
+    const completePlugin: Plugin = Object.assign(
+      {},
+      {
+        id: plugin.id,
+        name: plugin.name,
+        version: plugin.version,
+        description: plugin.description,
+        author: plugin.author,
+        enabled: plugin.enabled,
+        config: JSON.parse(JSON.stringify(plugin.config)), // Deep copy to ensure mutability
+        api,
+      },
+    );
 
     // Store plugin
     this.plugins.set(plugin.id, completePlugin);
@@ -93,18 +97,15 @@ class PluginService {
    * @param pluginId The ID of the plugin to enable
    */
   public enablePlugin(pluginId: string): boolean {
-    console.log(`🔄 PluginService: Attempting to enable plugin ${pluginId}`);
     const plugin = this.plugins.get(pluginId);
     if (!plugin) {
-      console.log(`🔄 PluginService: Plugin ${pluginId} not found in service`);
       warn('PluginService', `Plugin with id ${pluginId} not found`);
       return false;
     }
 
-    console.log(`🔄 PluginService: Found plugin ${pluginId}, current enabled state:`, plugin.enabled);
-    plugin.enabled = true;
-    console.log(`🔄 PluginService: Set plugin ${pluginId} enabled = true`);
-    info('PluginService', `Plugin ${plugin.name} (${pluginId}) enabled`);
+    // Don't mutate the plugin object directly - let the store handle state updates
+    // Just verify the plugin exists and return success
+    info('PluginService', `Plugin ${plugin.name} (${pluginId}) enable requested`);
     return true;
   }
 
@@ -113,18 +114,15 @@ class PluginService {
    * @param pluginId The ID of the plugin to disable
    */
   public disablePlugin(pluginId: string): boolean {
-    console.log(`🔄 PluginService: Attempting to disable plugin ${pluginId}`);
     const plugin = this.plugins.get(pluginId);
     if (!plugin) {
-      console.log(`🔄 PluginService: Plugin ${pluginId} not found in service`);
       warn('PluginService', `Plugin with id ${pluginId} not found`);
       return false;
     }
 
-    console.log(`🔄 PluginService: Found plugin ${pluginId}, current enabled state:`, plugin.enabled);
-    plugin.enabled = false;
-    console.log(`🔄 PluginService: Set plugin ${pluginId} enabled = false`);
-    info('PluginService', `Plugin ${plugin.name} (${pluginId}) disabled`);
+    // Don't mutate the plugin object directly - let the store handle state updates
+    // Just verify the plugin exists and return success
+    info('PluginService', `Plugin ${plugin.name} (${pluginId}) disable requested`);
     return true;
   }
 
@@ -170,7 +168,7 @@ class PluginService {
         }
         fileStore.updateFile(path, content);
       },
-      createFile: async (path: string, content: string = '') => {
+      createFile: async (path: string, content = '') => {
         fileStore.createFile(path, content);
       },
       deleteFile: async (path: string) => {
@@ -178,7 +176,7 @@ class PluginService {
       },
       renameFile: async (oldPath: string, newPath: string) => {
         fileStore.renameFile(oldPath, newPath);
-      }
+      },
     };
 
     // Create editor API
@@ -204,7 +202,7 @@ class PluginService {
       },
       closeFile: (path: string) => {
         fileStore.closeFile(path);
-      }
+      },
     };
 
     // Create compiler API
@@ -214,7 +212,7 @@ class PluginService {
       },
       getCompilationResult: (contractName: string) => {
         return compilerStore.getCompilationResult(contractName);
-      }
+      },
     };
 
     // Create deployment API
@@ -227,7 +225,7 @@ class PluginService {
       },
       interact: async (contract, method, args) => {
         return deploymentStore.interact(contract, method, args);
-      }
+      },
     };
 
     // Create UI API
@@ -243,7 +241,7 @@ class PluginService {
       showContextMenu: (menu) => {
         // Implementation will be added when UI store is available
         console.log('Show context menu:', menu);
-      }
+      },
     };
 
     return {
@@ -251,7 +249,7 @@ class PluginService {
       editor,
       compiler,
       deployment,
-      ui
+      ui,
     };
   }
 }
@@ -263,20 +261,15 @@ export const getPluginService = () => PluginService.getInstance();
 export const registerPlugin = (plugin: Omit<Plugin, 'api'>) =>
   getPluginService().registerPlugin(plugin);
 
-export const unregisterPlugin = (pluginId: string) =>
-  getPluginService().unregisterPlugin(pluginId);
+export const unregisterPlugin = (pluginId: string) => getPluginService().unregisterPlugin(pluginId);
 
-export const getPlugin = (pluginId: string) =>
-  getPluginService().getPlugin(pluginId);
+export const getPlugin = (pluginId: string) => getPluginService().getPlugin(pluginId);
 
-export const getAllPlugins = () =>
-  getPluginService().getAllPlugins();
+export const getAllPlugins = () => getPluginService().getAllPlugins();
 
-export const enablePlugin = (pluginId: string) =>
-  getPluginService().enablePlugin(pluginId);
+export const enablePlugin = (pluginId: string) => getPluginService().enablePlugin(pluginId);
 
-export const disablePlugin = (pluginId: string) =>
-  getPluginService().disablePlugin(pluginId);
+export const disablePlugin = (pluginId: string) => getPluginService().disablePlugin(pluginId);
 
 export const updatePluginConfig = (pluginId: string, config: PluginConfig) =>
   getPluginService().updatePluginConfig(pluginId, config);

@@ -98,24 +98,17 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
       enablePlugin: (pluginId) => {
         try {
-          console.log(`🔄 PluginStore: Attempting to enable plugin ${pluginId}`);
           const result = enablePlugin(pluginId);
-          console.log(`🔄 PluginStore: Service enable result for ${pluginId}:`, result);
 
           if (result) {
-            console.log(`🔄 PluginStore: Updating state for plugin ${pluginId}`);
             set((state) => {
               const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
-                console.log(`🔄 PluginStore: Found plugin ${pluginId}, setting enabled = true`);
                 plugin.enabled = true;
-              } else {
-                console.log(`🔄 PluginStore: Plugin ${pluginId} not found in state`);
               }
             });
 
             // Save changes to localStorage
-            console.log(`🔄 PluginStore: Saving plugins to localStorage`);
             get().savePlugins();
 
             info('PluginStore', `Plugin ${pluginId} enabled`);
@@ -123,7 +116,6 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           return result;
         } catch (err) {
-          console.error(`🔄 PluginStore: Error enabling plugin ${pluginId}:`, err);
           error('PluginStore', `Failed to enable plugin ${pluginId}`, err);
           set((state) => {
             state.error = err instanceof Error ? err.message : 'Unknown error enabling plugin';
@@ -134,27 +126,19 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
       disablePlugin: (pluginId) => {
         try {
-          console.log(`🔄 PluginStore: Attempting to disable plugin ${pluginId}`);
           const result = disablePlugin(pluginId);
-          console.log(`🔄 PluginStore: Service disable result for ${pluginId}:`, result);
 
           if (result) {
-            console.log(`🔄 PluginStore: Updating state for plugin ${pluginId}`);
             set((state) => {
               const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
-                console.log(`🔄 PluginStore: Found plugin ${pluginId}, setting enabled = false`);
                 plugin.enabled = false;
-              } else {
-                console.log(`🔄 PluginStore: Plugin ${pluginId} not found in state`);
               }
               // Also deactivate the plugin if it's active
-              console.log(`🔄 PluginStore: Removing ${pluginId} from active plugins`);
               state.activePlugins = state.activePlugins.filter((id) => id !== pluginId);
             });
 
             // Save changes to localStorage
-            console.log(`🔄 PluginStore: Saving plugins to localStorage`);
             get().savePlugins();
 
             info('PluginStore', `Plugin ${pluginId} disabled`);
@@ -162,7 +146,6 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
           return result;
         } catch (err) {
-          console.error(`🔄 PluginStore: Error disabling plugin ${pluginId}:`, err);
           error('PluginStore', `Failed to disable plugin ${pluginId}`, err);
           set((state) => {
             state.error = err instanceof Error ? err.message : 'Unknown error disabling plugin';
