@@ -6,6 +6,13 @@ import {
   LucideFile,
   LucidePlay,
   LucideRefreshCw,
+  Settings,
+  Zap,
+  Shield,
+  Palette,
+  Code,
+  Rocket,
+  TestTube,
 } from 'lucide-react';
 
 import { NavUser } from '@/components/NavUser';
@@ -30,7 +37,44 @@ import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
 import GitPanel from '@/components/Git/GitPanel.tsx';
 import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
+import CollaborationPluginUI from '@/components/PluginUI/CollaborationPluginUI.tsx';
+import BackupPluginUI from '@/components/PluginUI/BackupPluginUI.tsx';
+import CustomThemePluginUI from '@/components/PluginUI/CustomThemePluginUI.tsx';
+import AnalysisPluginUI from '@/components/PluginUI/AnalysisPluginUI.tsx';
+import DeploymentPluginUI from '@/components/PluginUI/DeploymentPluginUI.tsx';
+import GitPluginUI from '@/components/PluginUI/GitPluginUI.tsx';
+import TestingPluginUI from '@/components/PluginUI/TestingPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
+
+// Plugin icon mapping
+const getPluginIcon = (pluginId: string) => {
+  const iconMap: Record<string, React.ComponentType<any>> = {
+    'collaboration': Zap,
+    'backup-sync': Shield,
+    'custom-theme-ui': Palette,
+    'code-analysis': Code,
+    'solidity-debugger': Bug,
+    'deployment-automation': Rocket,
+    'git-integration': GitBranch,
+    'testing-framework': TestTube,
+  };
+  return iconMap[pluginId] || Settings;
+};
+
+// Plugin UI component mapping
+const getPluginComponent = (pluginId: string) => {
+  const componentMap: Record<string, React.ComponentType<{ pluginId: string }>> = {
+    'collaboration': CollaborationPluginUI,
+    'backup-sync': BackupPluginUI,
+    'custom-theme-ui': CustomThemePluginUI,
+    'code-analysis': AnalysisPluginUI,
+    'solidity-debugger': DebuggerPluginUI,
+    'deployment-automation': DeploymentPluginUI,
+    'git-integration': GitPluginUI,
+    'testing-framework': TestingPluginUI,
+  };
+  return componentMap[pluginId];
+};
 
 // This is sample data
 const data = {
@@ -97,35 +141,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { plugins } = usePluginStore();
   const { setOpen } = useSidebar();
 
-  // Check if debugger plugin is enabled
-  const debuggerPlugin = plugins.find((p) => p.id === 'solidity-debugger');
-  const isDebuggerEnabled = debuggerPlugin?.enabled || false;
-
   // Create dynamic navigation items
   const navItems = React.useMemo(() => {
     const baseItems = [...data.navMain];
 
-    // Add debugger to sidebar if enabled
-    if (isDebuggerEnabled) {
-      const debuggerItem = {
-        key: 'debugger',
-        title: 'Debugger',
-        url: '#',
-        icon: Bug,
-        isActive: false,
-        component: (
-          <ErrorBoundary>
-            <DebuggerPluginUI pluginId="solidity-debugger" />
-          </ErrorBoundary>
-        ),
-      };
+    // Add all enabled plugins to sidebar
+    const enabledPlugins = plugins.filter(plugin => plugin.enabled);
 
-      // Insert debugger after compiler (index 2)
-      baseItems.splice(2, 0, debuggerItem);
-    }
+    enabledPlugins.forEach((plugin, index) => {
+      const PluginComponent = getPluginComponent(plugin.id);
+      const PluginIcon = getPluginIcon(plugin.id);
+
+      if (PluginComponent) {
+        const pluginItem = {
+          key: plugin.id,
+          title: plugin.name,
+          url: '#',
+          icon: PluginIcon,
+          isActive: false,
+          component: (
+            <ErrorBoundary>
+              <PluginComponent pluginId={plugin.id} />
+            </ErrorBoundary>
+          ),
+        };
+
+        // Insert plugins after the base items (file explorer, compiler, deployment, git)
+        // This ensures plugins appear at the end of the sidebar
+        baseItems.push(pluginItem);
+      }
+    });
 
     return baseItems;
-  }, [isDebuggerEnabled]);
+  }, [plugins]);
 
   const [activeItem, setActiveItem] = React.useState(navItems[0]);
 
