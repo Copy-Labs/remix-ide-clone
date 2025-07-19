@@ -93,13 +93,17 @@ class PluginService {
    * @param pluginId The ID of the plugin to enable
    */
   public enablePlugin(pluginId: string): boolean {
+    console.log(`🔄 PluginService: Attempting to enable plugin ${pluginId}`);
     const plugin = this.plugins.get(pluginId);
     if (!plugin) {
+      console.log(`🔄 PluginService: Plugin ${pluginId} not found in service`);
       warn('PluginService', `Plugin with id ${pluginId} not found`);
       return false;
     }
 
+    console.log(`🔄 PluginService: Found plugin ${pluginId}, current enabled state:`, plugin.enabled);
     plugin.enabled = true;
+    console.log(`🔄 PluginService: Set plugin ${pluginId} enabled = true`);
     info('PluginService', `Plugin ${plugin.name} (${pluginId}) enabled`);
     return true;
   }
@@ -109,13 +113,17 @@ class PluginService {
    * @param pluginId The ID of the plugin to disable
    */
   public disablePlugin(pluginId: string): boolean {
+    console.log(`🔄 PluginService: Attempting to disable plugin ${pluginId}`);
     const plugin = this.plugins.get(pluginId);
     if (!plugin) {
+      console.log(`🔄 PluginService: Plugin ${pluginId} not found in service`);
       warn('PluginService', `Plugin with id ${pluginId} not found`);
       return false;
     }
 
+    console.log(`🔄 PluginService: Found plugin ${pluginId}, current enabled state:`, plugin.enabled);
     plugin.enabled = false;
+    console.log(`🔄 PluginService: Set plugin ${pluginId} enabled = false`);
     info('PluginService', `Plugin ${plugin.name} (${pluginId}) disabled`);
     return true;
   }
