@@ -4,6 +4,8 @@ import type {FileNode} from '@/types';
 import FileTreeItem from './FileTreeItem';
 import FileExplorerHeader from './FileExplorerHeader';
 import ContextMenu from './ContextMenu';
+import { LucideFile, LucideFolder } from 'lucide-react';
+import { Input } from '@/components/ui/input.tsx';
 
 interface FileExplorerProps {
   className?: string;
@@ -146,7 +148,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
   }, [clearSelection, closeContextMenu]);
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
+    <div className={`flex flex-col h-full max-w-full ${className}`}>
       <FileExplorerHeader
         onCreateFile={() => handleCreateNew('file', '/')}
         onCreateFolder={() => handleCreateNew('folder', '/')}
@@ -236,16 +238,16 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
   return (
     <form onSubmit={handleSubmit} className="flex items-center space-x-2 p-1">
       <span className="text-sm">
-        {type === 'folder' ? '📁' : '📄'}
+        {type === 'folder' ? <LucideFolder size={16} /> : <LucideFile size={16} />}
       </span>
-      <input
+      <Input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
         placeholder={`New ${type} name`}
-        className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+        // className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
         autoFocus
       />
     </form>

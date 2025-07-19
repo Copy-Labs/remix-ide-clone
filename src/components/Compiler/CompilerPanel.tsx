@@ -56,10 +56,15 @@ const CompilerPanel: React.FC = () => {
 
     // Allow compilation of empty files (new files should be compilable)
     const solidityFiles: Record<string, string> = {
-      [activeFile]: content || ''
+      [activeFile]: content || '',
     };
 
-    console.log('Compiling active file:', activeFile, 'with content length:', (content || '').length);
+    console.log(
+      'Compiling active file:',
+      activeFile,
+      'with content length:',
+      (content || '').length,
+    );
     await compile(solidityFiles);
   };
 
@@ -69,12 +74,10 @@ const CompilerPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <div className="h-full max-w-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Solidity Compiler
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Solidity Compiler</h2>
       </div>
 
       <div className="p-4 space-y-6">
@@ -98,7 +101,7 @@ const CompilerPanel: React.FC = () => {
               {availableVersions.length === 0 ? (
                 <option value="">Loading versions...</option>
               ) : (
-                availableVersions.map(version => (
+                availableVersions.map((version) => (
                   <option key={version} value={version}>
                     {version}
                   </option>
@@ -131,7 +134,10 @@ const CompilerPanel: React.FC = () => {
                 onChange={(e) => setOptimizationEnabled(e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
               />
-              <label htmlFor="optimization" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="optimization"
+                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+              >
                 Enable optimization
               </label>
             </div>
@@ -203,7 +209,9 @@ const CompilerPanel: React.FC = () => {
               </div>
               <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-sm">
                 <div className="text-gray-600 dark:text-gray-400">Errors</div>
-                <div className={`font-medium ${summary.totalErrors > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <div
+                  className={`font-medium ${summary.totalErrors > 0 ? 'text-red-600' : 'text-green-600'}`}
+                >
                   {summary.totalErrors}
                 </div>
               </div>
@@ -215,14 +223,12 @@ const CompilerPanel: React.FC = () => {
                 <h4 className="text-xs font-medium text-red-600 mb-2">Errors</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {compilationResult.errors.map((error, index) => (
-                    <div key={index}
-                         className="text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded-sm border-l-2 border-red-500">
-                      <div className="font-medium text-red-800 dark:text-red-400">
-                        {error.type}
-                      </div>
-                      <div className="text-red-700 dark:text-red-300 mt-1">
-                        {error.message}
-                      </div>
+                    <div
+                      key={index}
+                      className="text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded-sm border-l-2 border-red-500"
+                    >
+                      <div className="font-medium text-red-800 dark:text-red-400">{error.type}</div>
+                      <div className="text-red-700 dark:text-red-300 mt-1">{error.message}</div>
                       {error.sourceLocation.file && (
                         <div className="text-red-600 dark:text-red-400 mt-1">
                           {error.sourceLocation.file}:{error.sourceLocation.start}
@@ -240,11 +246,11 @@ const CompilerPanel: React.FC = () => {
                 <h4 className="text-xs font-medium text-yellow-600 mb-2">Warnings</h4>
                 <div className="space-y-1 max-h-24 overflow-y-auto">
                   {compilationResult.warnings.map((warning, index) => (
-                    <div key={index}
-                         className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-sm border-l-2 border-yellow-500">
-                      <div className="text-yellow-700 dark:text-yellow-300">
-                        {warning.message}
-                      </div>
+                    <div
+                      key={index}
+                      className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-sm border-l-2 border-yellow-500"
+                    >
+                      <div className="text-yellow-700 dark:text-yellow-300">{warning.message}</div>
                     </div>
                   ))}
                 </div>
@@ -257,11 +263,11 @@ const CompilerPanel: React.FC = () => {
                 <h4 className="text-xs font-medium text-gray-900 dark:text-white mb-2">
                   Compiled Contracts
                 </h4>
-                <div className="space-y-2">
-                  {Object.keys(compilationResult.contracts).map(contractName => (
+                <div className="w-full space-y-2">
+                  {Object.keys(compilationResult.contracts).map((contractName) => (
                     <div
                       key={contractName}
-                      className={`p-2 rounded border cursor-pointer transition-colors ${
+                      className={`w-full p-2 rounded border cursor-pointer transition-colors ${
                         selectedContract === contractName
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
@@ -271,7 +277,7 @@ const CompilerPanel: React.FC = () => {
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {contractName}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 w-full break-words">
                         {formatBytecode(compilationResult.contracts[contractName].bytecode)}
                       </div>
                     </div>
@@ -290,7 +296,10 @@ const CompilerPanel: React.FC = () => {
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">ABI Functions:</span>
                     <span className="ml-2 text-gray-900 dark:text-white">
-                      {selectedContractData.abi.filter((item: any) => item.type === 'function').length}
+                      {
+                        selectedContractData.abi.filter((item: any) => item.type === 'function')
+                          .length
+                      }
                     </span>
                   </div>
                   <div>
@@ -304,9 +313,7 @@ const CompilerPanel: React.FC = () => {
                     <span className="ml-2 text-gray-900 dark:text-white">
                       {selectedContractData.bytecode.length / 2} bytes
                       {!isContractSizeValid(selectedContractData.bytecode) && (
-                        <span className="ml-2 text-red-500">
-                          (Exceeds size limit)
-                        </span>
+                        <span className="ml-2 text-red-500">(Exceeds size limit)</span>
                       )}
                     </span>
                   </div>
