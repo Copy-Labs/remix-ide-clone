@@ -11,7 +11,7 @@ export const testingPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Write and run tests for your Solidity smart contracts',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     testFolder: '/tests',
     autoRunOnSave: false,
@@ -101,16 +101,16 @@ const ${contractName} = artifacts.require("${contractName}");
 
 contract("${contractName}", accounts => {
   let instance;
-  
+
   before(async () => {
     instance = await ${contractName}.deployed();
   });
-  
+
   it("should initialize correctly", async () => {
     // Add your test here
     assert.ok(instance);
   });
-  
+
   it("should perform expected operations", async () => {
     // Add your test here
     // Example: const result = await instance.someMethod();

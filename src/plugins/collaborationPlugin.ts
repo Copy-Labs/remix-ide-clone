@@ -11,7 +11,7 @@ export const collaborationPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Collaborate with other developers on your smart contracts',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     sharingEnabled: true,
     realTimeEditingEnabled: true,

@@ -11,7 +11,7 @@ export const gitPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Provides Git integration for managing your smart contract versions',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     defaultBranch: 'main',
     autoCommit: false,

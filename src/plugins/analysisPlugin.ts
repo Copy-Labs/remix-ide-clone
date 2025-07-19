@@ -11,7 +11,7 @@ export const analysisPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Analyze your Solidity code for potential issues and enforce coding standards',
   author: 'Remix IDE Clone Team',
-  enabled: true,
+  enabled: false,
   config: {
     autoAnalyze: true,
     securityRules: true,
