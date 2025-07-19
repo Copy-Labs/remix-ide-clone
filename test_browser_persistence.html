@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugin Persistence Browser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .storage-content {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Plugin Persistence Browser Test</h1>
+    <p>This test simulates the plugin persistence workflow to identify issues in the browser environment.</p>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <button onclick="simulateAppRestart()">Simulate App Restart</button>
+        <button onclick="showStorageContent()">Show Storage Content</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Storage Content</h2>
+        <div id="storage-content" class="storage-content"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Plugin State Simulation</h2>
+        <div id="plugin-simulation"></div>
+    </div>
+
+    <script>
+        // Simulate the plugin store structure
+        const mockPlugins = [
+            {
+                id: 'git-integration',
+                name: 'Git Integration',
+                version: '1.0.0',
+                description: 'Provides Git integration for managing your smart contract versions',
+                author: 'Remix IDE Clone Team',
+                enabled: false,
+                config: {
+                    defaultBranch: 'main',
+                    autoCommit: false,
+                    remoteUrl: '',
+                    username: '',
+                    email: '',
+                    authToken: '',
+                }
+            },
+            {
+                id: 'solidity-debugger',
+                name: 'Solidity Debugger',
+                version: '1.0.0',
+                description: 'Debug your Solidity smart contracts with step-by-step execution',
+                author: 'Remix IDE Clone Team',
+                enabled: false,
+                config: {
+                    showLocalVariables: true,
+                    showStateVariables: true,
+                    showCallStack: true,
+                    showMemory: true,
+                }
+            },
+            {
+                id: 'testing-framework',
+                name: 'Testing Framework',
+                version: '1.0.0',
+                description: 'Write and run tests for your Solidity smart contracts',
+                author: 'Remix IDE Clone Team',
+                enabled: false,
+                config: {
+                    testFolder: '/tests',
+                    autoRunOnSave: false,
+                    gasLimit: 6000000,
+                    showCoverage: true,
+                    testTimeout: 5000,
+                    testFramework: 'mocha',
+                }
+            }
+        ];
+
+        let currentPlugins = JSON.parse(JSON.stringify(mockPlugins)); // Deep copy
+        let activePlugins = [];
+
+        function logResult(message, isPass, isInfo = false) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${isInfo ? 'info' : (isPass ? 'pass' : 'fail')}`;
+            resultDiv.textContent = `${isInfo ? 'ℹ️' : (isPass ? '✅' : '❌')} ${message}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+        }
+
+        function showStorageContent() {
+            const storageDiv = document.getElementById('storage-content');
+            const plugins = localStorage.getItem('plugins');
+            const activePlugins = localStorage.getItem('activePlugins');
+
+            let content = 'localStorage Content:\n\n';
+            content += `plugins: ${plugins || 'null'}\n\n`;
+            content += `activePlugins: ${activePlugins || 'null'}\n\n`;
+
+            if (plugins) {
+                try {
+                    const parsedPlugins = JSON.parse(plugins);
+                    content += `Parsed plugins (${parsedPlugins.length} items):\n`;
+                    parsedPlugins.forEach(plugin => {
+                        content += `  - ${plugin.name}: enabled=${plugin.enabled}\n`;
+                    });
+                } catch (e) {
+                    content += `Error parsing plugins: ${e.message}\n`;
+                }
+            }
+
+            storageDiv.textContent = content;
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('plugins');
+            localStorage.removeItem('activePlugins');
+            logResult('Storage cleared', true, true);
+            showStorageContent();
+        }
+
+        // Simulate the savePlugins function
+        function savePlugins() {
+            try {
+                const serializablePlugins = currentPlugins.map(
+                    ({ id, name, version, description, author, enabled, config }) => ({
+                        id,
+                        name,
+                        version,
+                        description,
+                        author,
+                        enabled,
+                        config,
+                    }),
+                );
+
+                localStorage.setItem('plugins', JSON.stringify(serializablePlugins));
+                localStorage.setItem('activePlugins', JSON.stringify(activePlugins));
+
+                return true;
+            } catch (err) {
+                console.error('Failed to save plugins to localStorage', err);
+                return false;
+            }
+        }
+
+        // Simulate the loadPlugins function
+        function loadPlugins() {
+            try {
+                const savedPluginsStr = localStorage.getItem('plugins');
+                const savedActivePluginsStr = localStorage.getItem('activePlugins');
+
+                if (savedPluginsStr) {
+                    const savedPlugins = JSON.parse(savedPluginsStr);
+
+                    // Create a map of saved plugin states for quick lookup
+                    const savedPluginStates = new Map(
+                        savedPlugins.map((plugin) => [plugin.id, plugin])
+                    );
+
+                    // Update existing plugins with saved states
+                    currentPlugins.forEach((plugin) => {
+                        const savedState = savedPluginStates.get(plugin.id);
+                        if (savedState) {
+                            // Preserve the saved enabled state and config
+                            plugin.enabled = savedState.enabled;
+                            plugin.config = { ...plugin.config, ...savedState.config };
+                        }
+                    });
+                }
+
+                if (savedActivePluginsStr) {
+                    activePlugins = JSON.parse(savedActivePluginsStr);
+                }
+
+                return true;
+            } catch (err) {
+                console.error('Failed to load plugins from localStorage', err);
+                return false;
+            }
+        }
+
+        // Simulate enabling a plugin
+        function enablePlugin(pluginId) {
+            const plugin = currentPlugins.find(p => p.id === pluginId);
+            if (!plugin) {
+                return false;
+            }
+
+            plugin.enabled = true;
+
+            // Save changes to localStorage
+            const saveResult = savePlugins();
+
+            return saveResult;
+        }
+
+        // Simulate disabling a plugin
+        function disablePlugin(pluginId) {
+            const plugin = currentPlugins.find(p => p.id === pluginId);
+            if (!plugin) {
+                return false;
+            }
+
+            plugin.enabled = false;
+
+            // Also deactivate the plugin if it's active
+            activePlugins = activePlugins.filter(id => id !== pluginId);
+
+            // Save changes to localStorage
+            const saveResult = savePlugins();
+
+            return saveResult;
+        }
+
+        function updatePluginSimulation() {
+            const simulationDiv = document.getElementById('plugin-simulation');
+            simulationDiv.innerHTML = '<h3>Current Plugin States:</h3>';
+
+            currentPlugins.forEach(plugin => {
+                const pluginDiv = document.createElement('div');
+                pluginDiv.style.margin = '10px 0';
+                pluginDiv.style.padding = '10px';
+                pluginDiv.style.border = '1px solid #ccc';
+                pluginDiv.style.borderRadius = '3px';
+
+                pluginDiv.innerHTML = `
+                    <strong>${plugin.name}</strong> (${plugin.id})<br>
+                    Status: <span style="color: ${plugin.enabled ? 'green' : 'red'}">${plugin.enabled ? 'Enabled' : 'Disabled'}</span><br>
+                    <button onclick="togglePlugin('${plugin.id}')">${plugin.enabled ? 'Disable' : 'Enable'}</button>
+                `;
+
+                simulationDiv.appendChild(pluginDiv);
+            });
+        }
+
+        function togglePlugin(pluginId) {
+            const plugin = currentPlugins.find(p => p.id === pluginId);
+            if (!plugin) return;
+
+            const result = plugin.enabled ? disablePlugin(pluginId) : enablePlugin(pluginId);
+
+            logResult(`${plugin.enabled ? 'Enabled' : 'Disabled'} plugin: ${plugin.name}`, result, true);
+            updatePluginSimulation();
+            showStorageContent();
+        }
+
+        function simulateAppRestart() {
+            logResult('Simulating app restart...', true, true);
+
+            // Reset plugins to default state (all disabled)
+            currentPlugins = JSON.parse(JSON.stringify(mockPlugins));
+            activePlugins = [];
+
+            // Load saved states
+            const loadResult = loadPlugins();
+
+            logResult(`App restart simulation: ${loadResult ? 'Success' : 'Failed'}`, loadResult);
+            updatePluginSimulation();
+            showStorageContent();
+        }
+
+        function runAllTests() {
+            clearResults();
+            logResult('Starting comprehensive plugin persistence tests...', true, true);
+
+            // Test 1: Initial state
+            logResult('Test 1: Checking initial plugin states', true, true);
+            const allDisabled = currentPlugins.every(p => !p.enabled);
+            logResult(`All plugins start disabled: ${allDisabled}`, allDisabled);
+
+            // Test 2: Enable a plugin and save
+            logResult('Test 2: Enable plugin and save', true, true);
+            const enableResult = enablePlugin('git-integration');
+            logResult(`Enable git-integration: ${enableResult}`, enableResult);
+
+            const gitPlugin = currentPlugins.find(p => p.id === 'git-integration');
+            const gitEnabled = gitPlugin && gitPlugin.enabled;
+            logResult(`Git plugin is enabled in memory: ${gitEnabled}`, gitEnabled);
+
+            // Test 3: Check if saved to localStorage
+            logResult('Test 3: Check localStorage save', true, true);
+            const savedPluginsStr = localStorage.getItem('plugins');
+            const hasSavedData = !!savedPluginsStr;
+            logResult(`Data saved to localStorage: ${hasSavedData}`, hasSavedData);
+
+            if (hasSavedData) {
+                try {
+                    const savedPlugins = JSON.parse(savedPluginsStr);
+                    const savedGitPlugin = savedPlugins.find(p => p.id === 'git-integration');
+                    const savedAsEnabled = savedGitPlugin && savedGitPlugin.enabled;
+                    logResult(`Git plugin saved as enabled: ${savedAsEnabled}`, savedAsEnabled);
+                } catch (e) {
+                    logResult(`Error parsing saved data: ${e.message}`, false);
+                }
+            }
+
+            // Test 4: Simulate app restart and check persistence
+            logResult('Test 4: App restart persistence', true, true);
+
+            // Reset to default state
+            currentPlugins = JSON.parse(JSON.stringify(mockPlugins));
+
+            // Load from localStorage
+            const loadResult = loadPlugins();
+            logResult(`Load from localStorage: ${loadResult}`, loadResult);
+
+            const gitPluginAfterLoad = currentPlugins.find(p => p.id === 'git-integration');
+            const persistedCorrectly = gitPluginAfterLoad && gitPluginAfterLoad.enabled;
+            logResult(`Git plugin state persisted correctly: ${persistedCorrectly}`, persistedCorrectly);
+
+            // Test 5: Disable and check persistence
+            logResult('Test 5: Disable and persistence', true, true);
+            const disableResult = disablePlugin('git-integration');
+            logResult(`Disable git-integration: ${disableResult}`, disableResult);
+
+            // Simulate another restart
+            currentPlugins = JSON.parse(JSON.stringify(mockPlugins));
+            loadPlugins();
+
+            const gitPluginAfterDisable = currentPlugins.find(p => p.id === 'git-integration');
+            const disabledCorrectly = gitPluginAfterDisable && !gitPluginAfterDisable.enabled;
+            logResult(`Git plugin disabled state persisted: ${disabledCorrectly}`, disabledCorrectly);
+
+            // Update UI
+            updatePluginSimulation();
+            showStorageContent();
+
+            logResult('All tests completed!', true, true);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePluginSimulation();
+            showStorageContent();
+        });
+    </script>
+</body>
+</html>
