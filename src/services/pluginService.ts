@@ -39,9 +39,15 @@ class PluginService {
     // Create plugin API
     const api = this.createPluginAPI(plugin.id);
 
-    // Create complete plugin object
+    // Create complete plugin object with explicit mutable properties
     const completePlugin: Plugin = {
-      ...plugin,
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      description: plugin.description,
+      author: plugin.author,
+      enabled: plugin.enabled,
+      config: { ...plugin.config },
       api
     };
 

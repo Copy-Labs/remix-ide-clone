@@ -3,6 +3,11 @@ import { usePluginStore } from '@/stores/pluginStore';
 import CollaborationPluginUI from './CollaborationPluginUI';
 import BackupPluginUI from './BackupPluginUI';
 import CustomThemePluginUI from './CustomThemePluginUI';
+import AnalysisPluginUI from './AnalysisPluginUI';
+import DebuggerPluginUI from './DebuggerPluginUI';
+import DeploymentPluginUI from './DeploymentPluginUI';
+import GitPluginUI from './GitPluginUI';
+import TestingPluginUI from './TestingPluginUI';
 
 const PluginPanel: React.FC = () => {
   const { plugins, enablePlugin, disablePlugin } = usePluginStore();
@@ -75,6 +80,21 @@ const PluginPanel: React.FC = () => {
             {activePluginId === 'backup-sync' && <BackupPluginUI pluginId={activePluginId} />}
             {activePluginId === 'custom-theme-ui' && (
               <CustomThemePluginUI pluginId={activePluginId} />
+            )}
+            {activePluginId === 'code-analysis' && (
+              <AnalysisPluginUI pluginId={activePluginId} />
+            )}
+            {activePluginId === 'solidity-debugger' && (
+              <DebuggerPluginUI pluginId={activePluginId} />
+            )}
+            {activePluginId === 'deployment-automation' && (
+              <DeploymentPluginUI pluginId={activePluginId} />
+            )}
+            {activePluginId === 'git-integration' && (
+              <GitPluginUI pluginId={activePluginId} />
+            )}
+            {activePluginId === 'testing-framework' && (
+              <TestingPluginUI pluginId={activePluginId} />
             )}
           </div>
         )}

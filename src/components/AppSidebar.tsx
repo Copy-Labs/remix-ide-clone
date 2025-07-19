@@ -1,15 +1,12 @@
 import * as React from 'react';
 import {
-  ArchiveX,
+  Bug,
   Command,
-  File,
-  Inbox,
+  GitBranch,
   LucideFile,
   LucidePlay,
   LucidePlug2,
   LucideRefreshCw,
-  Send,
-  Trash2,
 } from 'lucide-react';
 
 import { NavUser } from '@/components/NavUser';
@@ -33,6 +30,9 @@ import ErrorBoundary from '@/components/ErrorBoundary.tsx';
 import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
 import PluginPanel from '@/components/PluginUI/PluginPanel.tsx';
+import GitPanel from '@/components/Git/GitPanel.tsx';
+import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
+import { usePluginStore } from '@/stores/pluginStore';
 
 // This is sample data
 const data = {
@@ -62,7 +62,7 @@ const data = {
       isActive: false,
       component: (
         <ErrorBoundary>
-          <CompilerPanel/>
+          <CompilerPanel />
         </ErrorBoundary>
       ),
     },
@@ -74,7 +74,19 @@ const data = {
       isActive: false,
       component: (
         <ErrorBoundary>
-          <DeploymentPanel/>
+          <DeploymentPanel />
+        </ErrorBoundary>
+      ),
+    },
+    {
+      key: 'git',
+      title: 'Git',
+      url: '#',
+      icon: GitBranch,
+      isActive: false,
+      component: (
+        <ErrorBoundary>
+          <GitPanel />
         </ErrorBoundary>
       ),
     },
@@ -96,8 +108,48 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Note: I'm using state to show active item.
   // IRL you should use the url/router.
-  const [activeItem, setActiveItem] = React.useState(data.navMain[0]);
+  const { plugins } = usePluginStore();
   const { setOpen } = useSidebar();
+
+  // Check if debugger plugin is enabled
+  const debuggerPlugin = plugins.find((p) => p.id === 'solidity-debugger');
+  const isDebuggerEnabled = debuggerPlugin?.enabled || false;
+
+  // Create dynamic navigation items
+  const navItems = React.useMemo(() => {
+    const baseItems = [...data.navMain];
+
+    // Add debugger to sidebar if enabled
+    if (isDebuggerEnabled) {
+      const debuggerItem = {
+        key: 'debugger',
+        title: 'Debugger',
+        url: '#',
+        icon: Bug,
+        isActive: false,
+        component: (
+          <ErrorBoundary>
+            <DebuggerPluginUI pluginId="solidity-debugger" />
+          </ErrorBoundary>
+        ),
+      };
+
+      // Insert debugger after compiler (index 2)
+      baseItems.splice(2, 0, debuggerItem);
+    }
+
+    return baseItems;
+  }, [isDebuggerEnabled]);
+
+  const [activeItem, setActiveItem] = React.useState(navItems[0]);
+
+  // Update active item when navItems change (e.g., debugger enabled/disabled)
+  React.useEffect(() => {
+    if (activeItem && !navItems.find((item) => item.key === activeItem.key)) {
+      // If current active item is no longer available, switch to first item
+      setActiveItem(navItems[0]);
+    }
+  }, [navItems, activeItem]);
 
   return (
     <Sidebar
@@ -130,7 +182,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroup>
             <SidebarGroupContent className="px-1.5 md:px-0">
               <SidebarMenu>
-                {data.navMain.map((item) => (
+                {navItems.map((item) => (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
                       tooltip={{
@@ -173,8 +225,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="px-0">
-            <SidebarGroupContent className={'max-w-full md:max-w-[calc(var(--sidebar-width)-1rem)]'}>
-              {data.navMain.find((item) => item.title === activeItem?.title)?.component}
+            <SidebarGroupContent
+              className={'max-w-full md:max-w-[calc(var(--sidebar-width)-1rem)]'}
+            >
+              {navItems.find((item) => item.title === activeItem?.title)?.component}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
