@@ -1,5 +1,21 @@
 import React, { useEffect, useRef } from 'react';
 import type { FileNode } from '@/types';
+import {
+  LucideFilePlus,
+  LucideFolderPlus,
+  LucidePencil,
+  LucideTrash2,
+  LucideCopy,
+  LucideScissors,
+  LucideClipboard,
+  LucideFiles,
+  LucideRefreshCw,
+} from 'lucide-react';
+
+export interface ClipboardItem {
+  file: FileNode;
+  operation: 'copy' | 'cut';
+}
 
 interface ContextMenuProps {
   x: number;
@@ -9,6 +25,13 @@ interface ContextMenuProps {
   onCreateFile: (parentPath: string) => void;
   onCreateFolder: (parentPath: string) => void;
   onDelete: (filePath: string) => void;
+  onRename?: (filePath: string) => void;
+  onCopy?: (file: FileNode) => void;
+  onCut?: (file: FileNode) => void;
+  onPaste?: (targetPath: string) => void;
+  onDuplicate?: (file: FileNode) => void;
+  onRefresh?: () => void;
+  clipboardItem?: ClipboardItem | null;
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -19,6 +42,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onCreateFile,
   onCreateFolder,
   onDelete,
+  onRename,
+  onCopy,
+  onCut,
+  onPaste,
+  onDuplicate,
+  onRefresh,
+  clipboardItem,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -68,50 +98,106 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   }, [x, y]);
 
   const menuItems = [
+    // File-specific actions
     ...(file
       ? [
           {
-            label: 'Rename',
-            icon: '✏️',
+            label: 'Copy',
+            icon: LucideCopy,
             action: () => {
-              // Rename action is handled by FileTreeItem
+              onCopy?.(file);
+              onClose();
+            },
+            shortcut: 'Ctrl+C',
+          },
+          {
+            label: 'Cut',
+            icon: LucideScissors,
+            action: () => {
+              onCut?.(file);
+              onClose();
+            },
+            shortcut: 'Ctrl+X',
+          },
+          {
+            label: 'Duplicate',
+            icon: LucideFiles,
+            action: () => {
+              onDuplicate?.(file);
               onClose();
             },
           },
+          { separator: true },
+          {
+            label: 'Rename',
+            icon: LucidePencil,
+            action: () => {
+              onRename?.(file.path);
+              onClose();
+            },
+            shortcut: 'F2',
+          },
           {
             label: 'Delete',
-            icon: '🗑️',
+            icon: LucideTrash2,
             action: () => onDelete(file.path),
             dangerous: true,
+            shortcut: 'Del',
           },
           { separator: true },
         ]
       : []),
+
+    // Paste action (available when clipboard has content)
+    ...(clipboardItem && onPaste
+      ? [
+          {
+            label: `Paste ${clipboardItem.file.name}`,
+            icon: LucideClipboard,
+            action: () => {
+              onPaste(file?.path || '/');
+              onClose();
+            },
+            shortcut: 'Ctrl+V',
+            disabled: false,
+          },
+          { separator: true },
+        ]
+      : []),
+
+    // Creation actions
     {
       label: 'New File',
-      icon: '📄',
+      icon: LucideFilePlus,
       action: () => onCreateFile(file?.path || '/'),
     },
     {
       label: 'New Folder',
-      icon: '📁',
+      icon: LucideFolderPlus,
       action: () => onCreateFolder(file?.path || '/'),
     },
-    { separator: true },
-    {
-      label: 'Refresh',
-      icon: '🔄',
-      action: () => {
-        // TODO: Implement refresh functionality
-        onClose();
-      },
-    },
+
+    // Refresh action
+    ...(onRefresh
+      ? [
+          { separator: true },
+          {
+            label: 'Refresh',
+            icon: LucideRefreshCw,
+            action: () => {
+              onRefresh();
+              onClose();
+            },
+            shortcut: 'F5',
+          },
+        ]
+      : []),
   ];
 
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg py-1 min-w-[160px]"
+      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg py-1 min-w-[200px]"
       style={{ left: x, top: y }}
     >
       {menuItems.map((item, index) => {
@@ -124,18 +210,33 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           );
         }
 
+        const IconComponent = item.icon;
+        const isDisabled = 'disabled' in item && item.disabled;
+
         return (
           <button
             key={index}
             onClick={item.action}
-            className={`w-full text-left px-3 py-2 text-sm flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+            disabled={isDisabled}
+            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed ${
               item.dangerous
                 ? 'text-red-600 dark:text-red-400'
                 : 'text-gray-700 dark:text-gray-300'
             }`}
           >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
+            <div className="flex items-center space-x-2">
+              {typeof IconComponent === 'function' ? (
+                <IconComponent size={16} />
+              ) : (
+                <span><IconComponent size={16} /></span>
+              )}
+              <span>{item.label}</span>
+            </div>
+            {'shortcut' in item && item.shortcut && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {item.shortcut}
+              </span>
+            )}
           </button>
         );
       })}

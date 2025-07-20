@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useFileStore } from '@/stores/fileStore.ts';
-import type {FileNode} from '@/types';
+import type { FileNode } from '@/types';
 import FileTreeItem from './FileTreeItem';
 import FileExplorerHeader from './FileExplorerHeader';
-import ContextMenu from './ContextMenu';
-import { LucideFile, LucideFolder } from 'lucide-react';
+import ContextMenu, { type ClipboardItem } from './ContextMenu';
+import { FileTypeIcon } from './FileTypeIcons';
 import { Input } from '@/components/ui/input.tsx';
 
 interface FileExplorerProps {
@@ -23,7 +23,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     openFile,
     selectFile,
     clearSelection,
-    toggleFolder
+    toggleFolder,
+    getFileContent,
+    collapseAllFolders,
+    refreshFolders,
   } = useFileStore();
 
   const [contextMenu, setContextMenu] = useState<{
@@ -37,10 +40,44 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     parentPath: string;
   } | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [clipboardItem, setClipboardItem] = useState<ClipboardItem | null>(null);
+
+  // Search filtering logic
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return files;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const matchingFiles = new Map<string, FileNode>();
+
+    // Find all files that match the search query
+    for (const [path, file] of files) {
+      if (file.name.toLowerCase().includes(query)) {
+        matchingFiles.set(path, file);
+
+        // Also include all parent folders to maintain hierarchy
+        let currentPath = file.parent;
+        while (currentPath && currentPath !== '/' && !matchingFiles.has(currentPath)) {
+          const parentFile = files.get(currentPath);
+          if (parentFile) {
+            matchingFiles.set(currentPath, parentFile);
+            currentPath = parentFile.parent;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    return matchingFiles;
+  }, [files, searchQuery]);
+
   // Get root files (files without parent or with parent '/')
   const getRootFiles = useCallback(() => {
-    return Array.from(files.values())
-      .filter(file => !file.parent || file.parent === '/')
+    return Array.from(filteredFiles.values())
+      .filter((file) => !file.parent || file.parent === '/')
       .sort((a, b) => {
         // Folders first, then files, alphabetically
         if (a.type !== b.type) {
@@ -48,46 +85,55 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [files]);
+  }, [filteredFiles]);
 
   // Get children of a folder
-  const getChildren = useCallback((parentPath: string) => {
-    return Array.from(files.values())
-      .filter(file => file.parent === parentPath)
-      .sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'folder' ? -1 : 1;
+  const getChildren = useCallback(
+    (parentPath: string) => {
+      return Array.from(filteredFiles.values())
+        .filter((file) => file.parent === parentPath)
+        .sort((a, b) => {
+          if (a.type !== b.type) {
+            return a.type === 'folder' ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+    },
+    [filteredFiles],
+  );
+
+  const handleFileClick = useCallback(
+    (file: FileNode, event: React.MouseEvent) => {
+      event.stopPropagation();
+
+      if (event.ctrlKey || event.metaKey) {
+        // Multi-select
+        selectFile(file.path, true);
+      } else {
+        selectFile(file.path, false);
+
+        if (file.type === 'file') {
+          openFile(file.path);
+        } else {
+          toggleFolder(file.path);
         }
-        return a.name.localeCompare(b.name);
-      });
-  }, [files]);
+      }
+    },
+    [selectFile, openFile, toggleFolder],
+  );
 
-  const handleFileClick = useCallback((file: FileNode, event: React.MouseEvent) => {
-    event.stopPropagation();
-
-    if (event.ctrlKey || event.metaKey) {
-      // Multi-select
-      selectFile(file.path, true);
-    } else {
-      selectFile(file.path, false);
+  const handleFileDoubleClick = useCallback(
+    (file: FileNode, event: React.MouseEvent) => {
+      event.stopPropagation();
 
       if (file.type === 'file') {
         openFile(file.path);
       } else {
         toggleFolder(file.path);
       }
-    }
-  }, [selectFile, openFile, toggleFolder]);
-
-  const handleFileDoubleClick = useCallback((file: FileNode, event: React.MouseEvent) => {
-    event.stopPropagation();
-
-    if (file.type === 'file') {
-      openFile(file.path);
-    } else {
-      toggleFolder(file.path);
-    }
-  }, [openFile, toggleFolder]);
+    },
+    [openFile, toggleFolder],
+  );
 
   const handleContextMenu = useCallback((event: React.MouseEvent, file: FileNode | null) => {
     event.preventDefault();
@@ -105,38 +151,45 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     setContextMenu(null);
   }, []);
 
-  const handleCreateConfirm = useCallback((name: string) => {
-    if (!isCreating || !name.trim()) return;
+  const handleCreateConfirm = useCallback(
+    (name: string) => {
+      if (!isCreating || !name.trim()) return;
 
-    const path = isCreating.parentPath === '/'
-      ? `/${name}`
-      : `${isCreating.parentPath}/${name}`;
+      const path = isCreating.parentPath === '/' ? `/${name}` : `${isCreating.parentPath}/${name}`;
 
-    if (isCreating.type === 'file') {
-      createFile(path, '');
-    } else {
-      createFolder(path);
-    }
+      if (isCreating.type === 'file') {
+        createFile(path, '');
+      } else {
+        createFolder(path);
+      }
 
-    setIsCreating(null);
-  }, [isCreating, createFile, createFolder]);
+      setIsCreating(null);
+    },
+    [isCreating, createFile, createFolder],
+  );
 
   const handleCreateCancel = useCallback(() => {
     setIsCreating(null);
   }, []);
 
-  const handleDelete = useCallback((filePath: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      deleteFile(filePath);
-    }
-    setContextMenu(null);
-  }, [deleteFile]);
+  const handleDelete = useCallback(
+    (filePath: string) => {
+      if (window.confirm('Are you sure you want to delete this item?')) {
+        deleteFile(filePath);
+      }
+      setContextMenu(null);
+    },
+    [deleteFile],
+  );
 
-  const handleRename = useCallback((oldPath: string, newName: string) => {
-    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/')) || '/';
-    const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
-    renameFile(oldPath, newPath);
-  }, [renameFile]);
+  const handleRename = useCallback(
+    (oldPath: string, newName: string) => {
+      const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/')) || '/';
+      const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+      renameFile(oldPath, newPath);
+    },
+    [renameFile],
+  );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -147,11 +200,93 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     closeContextMenu();
   }, [clearSelection, closeContextMenu]);
 
+  // Clipboard operations
+  const handleCopy = useCallback((file: FileNode) => {
+    setClipboardItem({ file, operation: 'copy' });
+  }, []);
+
+  const handleCut = useCallback((file: FileNode) => {
+    setClipboardItem({ file, operation: 'cut' });
+  }, []);
+
+  const handlePaste = useCallback(
+    async (targetPath: string) => {
+      if (!clipboardItem) return;
+
+      const { file, operation } = clipboardItem;
+      const fileName = file.name;
+      const newPath = targetPath === '/' ? `/${fileName}` : `${targetPath}/${fileName}`;
+
+      try {
+        if (operation === 'copy') {
+          // Copy file/folder
+          if (file.type === 'file') {
+            const content = await getFileContent(file.path);
+            await createFile(newPath, content || '');
+          } else {
+            await createFolder(newPath);
+            // TODO: Recursively copy folder contents
+          }
+        } else if (operation === 'cut') {
+          // Move file/folder
+          await renameFile(file.path, newPath);
+          setClipboardItem(null); // Clear clipboard after cut operation
+        }
+      } catch (error) {
+        console.error('Paste operation failed:', error);
+      }
+    },
+    [clipboardItem, createFile, createFolder, renameFile, getFileContent],
+  );
+
+  const handleDuplicate = useCallback(
+    async (file: FileNode) => {
+      const baseName = file.name;
+      const extension = baseName.includes('.') ? baseName.split('.').pop() : '';
+      const nameWithoutExt = extension ? baseName.slice(0, -(extension.length + 1)) : baseName;
+      const newName = extension ? `${nameWithoutExt}_copy.${extension}` : `${nameWithoutExt}_copy`;
+      const parentPath = file.parent || '/';
+      const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
+
+      try {
+        if (file.type === 'file') {
+          const content = await getFileContent(file.path);
+          await createFile(newPath, content || '');
+        } else {
+          await createFolder(newPath);
+          // TODO: Recursively duplicate folder contents
+        }
+      } catch (error) {
+        console.error('Duplicate operation failed:', error);
+      }
+    },
+    [createFile, createFolder, getFileContent],
+  );
+
+  // Utility functions
+  const handleRefresh = useCallback(() => {
+    // Force re-render using the store method
+    refreshFolders();
+  }, [refreshFolders]);
+
+  const handleCollapseAll = useCallback(() => {
+    // Collapse all folders using the store method
+    collapseAllFolders();
+  }, [collapseAllFolders]);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
   return (
     <div className={`flex flex-col h-full max-w-full ${className}`}>
       <FileExplorerHeader
         onCreateFile={() => handleCreateNew('file', '/')}
         onCreateFolder={() => handleCreateNew('folder', '/')}
+        onRefresh={handleRefresh}
+        onCollapseAll={handleCollapseAll}
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
       />
 
       <div
@@ -160,7 +295,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
         onContextMenu={(e) => handleContextMenu(e, null)}
       >
         <div className="space-y-1">
-          {getRootFiles().map(file => (
+          {getRootFiles().map((file) => (
             <FileTreeItem
               key={file.id}
               file={file}
@@ -173,13 +308,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
               onContextMenu={handleContextMenu}
               onRename={handleRename}
               onToggleExpanded={() => toggleFolder(file.path)}
-              isCreating={isCreating?.parentPath === file.path ? isCreating.type : null}
+              isCreating={isCreating?.parentPath === file.path ? isCreating : null}
               onCreateConfirm={handleCreateConfirm}
               onCreateCancel={handleCreateCancel}
               onCreateNew={handleCreateNew}
               getChildren={getChildren}
               expandedFolders={expandedFolders}
               selectedFiles={selectedFiles}
+              toggleFolder={toggleFolder}
             />
           ))}
         </div>
@@ -206,6 +342,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
           onCreateFile={(parentPath) => handleCreateNew('file', parentPath)}
           onCreateFolder={(parentPath) => handleCreateNew('folder', parentPath)}
           onDelete={handleDelete}
+          onRename={(filePath) => {
+            // Trigger rename mode in FileTreeItem
+            // This is handled by the FileTreeItem component itself
+          }}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onDuplicate={handleDuplicate}
+          onRefresh={handleRefresh}
+          clipboardItem={clipboardItem}
         />
       )}
     </div>
@@ -238,7 +384,12 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
   return (
     <form onSubmit={handleSubmit} className="flex items-center space-x-2 p-1">
       <span className="text-sm">
-        {type === 'folder' ? <LucideFolder size={16} /> : <LucideFile size={16} />}
+        <FileTypeIcon
+          fileName={type === 'folder' ? 'folder' : 'file.txt'}
+          fileType={type}
+          size={16}
+          className="text-gray-600 dark:text-gray-400"
+        />
       </span>
       <Input
         type="text"
@@ -247,7 +398,6 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
         placeholder={`New ${type} name`}
-        // className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
         autoFocus
       />
     </form>
