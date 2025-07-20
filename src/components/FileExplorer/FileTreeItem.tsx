@@ -1,15 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import type { FileNode } from '@/types';
 import {
-  ChevronRight, Folder,
-  LucideFile,
   LucideFilePlus,
-  LucideFolder,
-  LucideFolderOpen,
-  LucideFolderPlus, LucidePencil,
+  LucideFolderPlus,
+  LucidePencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.tsx';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip.tsx';
+import { FileTypeIcon } from './FileTypeIcons';
 
 interface FileTreeItemProps {
   file: FileNode;
@@ -22,13 +20,14 @@ interface FileTreeItemProps {
   onContextMenu: (event: React.MouseEvent, file: FileNode | null) => void;
   onRename: (oldPath: string, newName: string) => void;
   onToggleExpanded: () => void;
-  isCreating: 'file' | 'folder' | null;
+  isCreating: { type: 'file' | 'folder'; parentPath: string } | null;
   onCreateConfirm: (name: string) => void;
   onCreateCancel: () => void;
   onCreateNew: (type: 'file' | 'folder', parentPath: string) => void;
   getChildren: (parentPath: string) => FileNode[];
   expandedFolders: Set<string>;
   selectedFiles: string[];
+  toggleFolder: (path: string) => void;
 }
 
 const FileTreeItem: React.FC<FileTreeItemProps> = ({
@@ -49,6 +48,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   getChildren,
   expandedFolders,
   selectedFiles,
+  toggleFolder,
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(file.name);
@@ -94,7 +94,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
 
       <div className="flex flex-col">
         <div
-          className={`flex items-center space-x-2 p-2 rounded cursor-pointer ${
+          className={`group flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
             isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
           onClick={(event) => onClick(file, event)}
@@ -102,17 +102,14 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
           onContextMenu={(event) => onContextMenu(event, file)}
           style={{ marginLeft: level * 16 }}
         >
-          <span onClick={onToggleExpanded} className="text-sm select-none">
-            {/*{file.type === 'folder' ? (isExpanded ? '📂' : '📁') : '📄'}*/}
-            {file.type === 'folder' ? (
-              isExpanded ? (
-                <LucideFolderOpen size={15} />
-              ) : (
-                <LucideFolder size={15} />
-              )
-            ) : (
-              <LucideFile size={15} />
-            )}
+          <span onClick={onToggleExpanded} className="text-sm select-none cursor-pointer">
+            <FileTypeIcon
+              fileName={file.name}
+              fileType={file.type}
+              isExpanded={isExpanded}
+              size={16}
+              className="text-gray-600 dark:text-gray-400"
+            />
           </span>
           {isRenaming ? (
             <input
@@ -135,50 +132,68 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
             </span>
           )}
 
-          {/* New File/Folder Input */}
-          {isCreating && isExpanded && (
-            <CreateNewItem type={isCreating} onConfirm={onCreateConfirm} onCancel={onCreateCancel} />
-          )}
 
           {/* Context Menu Actions (icon buttons) */}
-          <div className="flex items-center space-x-0.5">
-            <Button
-              // className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCreateNew('file', file.path);
-              }}
-              size={'sm'}
-              variant={'ghost'}
-            >
-              {/*➕📄*/}
-              <LucideFilePlus size={14} />
-            </Button>
-            <Button
-              // className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCreateNew('folder', file.path);
-              }}
-              size={'sm'}
-              variant={'ghost'}
-            >
-              {/*➕📁*/}
-              <LucideFolderPlus size={14} />
-            </Button>
-            <Button
-              // className="p-1 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsRenaming(true);
-              }}
-              size={'sm'}
-              variant={'ghost'}
-            >
-              {/*✏️*/}
-              <LucidePencil size={14} />
-            </Button>
-          </div>
+          <TooltipProvider>
+            <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateNew('file', file.path);
+                    }}
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                  >
+                    <LucideFilePlus size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>New File</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateNew('folder', file.path);
+                    }}
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                  >
+                    <LucideFolderPlus size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>New Folder</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsRenaming(true);
+                    }}
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                  >
+                    <LucidePencil size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Rename</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Render children if expanded */}
@@ -196,16 +211,28 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                 onDoubleClick={onDoubleClick}
                 onContextMenu={onContextMenu}
                 onRename={onRename}
-                onToggleExpanded={() => onToggleExpanded()}
-                isCreating={null}
+                onToggleExpanded={() => toggleFolder(child.path)}
+                isCreating={isCreating?.parentPath === child.path ? isCreating : null}
                 onCreateConfirm={onCreateConfirm}
                 onCreateCancel={onCreateCancel}
                 onCreateNew={onCreateNew}
                 expandedFolders={expandedFolders}
                 selectedFiles={selectedFiles}
                 getChildren={getChildren}
+                toggleFolder={toggleFolder}
               />
             ))}
+
+            {/* Create New Item Input - render after children */}
+            {isCreating && isCreating.parentPath === file.path && (
+              <div className="ml-4 mt-1">
+                <CreateNewItem
+                  type={isCreating.type}
+                  onConfirm={onCreateConfirm}
+                  onCancel={onCreateCancel}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -243,7 +270,14 @@ const CreateNewItem: React.FC<CreateNewItemProps> = ({ type, onConfirm, onCancel
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center space-x-2 p-1">
-      <span className="text-sm">{type === 'folder' ? '📁' : '📄'}</span>
+      <span className="text-sm">
+        <FileTypeIcon
+          fileName={type === 'folder' ? 'folder' : 'file.txt'}
+          fileType={type}
+          size={16}
+          className="text-gray-600 dark:text-gray-400"
+        />
+      </span>
       <input
         type="text"
         value={name}

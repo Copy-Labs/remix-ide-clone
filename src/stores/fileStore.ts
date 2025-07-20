@@ -33,6 +33,8 @@ interface FileStoreActions {
   toggleFolder: (path: string) => void;
   expandFolder: (path: string) => void;
   collapseFolder: (path: string) => void;
+  collapseAllFolders: () => void;
+  refreshFolders: () => void;
 
   // Selection operations
   selectFile: (path: string, multiple?: boolean) => void;
@@ -503,6 +505,20 @@ export const useFileStore = create<FileStore>()(
         collapseFolder: (path: string) => {
           set((state) => {
             state.expandedFolders.delete(path);
+          });
+        },
+
+        collapseAllFolders: () => {
+          set((state) => {
+            state.expandedFolders = new Set(['/']);
+          });
+        },
+
+        refreshFolders: () => {
+          set((state) => {
+            // Force re-render by creating a new Set with current expanded folders
+            const currentExpanded = Array.from(state.expandedFolders);
+            state.expandedFolders = new Set(currentExpanded);
           });
         },
 
