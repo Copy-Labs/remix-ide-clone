@@ -162,7 +162,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
             set((state) => {
               const plugin = state.plugins.find((p) => p.id === pluginId);
               if (plugin) {
-                plugin.config = { ...plugin.config, ...config };
+                Object.assign(plugin.config, config);
               }
             });
 
@@ -207,7 +207,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
                 if (savedState) {
                   // Preserve the saved enabled state and config
                   plugin.enabled = savedState.enabled;
-                  plugin.config = { ...plugin.config, ...savedState.config };
+                  Object.assign(plugin.config, savedState.config);
                 }
               });
             });

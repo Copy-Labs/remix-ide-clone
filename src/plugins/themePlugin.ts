@@ -150,8 +150,9 @@ export class ThemePluginImplementation {
   private styleElement: HTMLStyleElement | null = null;
 
   constructor(config: PluginConfig) {
-    this.config = config;
-    this.activeTheme = config.theme;
+    // Create a deep copy of the config to avoid readonly property issues
+    this.config = JSON.parse(JSON.stringify(config));
+    this.activeTheme = config.theme || 'default';
     this.activeLayout = 'default';
 
     // Initialize built-in themes
