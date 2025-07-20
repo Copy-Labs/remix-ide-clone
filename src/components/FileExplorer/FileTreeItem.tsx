@@ -136,43 +136,48 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
           {/* Context Menu Actions (icon buttons) */}
           <TooltipProvider>
             <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCreateNew('file', file.path);
-                    }}
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0"
-                  >
-                    <LucideFilePlus size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>New File</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Only show create buttons on folders */}
+              {file.type === 'folder' && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateNew('file', file.path);
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0"
+                      >
+                        <LucideFilePlus size={12} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>New File</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCreateNew('folder', file.path);
-                    }}
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0"
-                  >
-                    <LucideFolderPlus size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>New Folder</p>
-                </TooltipContent>
-              </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateNew('folder', file.path);
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0"
+                      >
+                        <LucideFolderPlus size={12} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>New Folder</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              )}
 
               <Tooltip>
                 <TooltipTrigger asChild>
