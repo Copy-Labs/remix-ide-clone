@@ -57,7 +57,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, descrip
   </div>
 );
 
-const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) => {
+const ImprovedCustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) => {
   const { getPlugin, updatePluginConfig } = usePluginStore();
 
   // Core state
@@ -191,19 +191,15 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     setError(null);
 
     try {
-      // Get themes
       const themes = impl.getThemes();
       setThemes(themes);
 
-      // Get active theme
       const activeTheme = impl.getActiveTheme();
       setActiveTheme(activeTheme);
 
-      // Get layouts
       const layouts = impl.getLayouts();
       setLayouts(layouts);
 
-      // Get active layout
       const activeLayout = impl.getActiveLayout();
       setActiveLayout(activeLayout);
     } catch (err) {
@@ -223,8 +219,6 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     try {
       implementation.applyTheme(themeId);
       setSelectedThemeId(themeId);
-
-      // Refresh theme data
       loadThemeData();
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to apply theme: ${themeId}`);
@@ -243,8 +237,6 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     try {
       implementation.applyLayout(layoutId);
       setSelectedLayoutId(layoutId);
-
-      // Refresh layout data
       loadThemeData();
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to apply layout: ${layoutId}`);
@@ -261,7 +253,6 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     setError(null);
 
     try {
-      // Update custom theme in config
       const customTheme = {
         name: customThemeName,
         colors: {
@@ -294,16 +285,9 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
         },
       };
 
-      // Update plugin config
       updatePluginConfig(pluginId, { customTheme });
-
-      // Update implementation config
       implementation.updateConfig({ customTheme });
-
-      // Apply custom theme
       handleApplyTheme('custom');
-
-      setShowCustomTheme(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save custom theme');
     } finally {
@@ -319,7 +303,6 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     setError(null);
 
     try {
-      // Update layout in config
       const layout = {
         sidebarPosition,
         sidebarWidth,
@@ -329,16 +312,9 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
         compactMode,
       };
 
-      // Update plugin config
       updatePluginConfig(pluginId, { layout });
-
-      // Update implementation config
       implementation.updateConfig({ layout });
-
-      // Apply custom layout
       handleApplyLayout('custom');
-
-      setShowCustomLayout(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save custom layout');
     } finally {
@@ -354,13 +330,8 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
     setError(null);
 
     try {
-      // Update plugin config
       updatePluginConfig(pluginId, { customCSS });
-
-      // Update implementation
       implementation.updateCustomCSS(customCSS);
-
-      setShowCustomCSS(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save custom CSS');
     } finally {
@@ -381,10 +352,7 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
         speed: animationSpeed,
       };
 
-      // Update plugin config
       updatePluginConfig(pluginId, { animations });
-
-      // Update implementation
       implementation.updateAnimations(animationsEnabled, animationSpeed);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update animations');
@@ -925,4 +893,4 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
   );
 };
 
-export default CustomThemePluginUI;
+export default ImprovedCustomThemePluginUI;
