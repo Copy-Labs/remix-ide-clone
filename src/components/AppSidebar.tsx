@@ -45,6 +45,7 @@ import DeploymentPluginUI from '@/components/PluginUI/DeploymentPluginUI.tsx';
 import GitPluginUI from '@/components/PluginUI/GitPluginUI.tsx';
 import TestingPluginUI from '@/components/PluginUI/TestingPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
+import ImprovedCustomThemePluginUI from '@/components/PluginUI/ImprovedCustomThemePluginUI.tsx';
 
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
@@ -66,7 +67,7 @@ const getPluginComponent = (pluginId: string) => {
   const componentMap: Record<string, React.ComponentType<{ pluginId: string }>> = {
     'collaboration': CollaborationPluginUI,
     'backup-sync': BackupPluginUI,
-    'custom-theme-ui': CustomThemePluginUI,
+    'custom-theme-ui': ImprovedCustomThemePluginUI, // CustomThemePluginUI,
     'code-analysis': AnalysisPluginUI,
     'solidity-debugger': DebuggerPluginUI,
     'deployment-automation': DeploymentPluginUI,
