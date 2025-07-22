@@ -3,6 +3,10 @@ import { useCompilerStore } from '@/stores/compilerStore.ts';
 import { useFileStore } from '@/stores/fileStore.ts';
 import { LucideLoader2 } from 'lucide-react';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { selectBaseClass } from '@/utils/constant.ts';
+import { Separator } from '@/components/ui/separator.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { Input } from '@/components/ui/input.tsx';
 
 const CompilerPanel: React.FC = () => {
   const {
@@ -78,26 +82,26 @@ const CompilerPanel: React.FC = () => {
   return (
     <div className="h-full max-w-full flex flex-col">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Solidity Compiler</h2>
+      <div className="px-3 py-2 border-b border-border flex-shrink-0">
+        <h2 className="text-sm font-semibold text-foreground">Solidity Compiler</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* Compiler Settings */}
         <div className="space-y-3">
-          <h3 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
+          <h3 className="text-xs font-medium text-foreground uppercase tracking-wide">
             Configuration
           </h3>
 
           {/* Version Selection */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
               Compiler Version
             </label>
             <select
               value={compilerVersion}
               onChange={(e) => setCompilerVersion(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className={selectBaseClass}
               disabled={availableVersions.length === 0 || isCompiling}
             >
               {availableVersions.length === 0 ? (
@@ -119,26 +123,26 @@ const CompilerPanel: React.FC = () => {
               id="autoCompile"
               checked={autoCompile}
               onChange={(e) => setAutoCompile(e.target.checked)}
-              className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
+              className="h-3 w-3 text-muted-foreground rounded-sm"
             />
-            <label htmlFor="autoCompile" className="ml-2 text-xs text-gray-700 dark:text-gray-300">
+            <label htmlFor="autoCompile" className="ml-2 text-xs text-muted-foreground">
               Auto compile
             </label>
           </div>
 
           {/* Optimization */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <div className="flex items-center">
               <input
                 type="checkbox"
                 id="optimization"
                 checked={optimizationEnabled}
                 onChange={(e) => setOptimizationEnabled(e.target.checked)}
-                className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-sm"
+                className="h-3 w-3 text-muted-foreground rounded-sm"
               />
               <label
                 htmlFor="optimization"
-                className="ml-2 text-xs text-gray-700 dark:text-gray-300"
+                className="ml-2 text-xs text-muted-foreground"
               >
                 Enable optimization
               </label>
@@ -146,16 +150,16 @@ const CompilerPanel: React.FC = () => {
 
             {optimizationEnabled && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Optimization Runs
                 </label>
-                <input
+                <Input
                   type="number"
                   value={optimizationRuns}
                   onChange={(e) => setOptimizationRuns(parseInt(e.target.value) || 200)}
                   min="1"
                   max="10000"
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  // className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             )}
@@ -164,10 +168,10 @@ const CompilerPanel: React.FC = () => {
 
         {/* Compile Button */}
         <div>
-          <button
+          <Button
             onClick={handleCompile}
             disabled={isCompiling || availableVersions.length === 0}
-            className={`w-full px-3 py-2 text-xs font-medium rounded transition-colors ${
+            className={`w-full px-3 py-2 text-xs font-medium rounded-md transition-colors ${
               isCompiling || availableVersions.length === 0
                 ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-1 focus:ring-blue-500'
@@ -184,7 +188,7 @@ const CompilerPanel: React.FC = () => {
             ) : (
               'Compile'
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Compilation Results */}
