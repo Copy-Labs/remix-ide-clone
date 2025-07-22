@@ -925,6 +925,7 @@ export const useGitStore = create<GitStore>()(
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           config: state.config,
+          isInitialized: state.isInitialized,
         }),
       },
     ),
