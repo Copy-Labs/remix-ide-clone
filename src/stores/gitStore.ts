@@ -43,18 +43,6 @@ export interface GitConfig {
     name: string;
     email: string;
   };
-  github: {
-    token?: string;
-    username?: string;
-  };
-  gitlab?: {
-    token?: string;
-    username?: string;
-  };
-  token?: {
-    name?: string;
-    value?: string;
-  };
 }
 
 export interface GitFileBlame {
@@ -95,7 +83,6 @@ export interface GitState {
   isInitialized: boolean;
   currentBranch: string;
   branches: GitBranch[];
-  remotes: GitRemote[];
   commits: GitCommit[];
   status: GitStatus[];
 
@@ -105,17 +92,6 @@ export interface GitState {
   // UI state
   isLoading: boolean;
   error: string | null;
-
-  // GitHub integration
-  githubRepos: any[];
-  isGithubConnected: boolean;
-
-  // GitLab integration
-  gitlabRepos: any[];
-  isGitlabConnected: boolean;
-
-  // Generic token integration
-  isTokenConnected: boolean;
 
   // JetBrains-style Git integration
   fileBlame: Record<string, GitFileBlame[]>;
@@ -147,7 +123,6 @@ export interface GitState {
 export interface GitActions {
   // Repository operations
   initRepository: () => Promise<void>;
-  cloneRepository: (url: string, dir?: string) => Promise<void>;
   createInitialCommit: () => Promise<void>;
   resetGitIndex: () => Promise<void>;
 
@@ -165,12 +140,6 @@ export interface GitActions {
   getCommits: (options?: { limit?: number; skip?: number; resetPagination?: boolean }) => Promise<void>;
   loadMoreCommits: () => Promise<void>;
 
-  // Remote operations
-  addRemote: (name: string, url: string, force?: boolean) => Promise<void>;
-  removeRemote: (name: string) => Promise<void>;
-  push: (remote?: string, branch?: string) => Promise<void>;
-  pull: (remote?: string, branch?: string) => Promise<void>;
-  fetch: (remote?: string) => Promise<void>;
 
   // Status operations
   getStatus: (options?: {
@@ -185,21 +154,6 @@ export interface GitActions {
   // Configuration
   setConfig: (config: Partial<GitConfig>) => void;
 
-  // GitHub integration
-  connectGithub: (token: string) => Promise<void>;
-  disconnectGithub: () => void;
-  getGithubRepos: () => Promise<void>;
-  createGithubRepo: (name: string, description?: string, isPrivate?: boolean) => Promise<void>;
-
-  // GitLab integration
-  connectGitlab: (token: string) => Promise<void>;
-  disconnectGitlab: () => void;
-  getGitlabRepos: () => Promise<void>;
-  createGitlabRepo: (name: string, description?: string, isPrivate?: boolean) => Promise<void>;
-
-  // Generic token integration
-  connectWithToken: (name: string, token: string) => Promise<void>;
-  disconnectToken: () => void;
 
   // JetBrains-style Git integration
   // File-level operations
@@ -230,7 +184,6 @@ const initialState: GitState = {
   isInitialized: false,
   currentBranch: '',
   branches: [],
-  remotes: [],
   commits: [],
   status: [],
   config: {
@@ -238,26 +191,9 @@ const initialState: GitState = {
       name: '',
       email: '',
     },
-    github: {
-      token: undefined,
-      username: undefined,
-    },
-    gitlab: {
-      token: undefined,
-      username: undefined,
-    },
-    token: {
-      name: undefined,
-      value: undefined,
-    },
   },
   isLoading: false,
   error: null,
-  githubRepos: [],
-  isGithubConnected: false,
-  gitlabRepos: [],
-  isGitlabConnected: false,
-  isTokenConnected: false,
 
   // JetBrains-style Git integration
   fileBlame: {},
@@ -385,54 +321,6 @@ export const useGitStore = create<GitStore>()(
           }
         },
 
-        cloneRepository: async (url: string, dir = '/') => {
-          try {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            try {
-              await gitService.clone(url, dir);
-            } catch (cloneErr) {
-              // Handle the expected error from our mock implementation
-              if (cloneErr.message.includes('not supported in browser environment')) {
-                warn('Git clone operation is not supported in browser environment');
-
-                // Instead of failing, we'll initialize a new repository
-                await gitService.init('main');
-
-                // Create a dummy file to simulate cloned content
-                const dummyFilePath = `${dir === '/' ? '' : dir}/README.md`;
-                const fileStore = useFileStore.getState();
-                await fileStore.createFile(dummyFilePath, `# Simulated Repository\n\nThis is a simulated repository for ${url}\nCreated at ${new Date().toISOString()}`);
-
-                info('Created a simulated repository instead of cloning (browser-compatible mock)');
-              } else {
-                // If it's some other error, rethrow it
-                throw cloneErr;
-              }
-            }
-
-            set((state) => {
-              state.isInitialized = true;
-              state.isLoading = false;
-            });
-
-            // Get initial branch and status
-            await get().getBranches();
-            await get().getStatus();
-
-            info('Repository ready');
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
-            error('Failed to clone repository:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
-        },
 
         // Branch operations
         createBranch: async (name: string) => {
@@ -701,167 +589,6 @@ export const useGitStore = create<GitStore>()(
           });
         },
 
-        // Remote operations
-        addRemote: async (name: string, url: string, force: boolean = false) => {
-          try {
-            await gitService.addRemote(name, url, force);
-
-            const remotes = await gitService.listRemotes();
-
-            set((state) => {
-              state.remotes = remotes.map((remote) => ({
-                name: remote.remote,
-                url: remote.url,
-              }));
-            });
-
-            info(`Remote '${name}' added successfully`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to add remote';
-            error('Failed to add remote:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        removeRemote: async (name: string) => {
-          try {
-            await gitService.deleteRemote(name);
-
-            const remotes = await gitService.listRemotes();
-
-            set((state) => {
-              state.remotes = remotes.map((remote) => ({
-                name: remote.remote,
-                url: remote.url,
-              }));
-            });
-
-            info(`Remote '${name}' removed successfully`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to remove remote';
-            error('Failed to remove remote:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        push: async (remote = 'origin', branch?: string) => {
-          try {
-            const { currentBranch } = get();
-            const targetBranch = branch || currentBranch;
-
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            try {
-              await gitService.push(remote, targetBranch);
-            } catch (pushErr) {
-              // Handle the expected error from our mock implementation
-              if (pushErr.message.includes('not supported in browser environment')) {
-                warn('Git push operation is not supported in browser environment');
-
-                // Instead of failing, we'll simulate a successful push
-                info(`Simulated push to ${remote}/${targetBranch} (browser-compatible mock)`);
-              } else {
-                // If it's some other error, rethrow it
-                throw pushErr;
-              }
-            }
-
-            set((state) => {
-              state.isLoading = false;
-            });
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to push';
-            error('Failed to push:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
-        },
-
-        pull: async (remote = 'origin', branch?: string) => {
-          try {
-            const { currentBranch } = get();
-            const targetBranch = branch || currentBranch;
-
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            try {
-              await gitService.pull(remote, targetBranch);
-            } catch (pullErr) {
-              // Handle the expected error from our mock implementation
-              if (pullErr.message.includes('not supported in browser environment')) {
-                warn('Git pull operation is not supported in browser environment');
-
-                // Instead of failing, we'll simulate a successful pull
-                info(`Simulated pull from ${remote}/${targetBranch} (browser-compatible mock)`);
-              } else {
-                // If it's some other error, rethrow it
-                throw pullErr;
-              }
-            }
-
-            // Refresh the state regardless
-            await get().getCommits();
-            await get().getStatus();
-
-            set((state) => {
-              state.isLoading = false;
-            });
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to pull';
-            error('Failed to pull:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
-        },
-
-        fetch: async (remote = 'origin') => {
-          try {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            try {
-              await gitService.fetch(remote);
-            } catch (fetchErr) {
-              // Handle the expected error from our mock implementation
-              if (fetchErr.message.includes('not supported in browser environment')) {
-                warn('Git fetch operation is not supported in browser environment');
-
-                // Instead of failing, we'll simulate a successful fetch
-                info(`Simulated fetch from ${remote} (browser-compatible mock)`);
-              } else {
-                // If it's some other error, rethrow it
-                throw fetchErr;
-              }
-            }
-
-            set((state) => {
-              state.isLoading = false;
-            });
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch';
-            error('Failed to fetch:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
-        },
 
         // Status operations
         getStatus: async (options = {}) => {
@@ -954,277 +681,6 @@ export const useGitStore = create<GitStore>()(
           });
         },
 
-        // GitHub integration - browser-compatible mock
-        connectGithub: async (token: string) => {
-          try {
-            warn('GitHub API integration is not fully supported in browser environment');
-
-            // Simulate a successful connection with mock data
-            const mockUsername = 'browser-user';
-            const secureToken = `secure_${token}`;
-
-            set((state) => {
-              state.config.github.token = secureToken;
-              state.config.github.username = mockUsername;
-              state.isGithubConnected = true;
-              state.error = null;
-            });
-
-            info(`Connected to GitHub as ${mockUsername} (browser-compatible mock)`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitHub';
-            error('Failed to connect to GitHub:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isGithubConnected = false;
-            });
-          }
-        },
-
-        disconnectGithub: () => {
-          set((state) => {
-            state.config.github.token = undefined;
-            state.config.github.username = undefined;
-            state.isGithubConnected = false;
-            state.githubRepos = [];
-          });
-          info('Disconnected from GitHub');
-        },
-
-        getGithubRepos: async () => {
-          try {
-            warn('GitHub API integration is not fully supported in browser environment');
-
-            const { config } = get();
-            if (!config.github.token) {
-              throw new Error('GitHub token not configured');
-            }
-
-            // Create mock repositories data
-            const mockRepos = [
-              {
-                id: 1,
-                name: 'example-repo-1',
-                description: 'Mock repository 1',
-                private: false,
-                html_url: 'https://github.com/user/example-repo-1',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              {
-                id: 2,
-                name: 'example-repo-2',
-                description: 'Mock repository 2',
-                private: true,
-                html_url: 'https://github.com/user/example-repo-2',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              }
-            ];
-
-            set((state) => {
-              state.githubRepos = mockRepos;
-            });
-
-            info('Retrieved mock GitHub repositories (browser-compatible mock)');
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get GitHub repositories';
-            error('Failed to get GitHub repositories:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        createGithubRepo: async (name: string, description?: string, isPrivate = false) => {
-          try {
-            warn('GitHub API integration is not fully supported in browser environment');
-
-            const { config } = get();
-            if (!config.github.token) {
-              throw new Error('GitHub token not configured');
-            }
-
-            // Create a mock repository
-            const mockRepo = {
-              id: Math.floor(Math.random() * 10000),
-              name,
-              description: description || '',
-              private: isPrivate,
-              html_url: `https://github.com/user/${name}`,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-
-            // Update the repos list with the new mock repo
-            set((state) => {
-              state.githubRepos = [...state.githubRepos, mockRepo];
-            });
-
-            info(`GitHub repository '${name}' created successfully (browser-compatible mock)`);
-            return mockRepo;
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to create GitHub repository';
-            error('Failed to create GitHub repository:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-            throw err;
-          }
-        },
-
-        // GitLab integration - browser-compatible mock
-        connectGitlab: async (token: string) => {
-          try {
-            warn('GitLab API integration is not fully supported in browser environment');
-
-            // Simulate a successful connection with mock data
-            const username = `gitlab_user_${Math.floor(Math.random() * 1000)}`;
-
-            // Store token securely
-            const secureToken = `secure_${token}`;
-
-            set((state) => {
-              state.config.gitlab = {
-                token: secureToken,
-                username: username,
-              };
-              state.isGitlabConnected = true;
-              state.error = null;
-            });
-
-            info(`Connected to GitLab as ${username} (browser-compatible mock)`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitLab';
-            error('Failed to connect to GitLab:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isGitlabConnected = false;
-            });
-          }
-        },
-
-        disconnectGitlab: () => {
-          set((state) => {
-            state.config.gitlab = {
-              token: undefined,
-              username: undefined,
-            };
-            state.isGitlabConnected = false;
-            state.gitlabRepos = [];
-          });
-          info('Disconnected from GitLab');
-        },
-
-        getGitlabRepos: async () => {
-          try {
-            warn('GitLab API integration is not fully supported in browser environment');
-
-            const { config } = get();
-            if (!config.gitlab?.token) {
-              throw new Error('GitLab token not configured');
-            }
-
-            // Create mock repositories data
-            const mockRepos = Array.from({ length: 3 }, (_, i) => ({
-              id: i,
-              name: `gitlab-repo-${i}`,
-              description: `Mock GitLab repository ${i}`,
-              private: i % 2 === 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              clone_url: `https://gitlab.com/user/gitlab-repo-${i}.git`,
-            }));
-
-            set((state) => {
-              state.gitlabRepos = mockRepos;
-            });
-
-            info('Retrieved mock GitLab repositories (browser-compatible mock)');
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get GitLab repositories';
-            error('Failed to get GitLab repositories:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        createGitlabRepo: async (name: string, description?: string, isPrivate = false) => {
-          try {
-            warn('GitLab API integration is not fully supported in browser environment');
-
-            const { config } = get();
-            if (!config.gitlab?.token) {
-              throw new Error('GitLab token not configured');
-            }
-
-            // Create a mock repository
-            const mockRepo = {
-              id: Math.floor(Math.random() * 1000),
-              name,
-              description: description || '',
-              private: isPrivate,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              clone_url: `https://gitlab.com/user/${name}.git`,
-            };
-
-            // Update the repos list with the new mock repo
-            set((state) => {
-              state.gitlabRepos = [...state.gitlabRepos, mockRepo];
-            });
-
-            info(`GitLab repository '${name}' created successfully (browser-compatible mock)`);
-            return mockRepo;
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to create GitLab repository';
-            error('Failed to create GitLab repository:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-            throw err;
-          }
-        },
-
-        // Generic token integration - browser-compatible mock
-        connectWithToken: async (name: string, token: string) => {
-          try {
-            warn('Generic token integration is not fully supported in browser environment');
-
-            // Store token securely
-            const secureToken = `secure_${token}`;
-
-            set((state) => {
-              state.config.token = {
-                name,
-                value: secureToken,
-              };
-              state.isTokenConnected = true;
-              state.error = null;
-            });
-
-            info(`Connected with ${name} token (browser-compatible mock)`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to connect with token';
-            error('Failed to connect with token:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isTokenConnected = false;
-            });
-          }
-        },
-
-        disconnectToken: () => {
-          set((state) => {
-            state.config.token = {
-              name: undefined,
-              value: undefined,
-            };
-            state.isTokenConnected = false;
-          });
-          info('Disconnected token');
-        },
 
         // Utility
         reset: () => {
@@ -1474,9 +930,6 @@ export const useGitStore = create<GitStore>()(
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           config: state.config,
-          isGithubConnected: state.isGithubConnected,
-          isGitlabConnected: state.isGitlabConnected,
-          isTokenConnected: state.isTokenConnected,
         }),
       }
     ),

@@ -320,7 +320,6 @@ export class GitService {
     files: Map<string, string>; // filepath -> content
   }> = [];
   private stagedFiles: Set<string> = new Set();
-  private remotes: Array<{ remote: string; url: string }> = [];
 
   constructor(workingDirectory: string = '/') {
     this.fs = gitFS;
@@ -381,12 +380,6 @@ export class GitService {
       error('Failed to create initial commit:', err);
       throw err;
     }
-  }
-
-  // Clone a repository - not supported in browser
-  async clone(url: string, dir?: string): Promise<void> {
-    warn('Git clone operation is not supported in browser environment');
-    throw new Error('Git clone operation is not supported in browser environment');
   }
 
   // Reset the git index
@@ -648,70 +641,7 @@ export class GitService {
     }
   }
 
-  // Add remote
-  async addRemote(remote: string, url: string, force: boolean = false): Promise<void> {
-    try {
-      // Check if remote already exists
-      const existingRemoteIndex = this.remotes.findIndex(r => r.remote === remote);
 
-      if (existingRemoteIndex !== -1) {
-        if (force) {
-          // Replace the existing remote
-          this.remotes[existingRemoteIndex] = { remote, url };
-        } else {
-          throw new Error(`Remote ${remote} already exists`);
-        }
-      } else {
-        // Add new remote
-        this.remotes.push({ remote, url });
-      }
-
-      info(`Remote added: ${remote} -> ${url} (browser-compatible mock)`);
-    } catch (err) {
-      error(`Failed to add remote ${remote}:`, err);
-      throw err;
-    }
-  }
-
-  // Remove remote
-  async deleteRemote(remote: string): Promise<void> {
-    try {
-      const index = this.remotes.findIndex(r => r.remote === remote);
-
-      if (index === -1) {
-        throw new Error(`Remote ${remote} does not exist`);
-      }
-
-      this.remotes.splice(index, 1);
-      info(`Remote deleted: ${remote} (browser-compatible mock)`);
-    } catch (err) {
-      error(`Failed to delete remote ${remote}:`, err);
-      throw err;
-    }
-  }
-
-  // List remotes
-  async listRemotes(): Promise<Array<{ remote: string; url: string }>> {
-    return this.remotes;
-  }
-
-  // Push to remote - not supported in browser
-  async push(remote: string = 'origin', ref?: string): Promise<void> {
-    warn('Git push operation is not supported in browser environment');
-    throw new Error('Git push operation is not supported in browser environment');
-  }
-
-  // Pull from remote - not supported in browser
-  async pull(remote: string = 'origin', ref?: string): Promise<void> {
-    warn('Git pull operation is not supported in browser environment');
-    throw new Error('Git pull operation is not supported in browser environment');
-  }
-
-  // Fetch from remote - not supported in browser
-  async fetch(remote: string = 'origin'): Promise<void> {
-    warn('Git fetch operation is not supported in browser environment');
-    throw new Error('Git fetch operation is not supported in browser environment');
-  }
 
   // File-level Git operations
   async getFileBlame(filepath: string): Promise<Array<{
