@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/tooltip.tsx';
 import { FileTypeIcon } from './FileTypeIcons';
 import { useGitStore } from '@/stores/gitStore';
+import { Input } from '@/components/ui/input.tsx';
 
 // Git status indicator component
 const GitStatusIndicator: React.FC<{ filePath: string }> = ({ filePath }) => {
@@ -133,10 +134,10 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
       {/*  </CollapsibleContent>*/}
       {/*</Collapsible>*/}
 
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-0 transition-colors duration-200 ease-in-out">
         <div
-          className={`group flex items-center space-x-2 p-2 rounded cursor-pointer transition-colors ${
-            isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          className={`group flex items-center space-x-2 p-2 pl-3 rounded-md cursor-pointer transition-colors ${
+            isSelected ? 'bg-blue-100 dark:bg-blue-800' : 'hover:bg-accent'
           }`}
           onClick={(event) => onClick(file, event)}
           onDoubleClick={(event) => onDoubleClick(file, event)}
@@ -149,22 +150,23 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
               fileType={file.type}
               isExpanded={isExpanded}
               size={16}
-              className="text-gray-600 dark:text-gray-400"
+              className="text-muted-foreground"
             />
           </span>
           {isRenaming ? (
-            <input
+            <Input
               value={renameValue}
               onChange={handleRenameChange}
               onBlur={() => setIsRenaming(false)}
               onKeyDown={handleRenameKeyDown}
-              className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              className={'!text-xs h-6 border-0 ring-0 px-3 outline-none focus:ring-0 focus-visible:ring-1 focus-visible:ring-blue-600 !focus-visible:bg-background'}
+              // className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
           ) : (
             <div className="flex-1 flex items-center justify-between">
               <span
-                className="text-sm text-gray-700 dark:text-gray-300"
+                className="text-xs text-foreground/90"
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   setIsRenaming(true);
@@ -191,9 +193,9 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                         }}
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 text-muted-foreground"
                       >
-                        <LucideFilePlus size={12} />
+                        <LucideFilePlus size={10} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -210,9 +212,9 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                         }}
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 text-muted-foreground"
                       >
-                        <LucideFolderPlus size={12} />
+                        <LucideFolderPlus size={10} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -231,9 +233,9 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                     }}
                     size="sm"
                     variant="ghost"
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 text-muted-foreground"
                   >
-                    <LucidePencil size={12} />
+                    <LucidePencil size={10} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

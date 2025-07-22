@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
+import { selectBaseClass } from '@/utils/constant.ts';
 
 const DeploymentPanel: React.FC = () => {
   const {
@@ -275,12 +276,12 @@ const DeploymentPanel: React.FC = () => {
     <div className="h-full">
       {/* Header */}
       <div className="p-4 border-b border-muted">
-        <h2 className="text-lg font-semibold text-foreground">
+        <div className="text-sm font-semibold text-foreground">
           Deployment & Interaction
-        </h2>
+        </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-3 space-y-6">
         {/* Wallet Connection */}
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white">Wallet Connection</h3>
@@ -318,7 +319,7 @@ const DeploymentPanel: React.FC = () => {
                   Disconnect
                 </Button>
               </div>
-              <div className="p-3 bg-secondary rounded-lg space-y-4">
+              <div className="p-3 bg-secondary rounded-lg space-y-3">
                 <div className="text-sm font-normal text-foreground break-all">
                   {account}
                 </div>
@@ -352,7 +353,7 @@ const DeploymentPanel: React.FC = () => {
                   defaultValue={availableNetworks.find((n) => n.id === selectedNetwork.split('-')[1])?.chainId.toString() || ''}
                   onValueChange={handleNetworkValueChange}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full text-xs">
                     <SelectValue placeholder="Select Network" />
                   </SelectTrigger>
                   <SelectContent>
@@ -377,6 +378,7 @@ const DeploymentPanel: React.FC = () => {
                   type="text"
                   value={customGasLimit}
                   onChange={handleGasLimitChange}
+                  className={'text-xs'}
                   // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {gasPrice && (
@@ -513,7 +515,7 @@ const DeploymentPanel: React.FC = () => {
                     <select
                       value={methodName}
                       onChange={(e) => setMethodName(e.target.value)}
-                      className="w-full px-3 py-2 text-sm outline-none border-0 rounded-md bg-secondary text-gray-900 dark:text-white focus:ring focus:ring-muted-foreground/40 focus:border-muted-foreground/40"
+                      className={selectBaseClass}
                     >
                       <option value="">Select a method</option>
                       {getAvailableMethods().map((method) => (
@@ -527,20 +529,21 @@ const DeploymentPanel: React.FC = () => {
                   {/* Method Arguments */}
                   {methodName && getMethodInputs(methodName).length > 0 && (
                     <div className="space-y-2">
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <label className="block text-xs font-medium text-foreground">
                         Method Arguments
                       </label>
                       {getMethodInputs(methodName).map((input, index) => (
                         <div key={index} className="space-y-1">
-                          <label className="block text-xs text-gray-600 dark:text-gray-400">
+                          <label className="block text-xs text-muted-foreground">
                             {input.name} ({input.type})
                           </label>
-                          <input
+                          <Input
                             type="text"
                             value={methodArgs[index] || ''}
                             onChange={(e) => handleMethodArgChange(index, e.target.value)}
                             placeholder={`Enter ${input.type} value`}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className={'text-xs'}
+                            // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
                         </div>
                       ))}
@@ -563,11 +566,11 @@ const DeploymentPanel: React.FC = () => {
 
                   {/* Method Result */}
                   {methodResult !== null && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <div className="p-3 bg-secondary rounded-md">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
                         Result:
                       </div>
-                      <div className="text-sm text-gray-900 dark:text-white break-all">
+                      <div className="text-sm text-foreground break-all">
                         {typeof methodResult === 'object'
                           ? JSON.stringify(methodResult, null, 2)
                           : String(methodResult)}
