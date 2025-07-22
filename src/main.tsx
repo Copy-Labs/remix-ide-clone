@@ -10,6 +10,9 @@ import './index.css';
 
 import render from './root.tsx';
 
+import { Buffer } from 'buffer';
+window.Buffer = Buffer;
+
 import('./App.tsx').then(({ default: App }) => {
   render(App);
 });

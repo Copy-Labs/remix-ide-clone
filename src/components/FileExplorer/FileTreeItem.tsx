@@ -1,13 +1,54 @@
 import React, { useCallback, useState } from 'react';
 import type { FileNode } from '@/types';
-import {
-  LucideFilePlus,
-  LucideFolderPlus,
-  LucidePencil,
-} from 'lucide-react';
+import { LucideFilePlus, LucideFolderPlus, LucidePencil } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip.tsx';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip.tsx';
 import { FileTypeIcon } from './FileTypeIcons';
+import { useGitStore } from '@/stores/gitStore';
+
+// Git status indicator component
+const GitStatusIndicator: React.FC<{ filePath: string }> = ({ filePath }) => {
+  const { status, isInitialized } = useGitStore();
+
+  if (!isInitialized || !status || status.length === 0) return null;
+
+  const fileStatus = status.find(item => item.file === filePath);
+  if (!fileStatus) return null;
+
+  const getStatusInfo = (head: number, workdir: number, stage: number) => {
+    // VSCode-like status indicators with improved logic
+    if (stage === 2 && head === 0) return { label: 'A', color: 'text-green-500 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', tooltip: 'Added (Staged)' };
+    if (stage === 2 && head === 1 && workdir === 1) return { label: 'M', color: 'text-green-500 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', tooltip: 'Modified (Staged)' };
+    if (workdir === 2 && head === 1) return { label: 'M', color: 'text-orange-500 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/30', tooltip: 'Modified' };
+    if (workdir === 0 && head === 1) return { label: 'D', color: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', tooltip: 'Deleted' };
+    if (workdir === 2 && head === 0) return { label: 'U', color: 'text-blue-500 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', tooltip: 'Untracked' };
+    if (stage === 0 && head === 1) return { label: 'D', color: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', tooltip: 'Deleted (Staged)' };
+    return null;
+  };
+
+  const statusInfo = getStatusInfo(fileStatus.head, fileStatus.workdir, fileStatus.stage);
+  if (!statusInfo) return null;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold rounded-sm ${statusInfo.color} ${statusInfo.bgColor} border border-current/20`}>
+            {statusInfo.label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{statusInfo.tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 interface FileTreeItemProps {
   file: FileNode;
@@ -121,17 +162,19 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
               autoFocus
             />
           ) : (
-            <span
-              className="flex-1 text-sm text-gray-700 dark:text-gray-300"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setIsRenaming(true);
-              }}
-            >
-              {file.name}
-            </span>
+            <div className="flex-1 flex items-center justify-between">
+              <span
+                className="text-sm text-gray-700 dark:text-gray-300"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setIsRenaming(true);
+                }}
+              >
+                {file.name}
+              </span>
+              <GitStatusIndicator filePath={file.path} />
+            </div>
           )}
-
 
           {/* Context Menu Actions (icon buttons) */}
           <TooltipProvider>
@@ -202,33 +245,35 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
         </div>
 
         {/* Render children if expanded */}
-        {isExpanded && children && (
+        {isExpanded && (
           <div className="pl-4">
-            {children.map((child) => (
-              <FileTreeItem
-                key={child.path}
-                file={child}
-                level={level + 1}
-                isExpanded={expandedFolders.has(child.path)}
-                isSelected={selectedFiles.includes(child.path)}
-                children={child.type === 'folder' ? getChildren(child.path) : []}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
-                onContextMenu={onContextMenu}
-                onRename={onRename}
-                onToggleExpanded={() => toggleFolder(child.path)}
-                isCreating={isCreating?.parentPath === child.path ? isCreating : null}
-                onCreateConfirm={onCreateConfirm}
-                onCreateCancel={onCreateCancel}
-                onCreateNew={onCreateNew}
-                expandedFolders={expandedFolders}
-                selectedFiles={selectedFiles}
-                getChildren={getChildren}
-                toggleFolder={toggleFolder}
-              />
-            ))}
+            {/* Render existing children */}
+            {children &&
+              children.map((child) => (
+                <FileTreeItem
+                  key={child.path}
+                  file={child}
+                  level={level + 1}
+                  isExpanded={expandedFolders.has(child.path)}
+                  isSelected={selectedFiles.includes(child.path)}
+                  children={child.type === 'folder' ? getChildren(child.path) : []}
+                  onClick={onClick}
+                  onDoubleClick={onDoubleClick}
+                  onContextMenu={onContextMenu}
+                  onRename={onRename}
+                  onToggleExpanded={() => toggleFolder(child.path)}
+                  isCreating={isCreating?.parentPath === child.path ? isCreating : null}
+                  onCreateConfirm={onCreateConfirm}
+                  onCreateCancel={onCreateCancel}
+                  onCreateNew={onCreateNew}
+                  expandedFolders={expandedFolders}
+                  selectedFiles={selectedFiles}
+                  getChildren={getChildren}
+                  toggleFolder={toggleFolder}
+                />
+              ))}
 
-            {/* Create New Item Input - render after children */}
+            {/* Create New Item Input - render after children, even if no children exist */}
             {isCreating && isCreating.parentPath === file.path && (
               <div className="ml-4 mt-1">
                 <CreateNewItem

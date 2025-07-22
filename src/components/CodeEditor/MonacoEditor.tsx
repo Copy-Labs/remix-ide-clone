@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { type Monaco, type OnChange, type OnMount } from '@monaco-editor/react';
 import { useEditorStore } from '@/stores/editorStore.ts';
 import { useFileStore } from '@/stores/fileStore.ts';
+import { useGitStore } from '@/stores/gitStore';
 import {
   createDeleteTextCommand,
   createInsertTextCommand,
@@ -15,6 +16,9 @@ import {
   type MonacoOption,
 } from '@/utils/editorUtils';
 import type { monaco } from '@/lib/monaco-editor';
+import GitBlameGutter from './GitBlameGutter';
+import GitDiffViewer from './GitDiffViewer';
+import EditorToolbar from './EditorToolbar';
 
 interface MonacoEditorProps {
   filePath: string;
@@ -33,6 +37,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [lineHeight, setLineHeight] = useState(20); // Default line height
 
   const {
     registerEditor,
@@ -50,6 +56,9 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   const { executeCommand } = useHistoryStore();
   const { getFileContent, updateFileContent } = useFileStore();
+
+  // Git integration
+  const { showBlame, showDiff } = useGitStore();
 
   // State to manage file content asynchronously
   const [fileContent, setFileContent] = useState<string>('');
@@ -148,6 +157,15 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     // Set up editor change listeners for history tracking
     // Temporarily disable complex history tracking to prevent keystroke recursion
     // setupHistoryTracking(editor, monaco);
+
+    // Get line height from editor
+    const computedLineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+    setLineHeight(computedLineHeight);
+
+    // Track scroll position for blame gutter
+    editor.onDidScrollChange(e => {
+      setScrollTop(e.scrollTop);
+    });
 
     // Focus editor
     editor.focus();
@@ -1099,19 +1117,47 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         </div>
       )}
 
-      <Editor
-        key={filePath} // Force recreation of editor instance for each file to prevent model issues
-        height={height}
-        language={detectedLanguage}
-        // path={filePath} // Commented out to prevent re-renders when switching files
-        value={fileContent}
-        theme={monacoTheme}
-        // theme={'vs-dark'}
-        onChange={handleEditorChange}
-        onMount={handleEditorDidMount}
-        beforeMount={handleWillMount}
-        options={editorOptions}
-      />
+      {/* Editor Toolbar - only show when editor and content are loaded */}
+      {!isLoading && !isContentLoading && (
+        <EditorToolbar filePath={filePath} />
+      )}
+
+      {/* Git Blame Gutter */}
+      {!isLoading && !isContentLoading && (
+        <GitBlameGutter
+          filePath={filePath}
+          lineCount={fileContent.split('\n').length}
+          scrollTop={scrollTop}
+          lineHeight={lineHeight}
+          visible={showBlame}
+        />
+      )}
+
+      {/* Git Diff Viewer */}
+      {!isLoading && !isContentLoading && showDiff ? (
+        <GitDiffViewer
+          filePath={filePath}
+          visible={showDiff}
+        />
+      ) : (
+        <Editor
+          key={filePath} // Force recreation of editor instance for each file to prevent model issues
+          height={height}
+          language={detectedLanguage}
+          // path={filePath} // Commented out to prevent re-renders when switching files
+          value={fileContent}
+          theme={monacoTheme}
+          // theme={'vs-dark'}
+          onChange={handleEditorChange}
+          onMount={handleEditorDidMount}
+          beforeMount={handleWillMount}
+          options={{
+            ...editorOptions,
+            // Add padding to the left if blame is shown
+            lineDecorationsWidth: showBlame ? 48 : undefined,
+          }}
+        />
+      )}
     </div>
   );
 };

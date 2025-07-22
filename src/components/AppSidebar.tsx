@@ -1,22 +1,21 @@
 import * as React from 'react';
 import {
   Bug,
+  Code,
   Command,
   GitBranch,
   LucideFile,
   LucidePlay,
   LucideRefreshCw,
-  Settings,
-  Zap,
-  Shield,
   Palette,
-  Code,
   Rocket,
+  Settings,
+  Shield,
   TestTube,
+  Zap,
 } from 'lucide-react';
 
 import { NavUser } from '@/components/NavUser';
-import { Label } from '@/components/ui/label';
 import {
   Sidebar,
   SidebarContent,
@@ -24,22 +23,20 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Switch } from '@/components/ui/switch';
 import FileExplorer from '@/components/FileExplorer/FileExplorer.tsx';
 import ErrorBoundary from '@/components/ErrorBoundary.tsx';
 import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
 import GitPanel from '@/components/Git/GitPanel.tsx';
-import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
+// import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
+import DebuggerPanel from '@/components/Debugger/DebuggerPanel.tsx';
 import CollaborationPluginUI from '@/components/PluginUI/CollaborationPluginUI.tsx';
 import BackupPluginUI from '@/components/PluginUI/BackupPluginUI.tsx';
-import CustomThemePluginUI from '@/components/PluginUI/CustomThemePluginUI.tsx';
 import AnalysisPluginUI from '@/components/PluginUI/AnalysisPluginUI.tsx';
 import DeploymentPluginUI from '@/components/PluginUI/DeploymentPluginUI.tsx';
 import GitPluginUI from '@/components/PluginUI/GitPluginUI.tsx';
@@ -50,7 +47,7 @@ import ImprovedCustomThemePluginUI from '@/components/PluginUI/ImprovedCustomThe
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
   const iconMap: Record<string, React.ComponentType<any>> = {
-    'collaboration': Zap,
+    collaboration: Zap,
     'backup-sync': Shield,
     'custom-theme-ui': Palette,
     'code-analysis': Code,
@@ -65,11 +62,11 @@ const getPluginIcon = (pluginId: string) => {
 // Plugin UI component mapping
 const getPluginComponent = (pluginId: string) => {
   const componentMap: Record<string, React.ComponentType<{ pluginId: string }>> = {
-    'collaboration': CollaborationPluginUI,
+    collaboration: CollaborationPluginUI,
     'backup-sync': BackupPluginUI,
     'custom-theme-ui': ImprovedCustomThemePluginUI, // CustomThemePluginUI,
     'code-analysis': AnalysisPluginUI,
-    'solidity-debugger': DebuggerPluginUI,
+    'solidity-debugger': DebuggerPanel,
     'deployment-automation': DeploymentPluginUI,
     'git-integration': GitPluginUI,
     'testing-framework': TestingPluginUI,
@@ -133,6 +130,18 @@ const data = {
         </ErrorBoundary>
       ),
     },
+    /*{
+      key: 'debugger',
+      title: 'Debugger',
+      url: '#',
+      icon: Bug,
+      isActive: false,
+      component: (
+        <ErrorBoundary>
+          <DebuggerPanel />
+        </ErrorBoundary>
+      ),
+    },*/
   ],
 };
 
@@ -147,7 +156,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const baseItems = [...data.navMain];
 
     // Add all enabled plugins to sidebar
-    const enabledPlugins = plugins.filter(plugin => plugin.enabled);
+    const enabledPlugins = plugins.filter((plugin) => plugin.enabled);
 
     enabledPlugins.forEach((plugin, index) => {
       const PluginComponent = getPluginComponent(plugin.id);
@@ -251,12 +260,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader className="gap-3.5 border-b p-4">
           <div className="flex w-full items-center justify-between">
             <div className="text-foreground text-base font-medium">{activeItem?.title}</div>
-            <Label className="flex items-center gap-2 text-sm">
+            {/*<Label className="flex items-center gap-2 text-sm">
               <span>Unreads</span>
               <Switch className="shadow-none" />
-            </Label>
+            </Label>*/}
           </div>
-          <SidebarInput placeholder="Type to search..." />
+          {/*<SidebarInput placeholder="Type to search..." />*/}
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="px-0">

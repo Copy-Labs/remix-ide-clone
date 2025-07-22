@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -20,12 +21,15 @@ import {
 } from '@/components/ui/dialog';
 import {
   AlertCircle,
+  Check,
   Download,
   GitBranch,
   GitCommit,
   Github,
   GitMerge,
+  HelpCircle,
   Loader2,
+  Minus,
   Plus,
   RefreshCw,
   Settings,
@@ -33,7 +37,11 @@ import {
   Upload,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+// import toast from 'react-hot-toast';
+import GitBranchVisualizer from './GitBranchVisualizer';
+import GitAuthManager from './GitAuthManager';
+import { GitErrorBanner } from './GitErrorBanner';
 
 const GitPanel: React.FC = () => {
   const {
@@ -53,11 +61,13 @@ const GitPanel: React.FC = () => {
     // Actions
     initRepository,
     cloneRepository,
+    createInitialCommit,
     createBranch,
     switchBranch,
     deleteBranch,
     getBranches,
     addFile,
+    unstageFile,
     addAllFiles,
     commit,
     getCommits,
@@ -73,6 +83,7 @@ const GitPanel: React.FC = () => {
     getGithubRepos,
     createGithubRepo,
     setError,
+    resetGitIndex,
   } = useGitStore();
 
   // Local state for forms
@@ -81,6 +92,7 @@ const GitPanel: React.FC = () => {
   const [cloneUrl, setCloneUrl] = useState('');
   const [remoteName, setRemoteName] = useState('');
   const [remoteUrl, setRemoteUrl] = useState('');
+  const [forceRemote, setForceRemote] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoDescription, setNewRepoDescription] = useState('');
@@ -91,7 +103,7 @@ const GitPanel: React.FC = () => {
   const [showCloneDialog, setShowCloneDialog] = useState(false);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [showRemoteDialog, setShowRemoteDialog] = useState(false);
-  const [showGithubDialog, setShowGithubDialog] = useState(false);
+  // const [showGithubDialog, setShowGithubDialog] = useState(false); // Replaced by GitAuthManager
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [showCreateRepoDialog, setShowCreateRepoDialog] = useState(false);
 
@@ -181,31 +193,18 @@ const GitPanel: React.FC = () => {
     }
 
     try {
-      await addRemote(remoteName, remoteUrl);
+      await addRemote(remoteName, remoteUrl, forceRemote);
       setShowRemoteDialog(false);
       setRemoteName('');
       setRemoteUrl('');
+      setForceRemote(false);
       toast.success(`Remote '${remoteName}' added successfully`);
     } catch (err) {
       toast.error('Failed to add remote');
     }
   };
 
-  const handleConnectGithub = async () => {
-    if (!githubToken.trim()) {
-      toast.error('Please enter a GitHub token');
-      return;
-    }
-
-    try {
-      await connectGithub(githubToken);
-      setShowGithubDialog(false);
-      setGithubToken('');
-      toast.success('Connected to GitHub successfully');
-    } catch (err) {
-      toast.error('Failed to connect to GitHub');
-    }
-  };
+  // GitHub connection is now handled by GitAuthManager
 
   const handleSaveConfig = () => {
     setConfig({
@@ -235,15 +234,24 @@ const GitPanel: React.FC = () => {
     }
   };
 
+  const handleResetGitIndex = async () => {
+    try {
+      await resetGitIndex();
+      toast.success('Git index has been reset successfully');
+    } catch (err) {
+      toast.error('Failed to reset Git index');
+    }
+  };
+
   const getStatusIcon = (file: any) => {
     const { head, workdir, stage } = file;
 
-    if (head === 1 && workdir === 2 && stage === 0) return '🔴'; // Modified
-    if (head === 0 && workdir === 2 && stage === 0) return '🟢'; // New
-    if (head === 1 && workdir === 0 && stage === 0) return '🗑️'; // Deleted
-    if (stage === 2) return '📋'; // Staged
+    if (head === 1 && workdir === 2 && stage === 0) return <AlertCircle className="h-4 w-4 text-orange-500" />; // Modified
+    if (head === 0 && workdir === 2 && stage === 0) return <Plus className="h-4 w-4 text-green-500" />; // New
+    if (head === 1 && workdir === 0 && stage === 0) return <Trash2 className="h-4 w-4 text-red-500" />; // Deleted
+    if (stage === 2) return <Check className="h-4 w-4 text-blue-500" />; // Staged
 
-    return '❓';
+    return <HelpCircle className="h-4 w-4 text-gray-500" />; // Unknown
   };
 
   const getStatusText = (file: any) => {
@@ -330,6 +338,8 @@ const GitPanel: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        <GitErrorBanner error={error} />
       </div>
     );
   }
@@ -345,6 +355,15 @@ const GitPanel: React.FC = () => {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowConfigDialog(true)}>
             <Settings className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetGitIndex}
+            disabled={isLoading}
+            title="Reset Git Index"
+          >
+            <AlertCircle className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -368,59 +387,139 @@ const GitPanel: React.FC = () => {
         </Alert>
       )}
 
+      <GitErrorBanner error={error} />
+
       <Tabs defaultValue="changes" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="changes">Changes</TabsTrigger>
           <TabsTrigger value="branches">Branches</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="github">GitHub</TabsTrigger>
+          <TabsTrigger value="auth">Authentication</TabsTrigger>
         </TabsList>
 
         <TabsContent value="changes" className="space-y-4">
+          {/* Unstaged Changes */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Staging Area</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={addAllFiles} disabled={isLoading}>
-                  Stage All
-                </Button>
-                <Button variant="outline" size="sm" onClick={getStatus} disabled={isLoading}>
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Unstaged Changes</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addAllFiles}
+                    disabled={isLoading}
+                    title="Stage All Changes"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Stage All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={getStatus}
+                    disabled={isLoading}
+                    title="Refresh Status"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
-
+            </CardHeader>
+            <CardContent className="py-2">
               <ScrollArea className="h-32">
                 {status.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No changes detected</p>
+                  <div className="flex flex-col items-center justify-center h-full py-4 text-center">
+                    <Check className="h-8 w-8 text-green-500 mb-2" />
+                    <p className="text-sm text-muted-foreground">No changes detected</p>
+                    <p className="text-xs text-muted-foreground mt-1">Working tree is clean</p>
+                  </div>
                 ) : (
-                  <div className="space-y-2">
-                    {status.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <span>{getStatusIcon(file)}</span>
-                          <span className="font-mono">{file.file}</span>
+                  <div className="space-y-1">
+                    {status.filter(file => file.stage !== 2).map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted text-sm"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <div title={getStatusText(file)}>{getStatusIcon(file)}</div>
+                          <span className="font-mono truncate">{file.file}</span>
                           <Badge variant="outline" className="text-xs">
                             {getStatusText(file)}
                           </Badge>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addFile(file.file)}
-                          disabled={isLoading}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => addFile(file.file)}
+                            disabled={isLoading}
+                            title="Stage File"
+                            className="h-7 w-7 p-0"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </ScrollArea>
+            </CardContent>
+          </Card>
 
-              <Separator />
+          {/* Staged Changes */}
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Staged Changes</CardTitle>
+            </CardHeader>
+            <CardContent className="py-2">
+              <ScrollArea className="h-32">
+                {status.filter(file => file.stage === 2).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full py-4 text-center">
+                    <p className="text-sm text-muted-foreground">No staged changes</p>
+                    <p className="text-xs text-muted-foreground mt-1">Stage changes before committing</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {status.filter(file => file.stage === 2).map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted text-sm"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <div title="Staged">{getStatusIcon(file)}</div>
+                          <span className="font-mono truncate">{file.file}</span>
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                            Staged
+                          </Badge>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => unstageFile(file.file)}
+                            disabled={isLoading}
+                            title="Unstage File"
+                            className="h-7 w-7 p-0"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
 
+          {/* Commit Section */}
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Commit</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 py-2">
               <div className="space-y-2">
                 <Label htmlFor="commit-message">Commit Message</Label>
                 <Textarea
@@ -430,16 +529,21 @@ const GitPanel: React.FC = () => {
                   placeholder="Enter commit message..."
                   rows={3}
                 />
-                <Button
-                  onClick={handleCommit}
-                  disabled={isLoading || !commitMessage.trim()}
-                  className="w-full"
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  <GitCommit className="h-4 w-4 mr-2" />
-                  Commit Changes
-                </Button>
               </div>
+              <Button
+                onClick={handleCommit}
+                disabled={isLoading || !commitMessage.trim() || status.filter(file => file.stage === 2).length === 0}
+                className="w-full"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                <GitCommit className="h-4 w-4 mr-2" />
+                Commit Changes
+              </Button>
+              {status.filter(file => file.stage === 2).length === 0 && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Stage changes before committing
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -486,46 +590,99 @@ const GitPanel: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-48">
-                <div className="space-y-2">
-                  {branches.map((branch) => (
-                    <div
-                      key={branch.name}
-                      className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
-                    >
-                      <div className="flex items-center gap-2">
-                        <GitBranch className="h-4 w-4" />
-                        <span className={`font-mono ${branch.current ? 'font-bold' : ''}`}>
-                          {branch.name}
-                        </span>
-                        {branch.current && <Badge variant="default">Current</Badge>}
-                      </div>
-                      <div className="flex gap-1">
-                        {!branch.current && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSwitchBranch(branch.name)}
-                            disabled={isLoading}
-                          >
-                            <GitMerge className="h-3 w-3" />
-                          </Button>
-                        )}
-                        {!branch.current && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteBranch(branch.name)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+              {branches.length === 0 ? (
+                <div className="text-center py-8 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    No branches found. Create an initial commit to establish the main branch.
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      if (!config.user.name || !config.user.email) {
+                        toast.error('Please configure your Git user name and email first');
+                        return;
+                      }
+                      try {
+                        await createInitialCommit();
+                        toast.success('Initial commit created successfully');
+                      } catch (err) {
+                        toast.error('Failed to create initial commit');
+                      }
+                    }}
+                    disabled={isLoading || !config.user.name || !config.user.email}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    <GitCommit className="h-4 w-4 mr-2" />
+                    Create Initial Commit
+                  </Button>
                 </div>
-              </ScrollArea>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {/* Branch List */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Branch List</h4>
+                    <ScrollArea className="h-32">
+                      <div className="space-y-2">
+                        {branches.map((branch) => (
+                          <div
+                            key={branch.name}
+                            className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
+                          >
+                            <div className="flex items-center gap-2">
+                              <GitBranch className="h-4 w-4" />
+                              <span className={`font-mono ${branch.current ? 'font-bold' : ''}`}>
+                                {branch.name}
+                              </span>
+                              {branch.current && <Badge variant="default">Current</Badge>}
+                            </div>
+                            <div className="flex gap-1">
+                              {!branch.current && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSwitchBranch(branch.name)}
+                                  disabled={isLoading}
+                                  title="Switch to this branch"
+                                  className="flex items-center gap-1"
+                                >
+                                  <GitMerge className="h-3 w-3" />
+                                  <span className="hidden sm:inline">Switch</span>
+                                </Button>
+                              )}
+                              {!branch.current && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to delete the branch "${branch.name}"?`)) {
+                                      deleteBranch(branch.name);
+                                    }
+                                  }}
+                                  disabled={isLoading}
+                                  title="Delete this branch"
+                                  className="flex items-center gap-1 text-red-500 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  {/* Branch Visualization */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium mb-2">Branch Visualization</h4>
+                    <div className="border rounded-md h-96">
+                      <GitBranchVisualizer />
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -564,6 +721,16 @@ const GitPanel: React.FC = () => {
                           placeholder="https://github.com/user/repo.git"
                         />
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="force-remote"
+                          checked={forceRemote}
+                          onCheckedChange={setForceRemote}
+                        />
+                        <Label htmlFor="force-remote">
+                          Force (overwrite if remote already exists)
+                        </Label>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setShowRemoteDialog(false)}>
@@ -594,28 +761,41 @@ const GitPanel: React.FC = () => {
                       </div>
                       <div className="flex gap-1">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => push(remote.name)}
                           disabled={isLoading}
+                          title={`Push to ${remote.name}`}
+                          className="flex items-center gap-1"
                         >
                           <Upload className="h-3 w-3" />
+                          <span className="hidden sm:inline">Push</span>
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => pull(remote.name)}
                           disabled={isLoading}
+                          title={`Pull from ${remote.name}`}
+                          className="flex items-center gap-1"
                         >
                           <Download className="h-3 w-3" />
+                          <span className="hidden sm:inline">Pull</span>
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => removeRemote(remote.name)}
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to remove the remote "${remote.name}"?`)) {
+                              removeRemote(remote.name);
+                            }
+                          }}
                           disabled={isLoading}
+                          title={`Remove ${remote.name} remote`}
+                          className="flex items-center gap-1 text-red-500 hover:text-red-600"
                         >
                           <Trash2 className="h-3 w-3" />
+                          <span className="hidden sm:inline">Remove</span>
                         </Button>
                       </div>
                     </div>
@@ -663,71 +843,21 @@ const GitPanel: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="github" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Github className="h-5 w-5" />
-                  <CardTitle className="text-sm">GitHub Integration</CardTitle>
-                </div>
-                {isGithubConnected ? (
-                  <Badge variant="default">Connected</Badge>
-                ) : (
-                  <Badge variant="secondary">Not Connected</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isGithubConnected ? (
-                <Dialog open={showGithubDialog} onOpenChange={setShowGithubDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">
-                      <Github className="h-4 w-4 mr-2" />
-                      Connect to GitHub
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Connect to GitHub</DialogTitle>
-                      <DialogDescription>
-                        Enter your GitHub personal access token to connect.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className={'space-y-2'}>
-                        <Label htmlFor="github-token">Personal Access Token</Label>
-                        <Input
-                          id="github-token"
-                          type="password"
-                          value={githubToken}
-                          onChange={(e) => setGithubToken(e.target.value)}
-                          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowGithubDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleConnectGithub} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Connect
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">
-                      Connected as <strong>{config.github.username}</strong>
-                    </span>
-                    <Button variant="outline" size="sm" onClick={disconnectGithub}>
-                      Disconnect
-                    </Button>
-                  </div>
+        <TabsContent value="auth" className="space-y-4">
+          <GitAuthManager onAuthSuccess={() => {
+            // Refresh data when authentication is successful
+            getGithubRepos();
+          }} />
 
+          {/* GitHub Repositories (shown when connected) */}
+          {isGithubConnected && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Github className="h-5 w-5" />
+                    <CardTitle className="text-sm">GitHub Repositories</CardTitle>
+                  </div>
                   <div className="flex gap-2">
                     <Dialog open={showCreateRepoDialog} onOpenChange={setShowCreateRepoDialog}>
                       <DialogTrigger asChild>
@@ -777,46 +907,50 @@ const GitPanel: React.FC = () => {
                       Refresh
                     </Button>
                   </div>
-
-                  <ScrollArea className="h-48">
-                    <div className="space-y-2">
-                      {githubRepos.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No repositories found</p>
-                      ) : (
-                        githubRepos.map((repo: any) => (
-                          <div key={repo.id} className="p-3 border rounded-md hover:bg-muted">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-medium">{repo.name}</h4>
-                                {repo.description && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {repo.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                  {repo.language && (
-                                    <Badge variant="outline">{repo.language}</Badge>
-                                  )}
-                                  {repo.private && <Badge variant="secondary">Private</Badge>}
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setCloneUrl(repo.clone_url)}
-                              >
-                                <Download className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-48">
+                  <div className="space-y-2">
+                    {githubRepos.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No repositories found</p>
+                    ) : (
+                      githubRepos.map((repo: any) => (
+                        <div key={repo.id} className="p-3 border rounded-md hover:bg-muted">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium">{repo.name}</h4>
+                              {repo.description && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {repo.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                {repo.language && (
+                                  <Badge variant="outline">{repo.language}</Badge>
+                                )}
+                                {repo.private && <Badge variant="secondary">Private</Badge>}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setCloneUrl(repo.clone_url);
+                                setShowCloneDialog(true);
+                              }}
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -853,6 +987,38 @@ const GitPanel: React.FC = () => {
               Cancel
             </Button>
             <Button onClick={handleSaveConfig}>Save Configuration</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clone Repository Dialog */}
+      <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clone Repository</DialogTitle>
+            <DialogDescription>
+              Enter the URL of the repository you want to clone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className={"space-y-2"}>
+              <Label htmlFor="clone-url">Repository URL</Label>
+              <Input
+                id="clone-url"
+                value={cloneUrl}
+                onChange={(e) => setCloneUrl(e.target.value)}
+                placeholder="https://github.com/user/repo.git"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCloneDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCloneRepository} disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Clone
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

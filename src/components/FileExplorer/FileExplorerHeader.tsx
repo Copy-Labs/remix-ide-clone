@@ -5,11 +5,13 @@ import {
   LucideRefreshCw,
   LucideChevronDown,
   LucideSearch,
-  LucideX
+  LucideX,
+  GitBranch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip.tsx';
+import { useGitStore } from '@/stores/gitStore';
 
 interface FileExplorerHeaderProps {
   onCreateFile: () => void;
@@ -30,6 +32,11 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
 }) => {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
+  const { isInitialized, currentBranch, status } = useGitStore();
+
+  // Calculate changes count for Git status
+  const changesCount = status ? status.length : 0;
 
   const handleSearchToggle = () => {
     setIsSearchVisible(!isSearchVisible);
@@ -56,9 +63,22 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
   return (
     <div className="flex flex-col border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between p-3">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-          File Explorer
-        </h2>
+        <div className="flex flex-col">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+            File Explorer
+          </h2>
+          {isInitialized && currentBranch && (
+            <div className="flex items-center mt-1 text-xs text-gray-600 dark:text-gray-400">
+              <GitBranch size={12} className="mr-1" />
+              <span className="mr-2">{currentBranch}</span>
+              {changesCount > 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  {changesCount}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         <TooltipProvider>
           <div className="flex items-center space-x-1">

@@ -11,7 +11,7 @@ export const testingPlugin: Omit<Plugin, 'api'> = {
   version: '1.0.0',
   description: 'Write and run tests for your Solidity smart contracts',
   author: 'Remix IDE Clone Team',
-  enabled: false,
+  enabled: true, // Enable by default for better IDE integration
   config: {
     testFolder: '/tests',
     autoRunOnSave: false,
