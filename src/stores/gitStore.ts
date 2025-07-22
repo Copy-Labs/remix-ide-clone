@@ -1,9 +1,8 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { gitService } from '@/services/gitService';
-import { debug, info, warn, error } from '@/services/loggerService';
+import { debug, error, info } from '@/services/loggerService';
 
 export interface GitCommit {
   oid: string;
@@ -137,9 +136,12 @@ export interface GitActions {
   unstageFile: (filepath: string) => Promise<void>;
   addAllFiles: () => Promise<void>;
   commit: (message: string) => Promise<void>;
-  getCommits: (options?: { limit?: number; skip?: number; resetPagination?: boolean }) => Promise<void>;
+  getCommits: (options?: {
+    limit?: number;
+    skip?: number;
+    resetPagination?: boolean;
+  }) => Promise<void>;
   loadMoreCommits: () => Promise<void>;
-
 
   // Status operations
   getStatus: (options?: {
@@ -153,7 +155,6 @@ export interface GitActions {
 
   // Configuration
   setConfig: (config: Partial<GitConfig>) => void;
-
 
   // JetBrains-style Git integration
   // File-level operations
@@ -220,7 +221,6 @@ const initialState: GitState = {
   },
 };
 
-
 export const useGitStore = create<GitStore>()(
   devtools(
     persist(
@@ -248,7 +248,8 @@ export const useGitStore = create<GitStore>()(
 
             info('Git repository initialized');
           } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to initialize repository';
+            const errorMessage =
+              err instanceof Error ? err.message : 'Failed to initialize repository';
             error('Failed to initialize git repository:', errorMessage);
             set((state) => {
               state.error = errorMessage;
@@ -285,7 +286,8 @@ export const useGitStore = create<GitStore>()(
 
             info('Initial commit created successfully');
           } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to create initial commit';
+            const errorMessage =
+              err instanceof Error ? err.message : 'Failed to create initial commit';
             error('Failed to create initial commit:', errorMessage);
             set((state) => {
               state.error = errorMessage;
@@ -320,7 +322,6 @@ export const useGitStore = create<GitStore>()(
             });
           }
         },
-
 
         // Branch operations
         createBranch: async (name: string) => {
@@ -431,6 +432,7 @@ export const useGitStore = create<GitStore>()(
         addFile: async (filepath: string) => {
           try {
             await gitService.add(filepath);
+            info(`GitStore::addFile ${filepath}`);
 
             await get().getStatus();
             info(`File '${filepath}' added to staging area`);
@@ -465,13 +467,13 @@ export const useGitStore = create<GitStore>()(
             const status = await gitService.status();
 
             // If there are no files to add, just return
-            if (status.length === 0) {
+            if (status?.files.length === 0) {
               info('No files to add to staging area');
               return;
             }
 
             // Add each file individually instead of using '.'
-            for (const item of status) {
+            for (const item of status.files) {
               // Only add files that are not already staged
               if (item.stage !== 2) {
                 await gitService.add(item.file);
@@ -589,7 +591,6 @@ export const useGitStore = create<GitStore>()(
           });
         },
 
-
         // Status operations
         getStatus: async (options = {}) => {
           try {
@@ -600,12 +601,7 @@ export const useGitStore = create<GitStore>()(
               return;
             }
 
-            const {
-              limit = 100,
-              skip = 0,
-              filter,
-              resetPagination = false
-            } = options;
+            const { limit = 100, skip = 0, filter, resetPagination = false } = options;
 
             const currentFilter = filter || get().statusPagination.filter;
 
@@ -681,7 +677,6 @@ export const useGitStore = create<GitStore>()(
           });
         },
 
-
         // Utility
         reset: () => {
           set((state) => {
@@ -738,7 +733,7 @@ export const useGitStore = create<GitStore>()(
             const history = await gitService.getFileHistory(filepath);
 
             set((state) => {
-              state.fileHistory[filepath] = history.map(commit => ({
+              state.fileHistory[filepath] = history.map((commit) => ({
                 oid: commit.oid,
                 message: commit.message,
                 author: {
@@ -931,10 +926,10 @@ export const useGitStore = create<GitStore>()(
         partialize: (state) => ({
           config: state.config,
         }),
-      }
+      },
     ),
     {
       name: 'git-store',
-    }
-  )
+    },
+  ),
 );
