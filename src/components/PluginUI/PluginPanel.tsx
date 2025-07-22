@@ -132,7 +132,7 @@ const PluginPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex">
+      <div className="flex-1 flex h-full">
         {/* Plugin List Section */}
         <div className="w-1/2 border-r bg-card/50">
           <div className="p-4">
@@ -145,7 +145,7 @@ const PluginPanel: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 grid grid-cols-2 gap-4">
                 {filteredPlugins.map((plugin) => {
                   const IconComponent = getPluginIcon(plugin.id);
                   const isActive = activePluginId === plugin.id;
@@ -225,7 +225,7 @@ const PluginPanel: React.FC = () => {
         {/* Plugin Content Section */}
         <div className="flex-1 bg-background">
           {activePluginId ? (
-            <div className="h-full">
+            <div className="h-full overflow-y-auto">
               {activePluginId === 'collaboration' && (
                 <CollaborationPluginUI pluginId={activePluginId} />
               )}
