@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Branch Persistence Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .steps {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script>
+        // Function to check localStorage for git-store data
+        function checkLocalStorage() {
+            const gitStoreData = localStorage.getItem('git-store');
+            if (gitStoreData) {
+                try {
+                    const parsedData = JSON.parse(gitStoreData);
+                    console.log('Git store data found in localStorage:', parsedData);
+
+                    // Check if branches are in the persisted data
+                    if (parsedData.state && parsedData.state.branches) {
+                        console.log('Branches found in persisted data:', parsedData.state.branches);
+                        document.getElementById('branches').textContent = JSON.stringify(parsedData.state.branches, null, 2);
+                        document.getElementById('currentBranch').textContent = parsedData.state.currentBranch || 'None';
+                        document.getElementById('branchCount').textContent = parsedData.state.branches.length;
+
+                        if (parsedData.state.branches.length > 0) {
+                            document.getElementById('status').innerHTML = '<span class="success">Branches found in localStorage!</span>';
+                        } else {
+                            document.getElementById('status').innerHTML = '<span class="error">No branches found in localStorage.</span>';
+                        }
+                    } else {
+                        console.log('No branches found in persisted data');
+                        document.getElementById('branches').textContent = 'No branches found in persisted data';
+                        document.getElementById('status').innerHTML = '<span class="error">No branches found in localStorage.</span>';
+                    }
+                } catch (err) {
+                    console.error('Error parsing git-store data:', err);
+                    document.getElementById('branches').textContent = 'Error parsing git-store data: ' + err.message;
+                    document.getElementById('status').innerHTML = '<span class="error">Error parsing git-store data.</span>';
+                }
+            } else {
+                console.log('No git-store data found in localStorage');
+                document.getElementById('branches').textContent = 'No git-store data found in localStorage';
+                document.getElementById('status').innerHTML = '<span class="error">No git-store data found in localStorage.</span>';
+            }
+        }
+
+        // Run the check when the page loads
+        window.onload = checkLocalStorage;
+    </script>
+</head>
+<body>
+    <h1>Test Branch Persistence Fix</h1>
+    <p>This page helps verify that the fix for branch persistence is working correctly.</p>
+
+    <div class="steps">
+        <h2>Testing Steps:</h2>
+        <ol>
+            <li>Open the main application</li>
+            <li>Initialize a Git repository if not already done</li>
+            <li>Create a new branch (e.g., "test-branch")</li>
+            <li>Verify that the branch appears in the UI</li>
+            <li>Refresh the browser</li>
+            <li>Verify that the branch still appears in the UI after refresh</li>
+            <li>Open this test page in a new tab to confirm branches are stored in localStorage</li>
+        </ol>
+    </div>
+
+    <h2>Current Status: <span id="status">Checking...</span></h2>
+
+    <h3>Branches in localStorage: <span id="branchCount">0</span></h3>
+    <pre id="branches">Loading...</pre>
+
+    <h3>Current Branch:</h3>
+    <pre id="currentBranch">None</pre>
+
+    <button onclick="checkLocalStorage()">Refresh</button>
+
+    <h2>Explanation of the Fix</h2>
+    <p>The issue was that when the page was refreshed, the GitPanel component's useEffect hook wasn't triggering because <code>isInitialized</code> was already true from localStorage. However, the GitService's in-memory branches array hadn't been updated yet with the persisted branches.</p>
+
+    <p>The fix adds a new useEffect hook to the GitPanel component that runs when the component mounts, regardless of whether <code>isInitialized</code> has changed. This ensures that branches are loaded from GitService after the page is refreshed.</p>
+
+    <pre>
+// Added to GitPanel.tsx
+useEffect(() => {
+  if (isInitialized) {
+    getBranches();
+  }
+}, []);
+    </pre>
+</body>
+</html>
