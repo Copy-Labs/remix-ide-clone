@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { GitBranch, GitCommit, GitMerge, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils.ts';
 
 interface CommitNode {
   id: string;
@@ -177,16 +178,16 @@ const GitBranchVisualizer: React.FC = () => {
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Branch Visualization</h3>
+        <h3 className="text-sm font-semibold">Branch Visualization</h3>
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
             onClick={() => getCommits(50)}
             disabled={isLoading}
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('h-4 w-4', isLoading ? 'animate-spin' : '')} />
           </Button>
 
           {showNewBranchInput ? (
@@ -207,12 +208,13 @@ const GitBranchVisualizer: React.FC = () => {
             </div>
           ) : (
             <Button
+              className={'text-xs'}
               variant="outline"
               size="sm"
               onClick={() => setShowNewBranchInput(true)}
               disabled={isLoading}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               New Branch
             </Button>
           )}

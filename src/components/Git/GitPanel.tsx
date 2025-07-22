@@ -276,8 +276,8 @@ const GitPanel: React.FC = () => {
 
         <TabsContent value="changes" className="space-y-2 mt-2">
           {/* Unstaged Changes */}
-          <Card className="shadow-none border">
-            <CardHeader className="py-1.5 px-3">
+          <Card className="shadow-none border-0 p-0 gap-0">
+            <CardHeader className="py-2 px-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-medium">Unstaged Changes</CardTitle>
                 <div className="flex gap-1">
@@ -304,7 +304,7 @@ const GitPanel: React.FC = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="py-1 px-2">
+            <CardContent className="px-2">
               <ScrollArea className="h-24">
                 {status.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-2 text-center">
@@ -345,13 +345,15 @@ const GitPanel: React.FC = () => {
             </CardContent>
           </Card>
 
+          <Separator />
+
           {/* Staged Changes */}
-          <Card className="shadow-none border">
-            <CardHeader className="py-1.5 px-3">
+          <Card className="shadow-none border-0 p-0 gap-0">
+            <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Staged Changes</CardTitle>
             </CardHeader>
-            <CardContent className="py-1 px-2">
-              <ScrollArea className="h-24">
+            <CardContent className="px-2">
+              <ScrollArea className="h-64">
                 {status.filter(file => file.stage === 2).length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-2 text-center">
                     <p className="text-xs text-muted-foreground">No staged changes</p>
@@ -390,13 +392,15 @@ const GitPanel: React.FC = () => {
             </CardContent>
           </Card>
 
+          <Separator />
+
           {/* Commit Section */}
-          <Card className="shadow-none border">
-            <CardHeader className="py-1.5 px-3">
-              <CardTitle className="text-xs font-medium">Commit</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 py-1 px-2">
-              <div className="space-y-1">
+          <Card className="shadow-none border-0 p-0 gap-0 mt-4">
+            {/*<CardHeader className="px-3">
+              <CardTitle className="text-xs font-medium">Commit Panel</CardTitle>
+            </CardHeader>*/}
+            <CardContent className="space-y-2 px-2">
+              <div className="space-y-2">
                 <Label htmlFor="commit-message" className="text-xs">Commit Message</Label>
                 <Textarea
                   id="commit-message"
@@ -404,7 +408,7 @@ const GitPanel: React.FC = () => {
                   onChange={(e) => setCommitMessage(e.target.value)}
                   placeholder="Enter commit message..."
                   rows={2}
-                  className="text-xs min-h-[60px]"
+                  className="text-xs min-h-[80px] resize-none"
                 />
               </div>
               <Button
@@ -426,8 +430,8 @@ const GitPanel: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="branches" className="space-y-2 mt-2">
-          <Card className="shadow-none border">
-            <CardHeader className="py-1.5 px-3">
+          <Card className="shadow-none border-0 py-0 gap-0">
+            <CardHeader className="px-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-medium">Branches</CardTitle>
                 <Dialog open={showBranchDialog} onOpenChange={setShowBranchDialog}>
@@ -500,7 +504,7 @@ const GitPanel: React.FC = () => {
                   {/* Branch List */}
                   <div>
                     <h4 className="text-xs font-medium mb-1">Branch List</h4>
-                    <ScrollArea className="h-24">
+                    <ScrollArea className="h-96">
                       <div className="space-y-0.5">
                         {branches.map((branch) => (
                           <div
@@ -550,10 +554,12 @@ const GitPanel: React.FC = () => {
                     </ScrollArea>
                   </div>
 
+                  <Separator />
+
                   {/* Branch Visualization */}
                   <div className="mt-2">
-                    <h4 className="text-xs font-medium mb-1">Branch Visualization</h4>
-                    <div className="border rounded-sm h-48">
+                    {/*<h4 className="text-xs font-medium mb-1">Branch Visualization</h4>*/}
+                    <div className="rounded-sm h-48">
                       <GitBranchVisualizer />
                     </div>
                   </div>
@@ -610,18 +616,18 @@ const GitPanel: React.FC = () => {
             <DialogTitle className="text-sm">Git Configuration</DialogTitle>
             <DialogDescription className="text-xs">Configure your git user information.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <div>
+          <div className="space-y-4">
+            <div className={'space-y-2'}>
               <Label htmlFor="user-name" className="text-xs">Name</Label>
               <Input
                 id="user-name"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Your Name"
-                className="h-7 text-xs"
+                className="text-xs"
               />
             </div>
-            <div>
+            <div className={'space-y-2'}>
               <Label htmlFor="user-email" className="text-xs">Email</Label>
               <Input
                 id="user-email"
@@ -629,7 +635,7 @@ const GitPanel: React.FC = () => {
                 value={userEmail}
                 onChange={(e) => setUserEmail(e.target.value)}
                 placeholder="your.email@example.com"
-                className="h-7 text-xs"
+                className="text-xs"
               />
             </div>
           </div>
