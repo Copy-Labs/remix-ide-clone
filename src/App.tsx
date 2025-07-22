@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 // import {Toaster} from 'react-hot-toast';
-import {useFileStore} from './stores/fileStore';
-import {useEditorStore} from './stores/editorStore';
-import {usePluginStore} from './stores/pluginStore';
+import { useFileStore } from './stores/fileStore';
+import { useEditorStore } from './stores/editorStore';
+import { usePluginStore } from './stores/pluginStore';
 import PluginPanel from './components/PluginUI/PluginPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import MonacoEditor from './components/CodeEditor/MonacoEditor';
-import CompilerPanel from './components/Compiler/CompilerPanel';
-import DeploymentPanel from './components/Deployment/DeploymentPanel';
-import FileExplorer from './components/FileExplorer/FileExplorer';
+import EditorTabs from './components/CodeEditor/EditorTabs';
 import { corePlugins } from './plugins';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
@@ -16,20 +14,21 @@ import { Button } from '@/components/ui/button.tsx';
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbList, BreadcrumbPage,
+  BreadcrumbList,
+  BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb.tsx';
 import { AppSidebar } from './components/AppSidebar';
 import { ThemeProvider } from '@/components/ThemeProvider.tsx';
-import { Settings } from 'lucide-react';
+import { LucidePlug, Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner.tsx';
 
 // Define main page views
 type MainView = 'editor' | 'plugins';
 
 function App() {
-  const {files, activeFile, openTabs, createFile, openFile} = useFileStore();
-  const {theme} = useEditorStore();
+  const { files, activeFile, openTabs, createFile, openFile } = useFileStore();
+  const { theme } = useEditorStore();
   const { registerPlugin } = usePluginStore();
   const [showPluginPanel, setShowPluginPanel] = useState(false);
   const [mainView, setMainView] = useState<MainView>('editor');
@@ -94,11 +93,11 @@ console.log("Result:", result);`;
     const { loadPlugins } = usePluginStore.getState();
 
     // First, register core plugins
-    corePlugins.forEach(plugin => {
+    corePlugins.forEach((plugin) => {
       try {
         const currentPlugins = usePluginStore.getState().plugins;
         // Only register if plugin doesn't already exist
-        const existingPlugin = currentPlugins.find(p => p.id === plugin.id);
+        const existingPlugin = currentPlugins.find((p) => p.id === plugin.id);
         if (!existingPlugin) {
           registerPlugin(plugin);
           console.log(`Plugin registered: ${plugin.name}`);
@@ -133,6 +132,7 @@ console.log("Result:", result);`;
         <Toaster />
 
         <SidebarProvider
+          className={'h-screen overflow-hidden'}
           style={
             {
               '--sidebar-width': '400px',
@@ -140,33 +140,30 @@ console.log("Result:", result);`;
           }
         >
           <AppSidebar />
-          <SidebarInset>
-            <header className="bg-background sticky top-0 flex shrink-0 items-center gap-2 border-b p-4">
+          <SidebarInset className={'h-screen overflow-y-auto'}>
+            <div className="bg-card sticky top-0 flex shrink-0 items-center gap-2 border-b border-border p-4 overflow-x-auto z-10 max-w-[calc(100%-var(--sidebar-width-icon)+var(--sidebar-width-icon))]!">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-              {openTabs.length > 0 && (
-                <div className="">
-                  <div className="flex">
-                    {openTabs.map((filePath) => {
-                      const file = files.get(filePath);
-                      if (!file) return null;
+              <div className="flex-1 space-x-1 overflow-x-auto w-full">
+                {openTabs.length > 0 && <EditorTabs />}
+                {/*{openTabs.map((filePath) => {
+                    const file = files.get(filePath);
+                    if (!file) return null;
 
-                      return (
-                        <div
-                          key={filePath}
-                          className={`px-4 py-2 text-sm rounded-lg cursor-pointer ${
-                            activeFile === filePath ? 'bg-secondary' : ''
-                          }`}
-                          onClick={() => openFile(filePath)}
-                        >
-                          {file.name}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              <div className={'flex items-center justify-end gap-2 w-full'}>
+                    return (
+                      <div
+                        key={filePath}
+                        className={`px-4 py-2 text-sm rounded-lg cursor-pointer ${
+                          activeFile === filePath ? 'bg-secondary' : ''
+                        }`}
+                        onClick={() => openFile(filePath)}
+                      >
+                        {file.name}
+                      </div>
+                    );
+                  })}*/}
+              </div>
+              <div className={'flex items-center justify-end gap-2'}>
                 <div className="flex items-center space-x-4">
                   {/* Main View Navigation */}
                   <div className="flex items-center space-x-2">
@@ -182,24 +179,24 @@ console.log("Result:", result);`;
                       size="sm"
                       onClick={() => setMainView('plugins')}
                     >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Plugin Manager
+                      <LucidePlug className="h-4 w-4" />
+                      Plugins
                     </Button>
                   </div>
 
-                  <Separator orientation="vertical" className="h-4" />
+                  {/*<Separator orientation="vertical" className="h-4" />*/}
 
-                  <div className="flex items-center space-x-2">
+                  {/*<div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       Files: {Array.from(files.values()).filter((f) => f.type === 'file').length}
                     </span>
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       Open: {openTabs.length}
                     </span>
-                  </div>
+                  </div>*/}
                 </div>
               </div>
-            </header>
+            </div>
             <div className="flex flex-1 flex-col gap-4">
               {mainView === 'plugins' ? (
                 <div className="h-full">
@@ -210,8 +207,8 @@ console.log("Result:", result);`;
               ) : (
                 <>
                   {activeFile ? (
-                    <div className="h-full">
-                      <div className="p-4">
+                    <div className="h-full bg-card">
+                      {/*<div className="p-4">
                         <Breadcrumb>
                           <BreadcrumbList>
                             <BreadcrumbItem className="hidden md:block">
@@ -219,11 +216,13 @@ console.log("Result:", result);`;
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden md:block" />
                             <BreadcrumbItem>
-                              <BreadcrumbPage>{activeFile.split('/')[activeFile.split('/').length-1]}</BreadcrumbPage>
+                              <BreadcrumbPage>
+                                {activeFile.split('/')[activeFile.split('/').length - 1]}
+                              </BreadcrumbPage>
                             </BreadcrumbItem>
                           </BreadcrumbList>
                         </Breadcrumb>
-                      </div>
+                      </div>*/}
 
                       {/* Monaco Editor */}
                       <div className="w-full h-[calc(100%-100px)]">
@@ -240,11 +239,14 @@ console.log("Result:", result);`;
                           Welcome to Remix IDE Clone
                         </h2>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">
-                          Select a file from the explorer to start editing, or use the Plugin Manager to configure your development environment
+                          Select a file from the explorer to start editing, or use the Plugin
+                          Manager to configure your development environment
                         </p>
                         <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto">
                           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Features</h3>
+                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                              Features
+                            </h3>
                             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                               <li>✅ Modern React + TypeScript</li>
                               <li>✅ Zustand State Management</li>

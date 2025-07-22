@@ -66,7 +66,7 @@ const GitBlameGutter: React.FC<GitBlameGutterProps> = ({
   }
 
   return (
-    <div className="absolute left-0 top-0 bottom-0 w-48 bg-gray-100 dark:bg-gray-800 border-r border-gray-300 dark:border-gray-600 overflow-hidden z-10">
+    <div className="absolute left-0 top-0 bottom-0 w-48 bg-card overflow-hidden z-10">
       {groupedBlame.map((group, index) => {
         const topPosition = (group.startLine - 1) * lineHeight;
         const height = group.lineCount * lineHeight;
