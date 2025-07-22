@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFileStore } from '@/stores/fileStore.ts';
+import { useGitStore } from '@/stores/gitStore';
 import type { FileNode } from '@/types';
 import FileTreeItem from './FileTreeItem';
 import FileExplorerHeader from './FileExplorerHeader';
@@ -29,6 +30,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     refreshFolders,
   } = useFileStore();
 
+  const { isInitialized, getStatus } = useGitStore();
+
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -42,6 +45,24 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clipboardItem, setClipboardItem] = useState<ClipboardItem | null>(null);
+
+  // Fetch Git status when Git is initialized or files change
+  useEffect(() => {
+    if (isInitialized) {
+      getStatus();
+    }
+  }, [isInitialized, files, getStatus]);
+
+  // Refresh Git status periodically to catch external changes
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const interval = setInterval(() => {
+      getStatus();
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isInitialized, getStatus]);
 
   // Search filtering logic
   const filteredFiles = useMemo(() => {

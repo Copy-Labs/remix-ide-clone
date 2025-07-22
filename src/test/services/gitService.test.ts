@@ -35,6 +35,11 @@ vi.mock('isomorphic-git', () => ({
   },
 }));
 
+// Mock isomorphic-git http
+vi.mock('isomorphic-git/http/web', () => ({
+  default: fetch,
+}));
+
 describe('GitFileSystemAdapter', () => {
   let adapter: GitFileSystemAdapter;
   let mockFileStore: any;
@@ -449,6 +454,23 @@ describe('GitService', () => {
         dir: '/test',
         remote,
         url,
+        force: false,
+      });
+    });
+
+    it('should add remote with force option', async () => {
+      const remote = 'origin';
+      const url = 'https://github.com/user/repo.git';
+      const force = true;
+
+      await gitService.addRemote(remote, url, force);
+
+      expect(mockGit.addRemote).toHaveBeenCalledWith({
+        fs: expect.any(GitFileSystemAdapter),
+        dir: '/test',
+        remote,
+        url,
+        force,
       });
     });
   });

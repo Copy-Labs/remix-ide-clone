@@ -513,7 +513,6 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Step 1: Fetch latest changes
       mockGitService.fetch.mockResolvedValue(undefined);
       await gitStore.fetch(remoteName);
-
       // Step 2: Pull changes
       mockGitService.pull.mockResolvedValue(undefined);
       mockGitService.log.mockResolvedValue([

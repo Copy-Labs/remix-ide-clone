@@ -1,7 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePluginStore } from '@/stores/pluginStore';
 import { useFileStore } from '@/stores/fileStore';
 import { TestingPluginImplementation } from '@/plugins/testingPlugin';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Play,
+  PlayCircle,
+  Settings,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Zap,
+  ChevronDown,
+  ChevronRight,
+  TestTube,
+  BarChart3,
+  Loader2
+} from 'lucide-react';
 
 interface TestingPluginUIProps {
   pluginId: string;
@@ -164,317 +190,503 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
+  // Keyboard shortcuts for better IDE integration
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 'Enter':
+            event.preventDefault();
+            handleRunAllTests();
+            break;
+          case 't':
+            event.preventDefault();
+            // Focus on test name input
+            const testNameInput = document.querySelector('input[placeholder="Enter test name"]') as HTMLInputElement;
+            testNameInput?.focus();
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Testing Framework</h2>
+    <div className="p-4 space-y-6">
+      <div className="flex items-center gap-2">
+        <TestTube className="h-6 w-6" />
+        <h2 className="text-xl font-bold">Testing Framework</h2>
+        <Badge variant="secondary" className="ml-auto">
+          {testResults.size} suites
+        </Badge>
+      </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
-        </div>
+        <Card className="border-destructive">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-4 w-4" />
+              <p className="text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Test Controls */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-semibold">Test Controls</h3>
-          <button
-            onClick={handleRunAllTests}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            disabled={isLoading}
-          >
-            Run All Tests
-          </button>
-        </div>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Play className="h-5 w-5" />
+              <CardTitle>Test Controls</CardTitle>
+            </div>
+            <Button
+              onClick={handleRunAllTests}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <PlayCircle className="h-4 w-4" />
+              )}
+              {isLoading ? 'Running...' : 'Run All Tests'}
+            </Button>
+          </div>
+          <CardDescription>
+            Execute tests for your smart contracts. Use Ctrl+Enter to run all tests.
+          </CardDescription>
+        </CardHeader>
 
         {/* Test Results Summary */}
         {testResults.size > 0 && (
-          <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4">
-            <h4 className="font-medium mb-2">Test Results Summary</h4>
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-gray-800 p-3 rounded shadow">
-                <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.passed, 0)}</div>
-                <div className="text-sm text-green-600">Tests Passed</div>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="h-4 w-4" />
+                <h4 className="font-medium">Test Results Summary</h4>
               </div>
-              <div className="bg-white dark:bg-gray-800 p-3 rounded shadow">
-                <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.failed, 0)}</div>
-                <div className="text-sm text-red-600">Tests Failed</div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 p-3 rounded shadow">
-                <div className="text-lg font-bold">{testResults.size}</div>
-                <div className="text-sm text-gray-600">Test Suites</div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 p-3 rounded shadow">
-                <div className="text-lg font-bold">
-                  {formatDuration(Array.from(testResults.values()).reduce((sum, result) => sum + result.duration, 0))}
-                </div>
-                <div className="text-sm text-gray-600">Total Duration</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <div>
+                      <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.passed, 0)}</div>
+                      <div className="text-xs text-green-600">Tests Passed</div>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <div>
+                      <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.failed, 0)}</div>
+                      <div className="text-xs text-red-600">Tests Failed</div>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <div className="text-lg font-bold">{testResults.size}</div>
+                      <div className="text-xs text-muted-foreground">Test Suites</div>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <div className="text-lg font-bold">
+                        {formatDuration(Array.from(testResults.values()).reduce((sum, result) => sum + result.duration, 0))}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Total Duration</div>
+                    </div>
+                  </div>
+                </Card>
               </div>
             </div>
-          </div>
+          </CardContent>
         )}
-      </div>
+      </Card>
 
       {/* Create Test */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Create Test</h3>
-        <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded">
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Contract to Test</label>
-            <select
-              value={selectedContract}
-              onChange={(e) => setSelectedContract(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select a contract</option>
-              {getSolidityContracts().map(({ path, contractName }) => (
-                <option key={path} value={contractName}>{contractName}</option>
-              ))}
-            </select>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            <CardTitle>Create Test</CardTitle>
+          </div>
+          <CardDescription>
+            Generate a new test file for your smart contracts. Use Ctrl+T to focus on test name.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="contract-select">Contract to Test</Label>
+            <Select value={selectedContract} onValueChange={setSelectedContract}>
+              <SelectTrigger id="contract-select">
+                <SelectValue placeholder="Select a contract" />
+              </SelectTrigger>
+              <SelectContent>
+                {getSolidityContracts().map(({ path, contractName }) => (
+                  <SelectItem key={path} value={contractName}>
+                    {contractName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="mb-3">
-            <label className="block text-sm font-medium mb-1">Test Name</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="test-name">Test Name</Label>
+            <Input
+              id="test-name"
               type="text"
               value={testName}
               onChange={(e) => setTestName(e.target.value)}
               placeholder="Enter test name"
-              className="w-full p-2 border rounded"
+              disabled={isLoading}
             />
           </div>
 
-          <button
+          <Button
             onClick={handleCreateTestFile}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             disabled={isLoading || !selectedContract || !testName}
+            className="w-full gap-2"
           >
-            Create Test File
-          </button>
-        </div>
-      </div>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            {isLoading ? 'Creating...' : 'Create Test File'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Test Results */}
       {testResults.size > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Test Results</h3>
-          <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <TestTube className="h-5 w-5" />
+              <CardTitle>Test Results</CardTitle>
+              <Badge variant="outline" className="ml-auto">
+                {Array.from(testResults.values()).reduce((sum, result) => sum + result.tests.length, 0)} tests
+              </Badge>
+            </div>
+            <CardDescription>
+              Detailed results from your test executions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             {Array.from(testResults.entries()).map(([testPath, result]) => (
-              <div key={testPath} className="bg-white dark:bg-gray-800 border rounded shadow">
-                <div className="flex justify-between items-center p-3 border-b">
-                  <div>
-                    <h4 className="font-medium">{result.name}</h4>
-                    <div className="text-sm text-gray-500">{testPath}</div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className={`text-sm ${result.failed > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {result.passed}/{result.passed + result.failed} passed
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {formatDuration(result.duration)}
-                    </div>
-                    <button
-                      onClick={() => handleRunTest(testPath)}
-                      className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                      disabled={isLoading}
-                    >
-                      Run
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-3">
-                  <h5 className="font-medium mb-2">Tests:</h5>
-                  <ul className="space-y-2">
-                    {result.tests.map((test: any, index: number) => (
-                      <li key={index} className={`p-2 rounded ${test.passed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                        <div className="flex justify-between">
-                          <div className="font-medium">{test.name}</div>
-                          <div className="text-sm text-gray-500">{formatDuration(test.duration)}</div>
+              <Collapsible key={testPath} defaultOpen>
+                <Card>
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                          <div>
+                            <CardTitle className="text-base">{result.name}</CardTitle>
+                            <CardDescription className="text-xs">{testPath}</CardDescription>
+                          </div>
                         </div>
-                        {!test.passed && test.error && (
-                          <div className="mt-1 text-sm text-red-600">{test.error}</div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={result.failed > 0 ? "destructive" : "default"} className="gap-1">
+                            {result.failed > 0 ? (
+                              <XCircle className="h-3 w-3" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3" />
+                            )}
+                            {result.passed}/{result.passed + result.failed}
+                          </Badge>
+                          <Badge variant="outline" className="gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDuration(result.duration)}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRunTest(testPath);
+                            }}
+                            disabled={isLoading}
+                            className="gap-1"
+                          >
+                            {isLoading ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Play className="h-3 w-3" />
+                            )}
+                            Run
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        {result.tests.map((test: any, index: number) => (
+                          <Card key={index} className={`p-3 ${test.passed ? 'border-green-200 bg-green-50 dark:bg-green-950' : 'border-red-200 bg-red-50 dark:bg-red-950'}`}>
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-2">
+                                {test.passed ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                )}
+                                <div>
+                                  <div className="font-medium text-sm">{test.name}</div>
+                                  {!test.passed && test.error && (
+                                    <div className="mt-1 text-xs text-red-600 font-mono bg-red-100 dark:bg-red-900 p-1 rounded">
+                                      {test.error}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(test.duration)}
+                              </Badge>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Coverage Data */}
       {showCoverage && coverageData.size > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Coverage Report</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-700">
-                  <th className="border px-4 py-2 text-left">Contract</th>
-                  <th className="border px-4 py-2 text-left">Lines</th>
-                  <th className="border px-4 py-2 text-left">Functions</th>
-                  <th className="border px-4 py-2 text-left">Branches</th>
-                  <th className="border px-4 py-2 text-left">Statements</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from(coverageData.entries()).map(([contractName, data]) => (
-                  <tr key={contractName}>
-                    <td className="border px-4 py-2 font-medium">{contractName}</td>
-                    <td className="border px-4 py-2">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full"
-                            style={{ width: `${data.lines.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span>{data.lines.percentage}%</span>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              <CardTitle>Coverage Report</CardTitle>
+              <Badge variant="outline" className="ml-auto">
+                {coverageData.size} contracts
+              </Badge>
+            </div>
+            <CardDescription>
+              Code coverage analysis for your smart contracts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Array.from(coverageData.entries()).map(([contractName, data]) => (
+              <Card key={contractName}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{contractName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          Lines
+                        </span>
+                        <span className="font-medium">{data.lines.percentage}%</span>
                       </div>
-                    </td>
-                    <td className="border px-4 py-2">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-green-600 h-2.5 rounded-full"
-                            style={{ width: `${data.functions.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span>{data.functions.percentage}%</span>
+                      <Progress value={data.lines.percentage} className="h-2" />
+                      <div className="text-xs text-muted-foreground">
+                        {data.lines.covered}/{data.lines.total} lines covered
                       </div>
-                    </td>
-                    <td className="border px-4 py-2">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-yellow-600 h-2.5 rounded-full"
-                            style={{ width: `${data.branches.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span>{data.branches.percentage}%</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          Functions
+                        </span>
+                        <span className="font-medium">{data.functions.percentage}%</span>
                       </div>
-                    </td>
-                    <td className="border px-4 py-2">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-purple-600 h-2.5 rounded-full"
-                            style={{ width: `${data.statements.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span>{data.statements.percentage}%</span>
+                      <Progress value={data.functions.percentage} className="h-2" />
+                      <div className="text-xs text-muted-foreground">
+                        {data.functions.covered}/{data.functions.total} functions covered
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                          Branches
+                        </span>
+                        <span className="font-medium">{data.branches.percentage}%</span>
+                      </div>
+                      <Progress value={data.branches.percentage} className="h-2" />
+                      <div className="text-xs text-muted-foreground">
+                        {data.branches.covered}/{data.branches.total} branches covered
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          Statements
+                        </span>
+                        <span className="font-medium">{data.statements.percentage}%</span>
+                      </div>
+                      <Progress value={data.statements.percentage} className="h-2" />
+                      <div className="text-xs text-muted-foreground">
+                        {data.statements.covered}/{data.statements.total} statements covered
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Configuration */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Configuration</h3>
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className="text-blue-500 hover:text-blue-700"
-          >
-            {showConfig ? 'Hide' : 'Show'}
-          </button>
-        </div>
+      <Collapsible open={showConfig} onOpenChange={setShowConfig}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  <CardTitle>Configuration</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">Settings</Badge>
+                  <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                </div>
+              </div>
+              <CardDescription>
+                Customize testing framework settings and behavior
+              </CardDescription>
+            </CardHeader>
+          </CollapsibleTrigger>
 
-        {showConfig && (
-          <div className="mt-2 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-1">Test Folder</label>
-              <input
-                type="text"
-                value={testFolder}
-                onChange={(e) => setTestFolder(e.target.value)}
-                className="w-full p-2 border rounded"
-              />
-            </div>
+          <CollapsibleContent>
+            <CardContent className="space-y-6">
+              <Tabs defaultValue="general" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="general">General</TabsTrigger>
+                  <TabsTrigger value="execution">Execution</TabsTrigger>
+                  <TabsTrigger value="reporting">Reporting</TabsTrigger>
+                </TabsList>
 
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-1">Gas Limit</label>
-              <input
-                type="number"
-                value={gasLimit}
-                onChange={(e) => setGasLimit(parseInt(e.target.value))}
-                className="w-full p-2 border rounded"
-                min="1000000"
-              />
-            </div>
+                <TabsContent value="general" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="test-folder">Test Folder</Label>
+                    <Input
+                      id="test-folder"
+                      type="text"
+                      value={testFolder}
+                      onChange={(e) => setTestFolder(e.target.value)}
+                      placeholder="/tests"
+                    />
+                  </div>
 
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-1">Test Timeout (ms)</label>
-              <input
-                type="number"
-                value={testTimeout}
-                onChange={(e) => setTestTimeout(parseInt(e.target.value))}
-                className="w-full p-2 border rounded"
-                min="1000"
-              />
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="test-framework">Test Framework</Label>
+                    <Select value={testFramework} onValueChange={setTestFramework}>
+                      <SelectTrigger id="test-framework">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mocha">Mocha</SelectItem>
+                        <SelectItem value="truffle">Truffle</SelectItem>
+                        <SelectItem value="hardhat">Hardhat</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
 
-            <div className="mb-3">
-              <label className="block text-sm font-medium mb-1">Test Framework</label>
-              <select
-                value={testFramework}
-                onChange={(e) => setTestFramework(e.target.value)}
-                className="w-full p-2 border rounded"
-              >
-                <option value="mocha">Mocha</option>
-                <option value="truffle">Truffle</option>
-                <option value="hardhat">Hardhat</option>
-              </select>
-            </div>
+                <TabsContent value="execution" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gas-limit">Gas Limit</Label>
+                    <Input
+                      id="gas-limit"
+                      type="number"
+                      value={gasLimit}
+                      onChange={(e) => setGasLimit(parseInt(e.target.value))}
+                      min="1000000"
+                    />
+                  </div>
 
-            <div className="mb-3">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={autoRunOnSave}
-                  onChange={(e) => setAutoRunOnSave(e.target.checked)}
-                  className="mr-2"
-                />
-                Auto-run tests on file save
-              </label>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="test-timeout">Test Timeout (ms)</Label>
+                    <Input
+                      id="test-timeout"
+                      type="number"
+                      value={testTimeout}
+                      onChange={(e) => setTestTimeout(parseInt(e.target.value))}
+                      min="1000"
+                    />
+                  </div>
 
-            <div className="mb-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={showCoverage}
-                  onChange={(e) => setShowCoverage(e.target.checked)}
-                  className="mr-2"
-                />
-                Show coverage report
-              </label>
-            </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="auto-run"
+                      checked={autoRunOnSave}
+                      onCheckedChange={setAutoRunOnSave}
+                    />
+                    <Label htmlFor="auto-run" className="text-sm font-normal">
+                      Auto-run tests on file save
+                    </Label>
+                  </div>
+                </TabsContent>
 
-            <button
-              onClick={handleSaveConfig}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Save Configuration
-            </button>
-          </div>
-        )}
-      </div>
+                <TabsContent value="reporting" className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="show-coverage"
+                      checked={showCoverage}
+                      onCheckedChange={setShowCoverage}
+                    />
+                    <Label htmlFor="show-coverage" className="text-sm font-normal">
+                      Show coverage report
+                    </Label>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <Separator />
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveConfig} className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Save Configuration
+                </Button>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Loading indicator */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded shadow-lg">
-            <p>Processing...</p>
-          </div>
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="p-6 min-w-[200px]">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <div>
+                <p className="font-medium">Processing...</p>
+                <p className="text-sm text-muted-foreground">Running tests and analyzing results</p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Octokit } from '@octokit/rest';
 import { gitService } from '@/services/gitService';
 import { debug, info, warn, error } from '@/services/loggerService';
 
@@ -44,10 +43,39 @@ export interface GitConfig {
     name: string;
     email: string;
   };
-  github: {
-    token?: string;
-    username?: string;
+}
+
+export interface GitFileBlame {
+  commit: {
+    oid: string;
+    message: string;
+    author: {
+      name: string;
+      email: string;
+      timestamp: number;
+    };
   };
+  line: number;
+  content: string;
+}
+
+export interface GitFileDiff {
+  oldContent: string;
+  newContent: string;
+  diff: Array<{
+    type: 'added' | 'removed' | 'unchanged';
+    content: string;
+    lineNumber: {
+      old: number | null;
+      new: number | null;
+    };
+  }>;
+}
+
+export interface GitStash {
+  id: string;
+  message: string;
+  date: Date;
 }
 
 export interface GitState {
@@ -55,7 +83,6 @@ export interface GitState {
   isInitialized: boolean;
   currentBranch: string;
   branches: GitBranch[];
-  remotes: GitRemote[];
   commits: GitCommit[];
   status: GitStatus[];
 
@@ -66,15 +93,38 @@ export interface GitState {
   isLoading: boolean;
   error: string | null;
 
-  // GitHub integration
-  githubRepos: any[];
-  isGithubConnected: boolean;
+  // JetBrains-style Git integration
+  fileBlame: Record<string, GitFileBlame[]>;
+  fileHistory: Record<string, GitCommit[]>;
+  fileDiff: Record<string, GitFileDiff>;
+  stashes: GitStash[];
+
+  // UI state for JetBrains-style integration
+  selectedCommit: string | null;
+  showBlame: boolean;
+  showDiff: boolean;
+
+  // Pagination state
+  commitPagination: {
+    skip: number;
+    limit: number;
+    hasMore: boolean;
+    total: number;
+  };
+  statusPagination: {
+    skip: number;
+    limit: number;
+    hasMore: boolean;
+    total: number;
+    filter: 'all' | 'modified' | 'staged' | 'untracked';
+  };
 }
 
 export interface GitActions {
   // Repository operations
   initRepository: () => Promise<void>;
-  cloneRepository: (url: string, dir?: string) => Promise<void>;
+  createInitialCommit: () => Promise<void>;
+  resetGitIndex: () => Promise<void>;
 
   // Branch operations
   createBranch: (name: string) => Promise<void>;
@@ -84,28 +134,43 @@ export interface GitActions {
 
   // Commit operations
   addFile: (filepath: string) => Promise<void>;
+  unstageFile: (filepath: string) => Promise<void>;
   addAllFiles: () => Promise<void>;
   commit: (message: string) => Promise<void>;
-  getCommits: (limit?: number) => Promise<void>;
+  getCommits: (options?: { limit?: number; skip?: number; resetPagination?: boolean }) => Promise<void>;
+  loadMoreCommits: () => Promise<void>;
 
-  // Remote operations
-  addRemote: (name: string, url: string) => Promise<void>;
-  removeRemote: (name: string) => Promise<void>;
-  push: (remote?: string, branch?: string) => Promise<void>;
-  pull: (remote?: string, branch?: string) => Promise<void>;
-  fetch: (remote?: string) => Promise<void>;
 
   // Status operations
-  getStatus: () => Promise<void>;
+  getStatus: (options?: {
+    limit?: number;
+    skip?: number;
+    filter?: 'all' | 'modified' | 'staged' | 'untracked';
+    resetPagination?: boolean;
+  }) => Promise<void>;
+  loadMoreStatus: () => Promise<void>;
+  setStatusFilter: (filter: 'all' | 'modified' | 'staged' | 'untracked') => void;
 
   // Configuration
   setConfig: (config: Partial<GitConfig>) => void;
 
-  // GitHub integration
-  connectGithub: (token: string) => Promise<void>;
-  disconnectGithub: () => void;
-  getGithubRepos: () => Promise<void>;
-  createGithubRepo: (name: string, description?: string, isPrivate?: boolean) => Promise<void>;
+
+  // JetBrains-style Git integration
+  // File-level operations
+  getFileBlame: (filepath: string) => Promise<void>;
+  getFileHistory: (filepath: string) => Promise<void>;
+  getFileDiff: (filepath: string, oldOid?: string, newOid?: string) => Promise<void>;
+
+  // Stash operations
+  createStash: (message: string) => Promise<void>;
+  listStashes: () => Promise<void>;
+  applyStash: (stashId: string) => Promise<void>;
+  dropStash: (stashId: string) => Promise<void>;
+
+  // UI state operations
+  toggleBlame: (show?: boolean) => void;
+  toggleDiff: (show?: boolean) => void;
+  selectCommit: (commitOid: string | null) => void;
 
   // Utility
   reset: () => void;
@@ -119,7 +184,6 @@ const initialState: GitState = {
   isInitialized: false,
   currentBranch: '',
   branches: [],
-  remotes: [],
   commits: [],
   status: [],
   config: {
@@ -127,15 +191,33 @@ const initialState: GitState = {
       name: '',
       email: '',
     },
-    github: {
-      token: undefined,
-      username: undefined,
-    },
   },
   isLoading: false,
   error: null,
-  githubRepos: [],
-  isGithubConnected: false,
+
+  // JetBrains-style Git integration
+  fileBlame: {},
+  fileHistory: {},
+  fileDiff: {},
+  stashes: [],
+  selectedCommit: null,
+  showBlame: false,
+  showDiff: false,
+
+  // Pagination state
+  commitPagination: {
+    skip: 0,
+    limit: 10,
+    hasMore: false,
+    total: 0,
+  },
+  statusPagination: {
+    skip: 0,
+    limit: 100,
+    hasMore: false,
+    total: 0,
+    filter: 'all',
+  },
 };
 
 
@@ -155,9 +237,12 @@ export const useGitStore = create<GitStore>()(
 
             await gitService.init('main');
 
+            // Get the actual current branch (may be undefined if no commits yet)
+            const currentBranch = await gitService.currentBranch();
+
             set((state) => {
               state.isInitialized = true;
-              state.currentBranch = 'main';
+              state.currentBranch = currentBranch || '';
               state.isLoading = false;
             });
 
@@ -172,34 +257,70 @@ export const useGitStore = create<GitStore>()(
           }
         },
 
-        cloneRepository: async (url: string, dir = '/') => {
+        createInitialCommit: async () => {
           try {
+            const { config } = get();
+
+            if (!config.user.name || !config.user.email) {
+              throw new Error('Git user name and email must be configured');
+            }
+
             set((state) => {
               state.isLoading = true;
               state.error = null;
             });
 
-            await gitService.clone(url, dir);
+            await gitService.createInitialCommit({
+              name: config.user.name,
+              email: config.user.email,
+            });
+
+            // Update branches and current branch after initial commit
+            await get().getBranches();
+            await get().getCommits();
 
             set((state) => {
-              state.isInitialized = true;
               state.isLoading = false;
             });
 
-            // Get initial branch and status
-            await get().getBranches();
-            await get().getStatus();
-
-            info('Repository cloned successfully');
+            info('Initial commit created successfully');
           } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
-            error('Failed to clone repository:', errorMessage);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to create initial commit';
+            error('Failed to create initial commit:', errorMessage);
             set((state) => {
               state.error = errorMessage;
               state.isLoading = false;
             });
           }
         },
+
+        resetGitIndex: async () => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            await gitService.resetGitIndex();
+
+            // Refresh status after resetting the index
+            await get().getStatus();
+
+            set((state) => {
+              state.isLoading = false;
+            });
+
+            info('Git index has been reset successfully');
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to reset Git index';
+            error('Failed to reset Git index:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
 
         // Branch operations
         createBranch: async (name: string) => {
@@ -322,9 +443,40 @@ export const useGitStore = create<GitStore>()(
           }
         },
 
+        unstageFile: async (filepath: string) => {
+          try {
+            await gitService.unstage(filepath);
+
+            await get().getStatus();
+            info(`File '${filepath}' removed from staging area`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to unstage file';
+            error('Failed to unstage file:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+            });
+          }
+        },
+
         addAllFiles: async () => {
           try {
-            await gitService.add('.');
+            // Use a more robust approach to add all files
+            // First get the status to find all unstaged files
+            const status = await gitService.status();
+
+            // If there are no files to add, just return
+            if (status.length === 0) {
+              info('No files to add to staging area');
+              return;
+            }
+
+            // Add each file individually instead of using '.'
+            for (const item of status) {
+              // Only add files that are not already staged
+              if (item.stage !== 2) {
+                await gitService.add(item.file);
+              }
+            }
 
             await get().getStatus();
             info('All files added to staging area');
@@ -373,9 +525,22 @@ export const useGitStore = create<GitStore>()(
           }
         },
 
-        getCommits: async (limit = 10) => {
+        getCommits: async (options = {}) => {
           try {
-            const commits = await gitService.log(limit);
+            const { limit = 10, skip = 0, resetPagination = false } = options;
+
+            set((state) => {
+              state.isLoading = true;
+              if (resetPagination) {
+                state.commitPagination.skip = 0;
+              }
+            });
+
+            const { commits, hasMore } = await gitService.log({
+              limit,
+              skip: resetPagination ? 0 : skip,
+              depth: 100, // Get more commits to support pagination
+            });
 
             const commitList: GitCommit[] = commits.map((commit) => ({
               oid: commit.oid,
@@ -393,151 +558,74 @@ export const useGitStore = create<GitStore>()(
             }));
 
             set((state) => {
-              state.commits = commitList;
+              if (resetPagination || skip === 0) {
+                state.commits = commitList;
+              } else {
+                state.commits = [...state.commits, ...commitList];
+              }
+              state.commitPagination.skip = resetPagination ? limit : skip + limit;
+              state.commitPagination.limit = limit;
+              state.commitPagination.hasMore = hasMore;
+              state.commitPagination.total = state.commits.length + (hasMore ? 1 : 0); // Approximate total
+              state.isLoading = false;
             });
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to get commits';
             error('Failed to get commits:', errorMessage);
             set((state) => {
               state.error = errorMessage;
-            });
-          }
-        },
-
-        // Remote operations
-        addRemote: async (name: string, url: string) => {
-          try {
-            await gitService.addRemote(name, url);
-
-            const remotes = await gitService.listRemotes();
-
-            set((state) => {
-              state.remotes = remotes.map((remote) => ({
-                name: remote.remote,
-                url: remote.url,
-              }));
-            });
-
-            info(`Remote '${name}' added successfully`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to add remote';
-            error('Failed to add remote:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        removeRemote: async (name: string) => {
-          try {
-            await gitService.deleteRemote(name);
-
-            const remotes = await gitService.listRemotes();
-
-            set((state) => {
-              state.remotes = remotes.map((remote) => ({
-                name: remote.remote,
-                url: remote.url,
-              }));
-            });
-
-            info(`Remote '${name}' removed successfully`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to remove remote';
-            error('Failed to remove remote:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        push: async (remote = 'origin', branch?: string) => {
-          try {
-            const { currentBranch } = get();
-            const targetBranch = branch || currentBranch;
-
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            await gitService.push(remote, targetBranch);
-
-            set((state) => {
-              state.isLoading = false;
-            });
-
-            info(`Pushed to ${remote}/${targetBranch}`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to push';
-            error('Failed to push:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
               state.isLoading = false;
             });
           }
         },
 
-        pull: async (remote = 'origin', branch?: string) => {
-          try {
-            const { currentBranch } = get();
-            const targetBranch = branch || currentBranch;
+        loadMoreCommits: async () => {
+          const { commitPagination } = get();
+          if (!commitPagination.hasMore) return;
 
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            await gitService.pull(remote, targetBranch);
-
-            await get().getCommits();
-            await get().getStatus();
-
-            set((state) => {
-              state.isLoading = false;
-            });
-
-            info(`Pulled from ${remote}/${targetBranch}`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to pull';
-            error('Failed to pull:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
+          await get().getCommits({
+            skip: commitPagination.skip,
+            limit: commitPagination.limit,
+          });
         },
 
-        fetch: async (remote = 'origin') => {
-          try {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
-
-            await gitService.fetch(remote);
-
-            set((state) => {
-              state.isLoading = false;
-            });
-
-            info(`Fetched from ${remote}`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch';
-            error('Failed to fetch:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isLoading = false;
-            });
-          }
-        },
 
         // Status operations
-        getStatus: async () => {
+        getStatus: async (options = {}) => {
           try {
-            const statusMatrix = await gitService.status();
+            // Don't try to get status if repository is not initialized
+            const { isInitialized } = get();
+            if (!isInitialized) {
+              debug('Repository not initialized, skipping status check');
+              return;
+            }
 
-            const status: GitStatus[] = statusMatrix.map((item) => ({
+            const {
+              limit = 100,
+              skip = 0,
+              filter,
+              resetPagination = false
+            } = options;
+
+            const currentFilter = filter || get().statusPagination.filter;
+
+            set((state) => {
+              state.isLoading = true;
+              if (resetPagination) {
+                state.statusPagination.skip = 0;
+              }
+              if (filter) {
+                state.statusPagination.filter = filter;
+              }
+            });
+
+            const { files, hasMore, total } = await gitService.status({
+              limit,
+              skip: resetPagination ? 0 : skip,
+              filter: currentFilter,
+            });
+
+            const status: GitStatus[] = files.map((item) => ({
               file: item.file,
               head: item.head,
               workdir: item.workdir,
@@ -545,15 +633,45 @@ export const useGitStore = create<GitStore>()(
             }));
 
             set((state) => {
-              state.status = status;
+              if (resetPagination || skip === 0) {
+                state.status = status;
+              } else {
+                state.status = [...state.status, ...status];
+              }
+              state.statusPagination.skip = resetPagination ? limit : skip + limit;
+              state.statusPagination.limit = limit;
+              state.statusPagination.hasMore = hasMore;
+              state.statusPagination.total = total;
+              state.isLoading = false;
             });
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to get status';
             error('Failed to get status:', errorMessage);
             set((state) => {
               state.error = errorMessage;
+              state.isLoading = false;
             });
           }
+        },
+
+        loadMoreStatus: async () => {
+          const { statusPagination } = get();
+          if (!statusPagination.hasMore) return;
+
+          await get().getStatus({
+            skip: statusPagination.skip,
+            limit: statusPagination.limit,
+            filter: statusPagination.filter,
+          });
+        },
+
+        setStatusFilter: (filter: 'all' | 'modified' | 'staged' | 'untracked') => {
+          set((state) => {
+            state.statusPagination.filter = filter;
+          });
+
+          // Reload status with new filter
+          get().getStatus({ resetPagination: true });
         },
 
         // Configuration
@@ -563,92 +681,6 @@ export const useGitStore = create<GitStore>()(
           });
         },
 
-        // GitHub integration
-        connectGithub: async (token: string) => {
-          try {
-            const octokit = new Octokit({ auth: token });
-            const { data: user } = await octokit.rest.users.getAuthenticated();
-
-            set((state) => {
-              state.config.github.token = token;
-              state.config.github.username = user.login;
-              state.isGithubConnected = true;
-              state.error = null;
-            });
-
-            info(`Connected to GitHub as ${user.login}`);
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitHub';
-            error('Failed to connect to GitHub:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-              state.isGithubConnected = false;
-            });
-          }
-        },
-
-        disconnectGithub: () => {
-          set((state) => {
-            state.config.github.token = undefined;
-            state.config.github.username = undefined;
-            state.isGithubConnected = false;
-            state.githubRepos = [];
-          });
-          info('Disconnected from GitHub');
-        },
-
-        getGithubRepos: async () => {
-          try {
-            const { config } = get();
-            if (!config.github.token) {
-              throw new Error('GitHub token not configured');
-            }
-
-            const octokit = new Octokit({ auth: config.github.token });
-            const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser({
-              sort: 'updated',
-              per_page: 50,
-            });
-
-            set((state) => {
-              state.githubRepos = repos;
-            });
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get GitHub repositories';
-            error('Failed to get GitHub repositories:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-          }
-        },
-
-        createGithubRepo: async (name: string, description?: string, isPrivate = false) => {
-          try {
-            const { config } = get();
-            if (!config.github.token) {
-              throw new Error('GitHub token not configured');
-            }
-
-            const octokit = new Octokit({ auth: config.github.token });
-            const { data: repo } = await octokit.rest.repos.createForAuthenticatedUser({
-              name,
-              description,
-              private: isPrivate,
-            });
-
-            await get().getGithubRepos();
-            info(`GitHub repository '${name}' created successfully`);
-
-            return repo;
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to create GitHub repository';
-            error('Failed to create GitHub repository:', errorMessage);
-            set((state) => {
-              state.error = errorMessage;
-            });
-            throw err;
-          }
-        },
 
         // Utility
         reset: () => {
@@ -668,13 +700,236 @@ export const useGitStore = create<GitStore>()(
             state.isLoading = loading;
           });
         },
+
+        // JetBrains-style Git integration
+        // File-level operations
+        getFileBlame: async (filepath: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const blame = await gitService.getFileBlame(filepath);
+
+            set((state) => {
+              state.fileBlame[filepath] = blame;
+              state.isLoading = false;
+            });
+
+            debug(`Got blame for ${filepath}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to get file blame';
+            error('Failed to get file blame:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        getFileHistory: async (filepath: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const history = await gitService.getFileHistory(filepath);
+
+            set((state) => {
+              state.fileHistory[filepath] = history.map(commit => ({
+                oid: commit.oid,
+                message: commit.message,
+                author: {
+                  name: commit.author.name,
+                  email: commit.author.email,
+                  timestamp: commit.author.timestamp,
+                },
+                committer: {
+                  name: commit.author.name,
+                  email: commit.author.email,
+                  timestamp: commit.author.timestamp,
+                },
+              }));
+              state.isLoading = false;
+            });
+
+            debug(`Got history for ${filepath}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to get file history';
+            error('Failed to get file history:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        getFileDiff: async (filepath: string, oldOid?: string, newOid?: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const diff = await gitService.getFileDiff(filepath, oldOid, newOid);
+
+            set((state) => {
+              state.fileDiff[filepath] = diff;
+              state.isLoading = false;
+            });
+
+            debug(`Got diff for ${filepath}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to get file diff';
+            error('Failed to get file diff:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        // Stash operations
+        createStash: async (message: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const stashId = await gitService.createStash(message);
+
+            // Refresh stashes
+            await get().listStashes();
+
+            set((state) => {
+              state.isLoading = false;
+            });
+
+            info(`Stash created: ${stashId}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to create stash';
+            error('Failed to create stash:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        listStashes: async () => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const stashes = await gitService.listStashes();
+
+            set((state) => {
+              state.stashes = stashes;
+              state.isLoading = false;
+            });
+
+            debug(`Got ${stashes.length} stashes`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to list stashes';
+            error('Failed to list stashes:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        applyStash: async (stashId: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            await gitService.applyStash(stashId);
+
+            // Refresh status
+            await get().getStatus();
+
+            set((state) => {
+              state.isLoading = false;
+            });
+
+            info(`Stash applied: ${stashId}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to apply stash';
+            error('Failed to apply stash:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        dropStash: async (stashId: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            await gitService.dropStash(stashId);
+
+            // Refresh stashes
+            await get().listStashes();
+
+            set((state) => {
+              state.isLoading = false;
+            });
+
+            info(`Stash dropped: ${stashId}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to drop stash';
+            error('Failed to drop stash:', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        // UI state operations
+        toggleBlame: (show?: boolean) => {
+          set((state) => {
+            state.showBlame = show !== undefined ? show : !state.showBlame;
+            // If we're showing blame, hide diff
+            if (state.showBlame) {
+              state.showDiff = false;
+            }
+          });
+        },
+
+        toggleDiff: (show?: boolean) => {
+          set((state) => {
+            state.showDiff = show !== undefined ? show : !state.showDiff;
+            // If we're showing diff, hide blame
+            if (state.showDiff) {
+              state.showBlame = false;
+            }
+          });
+        },
+
+        selectCommit: (commitOid: string | null) => {
+          set((state) => {
+            state.selectedCommit = commitOid;
+          });
+        },
       })),
       {
         name: 'git-store',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           config: state.config,
-          isGithubConnected: state.isGithubConnected,
         }),
       }
     ),

@@ -37,9 +37,18 @@ export class GitPluginImplementation {
    * Initialize a Git repository
    */
   async initRepository(): Promise<boolean> {
-    console.log('Initializing Git repository with default branch:', this.config.defaultBranch);
-    // In a real implementation, this would use a Git library to initialize a repository
-    return true;
+      try {
+        console.log('Initializing Git repository with default branch:', this.config.defaultBranch);
+
+        // Use the gitService to initialize the repository
+        const gitStore = useGitStore.getState();
+        await gitStore.initRepository(this.config.defaultBranch);
+
+        return true;
+      } catch (error) {
+        console.error('Failed to initialize repository:', error);
+        return false;
+      }
   }
 
   /**

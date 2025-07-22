@@ -2,6 +2,10 @@
 import { useGitStore } from './src/stores/gitStore.js';
 import { gitService } from './src/services/gitService.js';
 
+import { useGitStore } from './src/stores/gitStore';
+
+import { useGitStore } from './src/stores/gitStore';
+
 async function testGitIntegration() {
   console.log('Testing Git Integration...');
 
