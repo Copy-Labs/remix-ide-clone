@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { createJSONStorage, devtools, persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { gitService } from '@/services/gitService';
 import { debug, error, info } from '@/services/loggerService';
+import { createIndexedDBStorage } from '@/utils/indexedDBStorage';
 
 export interface GitCommit {
   oid: string;
@@ -120,6 +121,9 @@ export interface GitState {
 }
 
 export interface GitActions {
+  // Internal actions for persistence
+  _onHydrate?: (state: GitState) => void;
+
   // Repository operations
   initRepository: () => Promise<void>;
   createInitialCommit: () => Promise<void>;
@@ -226,6 +230,16 @@ export const useGitStore = create<GitStore>()(
     persist(
       immer((set, get) => ({
         ...initialState,
+
+        // Initialize GitService with persisted branches on store hydration
+        _onHydrate: (state) => {
+          // If we have persisted branches, update the GitService's in-memory branches
+          if (state.branches && state.branches.length > 0) {
+            // Extract branch names from GitBranch objects
+            const branchNames = state.branches.map(branch => branch.name);
+            gitService.syncBranches(branchNames, state.currentBranch);
+          }
+        },
 
         // Repository operations
         initRepository: async () => {
@@ -922,11 +936,30 @@ export const useGitStore = create<GitStore>()(
       })),
       {
         name: 'git-store',
-        storage: createJSONStorage(() => localStorage),
+        storage: createIndexedDBStorage('git-store'),
         partialize: (state) => ({
           config: state.config,
           isInitialized: state.isInitialized,
+          branches: state.branches,
+          currentBranch: state.currentBranch,
         }),
+        onRehydrateStorage: (state) => {
+          // Return a function that will be called when the store is rehydrated
+          return (rehydratedState, error) => {
+            if (error) {
+              console.error('Error rehydrating git store:', error);
+              return;
+            }
+
+            if (rehydratedState) {
+              // Call our _onHydrate function with the rehydrated state
+              const store = useGitStore.getState();
+              if (store._onHydrate) {
+                store._onHydrate(rehydratedState);
+              }
+            }
+          };
+        },
       },
     ),
     {

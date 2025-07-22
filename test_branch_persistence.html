@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Branch Persistence</title>
+    <script>
+        // Function to check localStorage for git-store data
+        function checkLocalStorage() {
+            const gitStoreData = localStorage.getItem('git-store');
+            if (gitStoreData) {
+                try {
+                    const parsedData = JSON.parse(gitStoreData);
+                    console.log('Git store data found in localStorage:', parsedData);
+
+                    // Check if branches are in the persisted data
+                    if (parsedData.state && parsedData.state.branches) {
+                        console.log('Branches found in persisted data:', parsedData.state.branches);
+                        document.getElementById('branches').textContent = JSON.stringify(parsedData.state.branches, null, 2);
+                    } else {
+                        console.log('No branches found in persisted data');
+                        document.getElementById('branches').textContent = 'No branches found in persisted data';
+                    }
+                } catch (err) {
+                    console.error('Error parsing git-store data:', err);
+                    document.getElementById('branches').textContent = 'Error parsing git-store data: ' + err.message;
+                }
+            } else {
+                console.log('No git-store data found in localStorage');
+                document.getElementById('branches').textContent = 'No git-store data found in localStorage';
+            }
+        }
+
+        // Run the check when the page loads
+        window.onload = checkLocalStorage;
+    </script>
+</head>
+<body>
+    <h1>Test Branch Persistence</h1>
+    <p>This page checks if git branches are being persisted in localStorage.</p>
+    <p>To use this test:</p>
+    <ol>
+        <li>Open the main application and create a branch</li>
+        <li>Open this test page in a new tab</li>
+        <li>Check if the branch you created is listed below</li>
+        <li>Go back to the main application and refresh the page</li>
+        <li>Check if your branch is still visible in the UI</li>
+    </ol>
+
+    <h2>Branches in localStorage:</h2>
+    <pre id="branches">Loading...</pre>
+
+    <button onclick="checkLocalStorage()">Refresh</button>
+</body>
+</html>

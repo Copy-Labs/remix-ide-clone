@@ -82,6 +82,7 @@ const GitPanel: React.FC = () => {
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
 
+  // Effect to load data when initialized changes
   useEffect(() => {
     if (isInitialized) {
       getBranches();
@@ -89,6 +90,14 @@ const GitPanel: React.FC = () => {
       getStatus();
     }
   }, [isInitialized]);
+
+  // Effect to ensure branches are loaded on component mount
+  // This is needed to handle page refreshes when isInitialized is already true
+  useEffect(() => {
+    if (isInitialized) {
+      getBranches();
+    }
+  }, []);
 
 
   const handleInitRepository = async () => {

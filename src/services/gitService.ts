@@ -1081,6 +1081,19 @@ export class GitService {
     }
     return oid;
   }
+
+  // Method to sync branches from persisted store
+  syncBranches(branches: string[], currentBranch: string): void {
+    if (branches && branches.length > 0) {
+      this.branches = [...branches];
+      info(`Synced ${branches.length} branches from persisted store`);
+    }
+
+    if (currentBranch) {
+      this.currentBranchName = currentBranch;
+      info(`Set current branch to ${currentBranch} from persisted store`);
+    }
+  }
 }
 
 // Export a default git service instance
