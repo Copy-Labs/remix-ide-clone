@@ -1,5 +1,6 @@
 import { useFileStore } from '@/stores/fileStore';
-import { debug, info, warn, error } from '@/services/loggerService';
+import { debug, error, info, warn } from '@/services/loggerService';
+import { databaseService } from '@/services/databaseService';
 
 // Mock implementation of Git functionality for browser environments
 // This class provides the same interface as the original GitService
@@ -7,33 +8,26 @@ import { debug, info, warn, error } from '@/services/loggerService';
 
 // File system adapter for our file store
 export class GitFileSystemAdapter {
-  private fileStore: any;
-
-  constructor() {
-    // We'll get the file store instance when needed
-    this.fileStore = null;
-  }
-
-  private getFileStore() {
-    if (!this.fileStore) {
-      this.fileStore = useFileStore.getState();
-    }
-    return this.fileStore;
-  }
-
   promises = {
     readFile: async (filepath: string, options?: any): Promise<string> => {
+      debug('GitFileSystemAdapter', `filepath ${filepath}`);
       try {
         // Debug logging to identify undefined filepath issues
-        if (typeof filepath !== 'string' || filepath === undefined || filepath === null || filepath === '' || filepath === 'undefined') {
-          debug(`Invalid filepath in readFile: ${typeof filepath}, value: ${filepath}`);
+        if (
+          typeof filepath !== 'string' ||
+          filepath === undefined ||
+          filepath === null ||
+          filepath === '' ||
+          filepath === 'undefined'
+        ) {
+          debug('GitFileSystemAdapter', `Invalid filepath in readFile: ${typeof filepath}, value: ${filepath}`);
           const err = new Error(`ENOENT: no such file or directory, open '${filepath}'`);
           (err as any).code = 'ENOENT';
           throw err;
         }
 
         const store = this.getFileStore();
-        const content = await store.getFileContent(filepath);
+        const content = await store.getFileContent('/' + filepath);
 
         if (content === undefined) {
           const err = new Error(`ENOENT: no such file or directory, open '${filepath}'`);
@@ -71,7 +65,7 @@ export class GitFileSystemAdapter {
             await this.promises.stat(dirPath);
           } catch (statErr) {
             // Directory doesn't exist, so create it
-            debug(`Creating directory: ${dirPath} for file: ${filepath}`);
+            debug('GitFileSystemAdapter', `Creating directory: ${dirPath} for file: ${filepath}`);
             await this.promises.mkdir(dirPath, { recursive: true });
           }
         }
@@ -168,9 +162,8 @@ export class GitFileSystemAdapter {
         // If no entries found and this is not the root, check if directory exists
         if (entries.length === 0 && normalizedPath !== '/') {
           // Check if directory exists by looking for any path that starts with this directory
-          const directoryExists = Array.from(files.keys()).some(path =>
-            path === normalizedPath ||
-            path.startsWith(normalizedPath + '/')
+          const directoryExists = Array.from(files.keys()).some(
+            (path) => path === normalizedPath || path.startsWith(normalizedPath + '/'),
           );
 
           if (!directoryExists) {
@@ -189,22 +182,37 @@ export class GitFileSystemAdapter {
     },
 
     stat: async (filepath: string): Promise<any> => {
+      info(`GitService::stat - ${filepath}`);
       try {
         // Handle invalid filepath parameters
-        if (typeof filepath !== 'string' || filepath === undefined || filepath === null || filepath === '' || filepath === 'undefined') {
+        if (
+          typeof filepath !== 'string' ||
+          filepath === undefined ||
+          filepath === null ||
+          filepath === '' ||
+          filepath === 'undefined'
+        ) {
           debug(`Invalid filepath in stat: ${typeof filepath}, value: ${filepath}`);
           const err = new Error(`ENOENT: no such file or directory, stat '${filepath}'`);
           (err as any).code = 'ENOENT';
           throw err;
         }
 
+        info(`GitService::stat inside try - ${filepath}`);
+
         // Normalize path to handle various path formats
         const normalizedPath = filepath.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+        info(`GitService::stat::normalizedPath - ${normalizedPath}`);
 
         // Special case for current directory, parent directory, or root
-        if (normalizedPath === '.' || normalizedPath === '..' ||
-            normalizedPath === '/.' || normalizedPath === '/..' ||
-            normalizedPath === '/' || normalizedPath === '//.') {
+        if (
+          normalizedPath === '.' ||
+          normalizedPath === '..' ||
+          normalizedPath === '/.' ||
+          normalizedPath === '/..' ||
+          normalizedPath === '/' ||
+          normalizedPath === '//.'
+        ) {
           debug(`stat called for special directory ('${filepath}' -> '${normalizedPath}')`);
 
           // Return a directory stat object for the special directory
@@ -220,13 +228,18 @@ export class GitFileSystemAdapter {
         }
 
         const store = this.getFileStore();
-        const file = await store.getFile(normalizedPath);
+        console.log('Git service::stat::store', store);
+        info(`GitService::stat::store - ${store}`);
+        const file = await store.getFile('/' + normalizedPath);
+        console.log('Git service::stat::file', file);
+        info(`GitService::stat::file - ${file}`);
 
         if (!file) {
           // Check if this might be a directory that exists but isn't explicitly tracked
-          const potentialChildren = Array.from(store.files.keys()).filter(path =>
-            path.startsWith(normalizedPath + '/') || path === normalizedPath
+          const potentialChildren = Array.from(store.files.keys()).filter(
+            (path) => path.startsWith('/' + normalizedPath + '/') || path === normalizedPath,
           );
+          info(`GitService::stat::potentialChildren - ${potentialChildren}`);
 
           if (potentialChildren.length > 0) {
             debug(`stat: treating ${normalizedPath} as directory based on child paths`);
@@ -247,7 +260,7 @@ export class GitFileSystemAdapter {
         }
 
         // Return stat-like object
-        return {
+        const formattedFile = {
           isFile: () => file.type === 'file',
           isDirectory: () => file.type === 'folder',
           isSymbolicLink: () => false,
@@ -256,6 +269,11 @@ export class GitFileSystemAdapter {
           ctime: new Date(file.lastModified),
           mode: file.type === 'file' ? 33188 : 16877, // 0o100644 for files, 0o040755 for directories
         };
+
+        info(`GitService::stat::formattedFile - ${formattedFile}`);
+        console.log('Git service::stat::formattedFile', formattedFile);
+
+        return formattedFile;
       } catch (err) {
         error(`Failed to stat ${filepath}:`, err);
         throw err;
@@ -299,10 +317,26 @@ export class GitFileSystemAdapter {
       throw new Error(`EPERM: operation not permitted, symlink '${target}' -> '${filepath}'`);
     },
   };
+  private fileStore: any;
+
+  constructor() {
+    // We'll get the file store instance when needed
+    this.fileStore = null;
+  }
+
+  private getFileStore() {
+    if (!this.fileStore) {
+      this.fileStore = useFileStore.getState();
+    }
+    return this.fileStore;
+  }
 }
 
 // Create a singleton instance
 export const gitFS = new GitFileSystemAdapter();
+
+// Prefix for staged files in IndexedDB
+const STAGED_FILE_PREFIX = 'git_staged_';
 
 // Mock Git service class for browser environments
 export class GitService {
@@ -315,22 +349,24 @@ export class GitService {
   private commits: Array<{
     oid: string;
     message: string;
-    author: { name: string; email: string; timestamp: number; };
+    author: { name: string; email: string; timestamp: number };
     parent?: string;
     files: Map<string, string>; // filepath -> content
   }> = [];
-  private stagedFiles: Set<string> = new Set();
 
   constructor(workingDirectory: string = '/') {
     this.fs = gitFS;
-    this.dir = workingDirectory;
+    // Normalize the working directory path for consistency in browser environments
+    this.dir = workingDirectory.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
   }
 
   // Initialize a new git repository
   async init(defaultBranch: string = 'main'): Promise<void> {
     try {
       // Create .git directory to simulate initialization
-      await this.fs.promises.mkdir(`${this.dir}/.git`, { recursive: true });
+      // Ensure the path is properly formatted for browser environments
+      const gitDirPath = this.dir === '/' ? '/.git' : `${this.dir}/.git`;
+      await this.fs.promises.mkdir(gitDirPath, { recursive: true });
 
       // Set default branch
       this.branches = [defaultBranch];
@@ -347,11 +383,17 @@ export class GitService {
   async createInitialCommit(author: { name: string; email: string }): Promise<string> {
     try {
       // Create a .gitkeep file to have something to commit
-      const gitkeepPath = `${this.dir === '/' ? '' : this.dir}/.gitkeep`;
+      // Ensure the path is properly formatted for browser environments
+      const gitkeepPath = this.dir === '/' ? '/.gitkeep' : `${this.dir}/.gitkeep`;
       await this.fs.promises.writeFile(gitkeepPath, '', { encoding: 'utf8' });
 
-      // Add the file to staging
-      this.stagedFiles.add('.gitkeep');
+      // Add the file to staging using IndexedDB
+      await databaseService.saveFile({
+        id: this.getStagedFileKey('.gitkeep'),
+        content: '',
+        lastModified: Date.now(),
+        type: 'staged',
+      });
 
       // Create a commit
       const oid = this.generateOid();
@@ -366,13 +408,13 @@ export class GitService {
         author: {
           name: author.name,
           email: author.email,
-          timestamp
+          timestamp,
         },
-        files
+        files,
       });
 
-      // Clear staged files
-      this.stagedFiles.clear();
+      // Clear staged files from IndexedDB
+      await this.resetGitIndex();
 
       info('Initial commit created (browser-compatible mock)');
       return oid;
@@ -385,8 +427,16 @@ export class GitService {
   // Reset the git index
   async resetGitIndex(): Promise<void> {
     try {
-      // In our mock implementation, just clear staged files
-      this.stagedFiles.clear();
+      // Get all staged files
+      const stagedFiles = await this.getStagedFiles();
+
+      // Delete each staged file from IndexedDB
+      for (const filepath of stagedFiles) {
+        // Normalize the path for consistency
+        const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+        await databaseService.deleteFile(this.getStagedFileKey(normalizedPath));
+      }
+
       info('Git index has been reset (browser-compatible mock)');
     } catch (err) {
       error('Failed to reset git index:', err);
@@ -397,11 +447,40 @@ export class GitService {
   // Add files to staging area
   async add(filepath: string): Promise<void> {
     try {
-      // Check if file exists
-      await this.fs.promises.stat(filepath);
+      info(`GitService::beforeAdd - ${filepath}`);
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+      info(`GitService::normalizedPath - ${filepath}`);
 
-      // Add to staged files
-      this.stagedFiles.add(filepath);
+      info(`GitService::add - ${filepath}`);
+      // Check if file exists using the normalized path
+      try {
+        await this.fs.promises.stat(normalizedPath);
+      } catch (statErr) {
+        // If the normalized path fails, try with the original path
+        // This is a fallback for browser environments where paths might be handled differently
+        await this.fs.promises.stat(filepath);
+      }
+
+      // Get the file content
+      let content;
+      try {
+        content = await this.fs.promises.readFile(normalizedPath, { encoding: 'utf8' });
+        info(`GitService::add::content - ${content}`);
+      } catch (readErr) {
+        // If the normalized path fails, try with the original path
+        content = await this.fs.promises.readFile(filepath, { encoding: 'utf8' });
+      }
+      info(`GitService::add::afterTryContent - ${content}`);
+
+      // Save to IndexedDB with the staged file prefix using the normalized path
+      await databaseService.saveFile({
+        id: this.getStagedFileKey(normalizedPath),
+        content,
+        lastModified: Date.now(),
+        type: 'staged',
+      });
+
       debug(`File added to staging: ${filepath} (browser-compatible mock)`);
     } catch (err) {
       error(`Failed to add file ${filepath}:`, err);
@@ -412,8 +491,17 @@ export class GitService {
   // Remove files from staging area (unstage)
   async unstage(filepath: string): Promise<void> {
     try {
-      // Remove from staged files
-      this.stagedFiles.delete(filepath);
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
+      // Try to unstage using both the normalized path and the original path
+      try {
+        await databaseService.deleteFile(this.getStagedFileKey(normalizedPath));
+      } catch (deleteErr) {
+        // If the normalized path fails, try with the original path
+        await databaseService.deleteFile(this.getStagedFileKey(filepath));
+      }
+
       debug(`File removed from staging: ${filepath} (browser-compatible mock)`);
     } catch (err) {
       error(`Failed to unstage file ${filepath}:`, err);
@@ -424,7 +512,10 @@ export class GitService {
   // Commit changes
   async commit(message: string, author: { name: string; email: string }): Promise<string> {
     try {
-      if (this.stagedFiles.size === 0) {
+      // Get all staged files from IndexedDB
+      const stagedFilePaths = await this.getStagedFiles();
+
+      if (stagedFilePaths.length === 0) {
         throw new Error('No changes to commit');
       }
 
@@ -432,14 +523,25 @@ export class GitService {
       const timestamp = Math.floor(Date.now() / 1000);
 
       // Get the latest commit as parent
-      const parent = this.commits.length > 0 ? this.commits[this.commits.length - 1].oid : undefined;
+      const parent =
+        this.commits.length > 0 ? this.commits[this.commits.length - 1].oid : undefined;
 
       // Create a new commit with the staged files
       const files = new Map<string, string>();
-      for (const filepath of this.stagedFiles) {
+      for (const filepath of stagedFilePaths) {
         try {
-          const content = await this.fs.promises.readFile(filepath, { encoding: 'utf8' });
-          files.set(filepath, content);
+          // Normalize the path for consistency
+          const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
+          // Get the content from the staged file in IndexedDB
+          const stagedFile = await databaseService.getFile(this.getStagedFileKey(normalizedPath));
+          if (stagedFile && stagedFile.content) {
+            files.set(normalizedPath, stagedFile.content);
+          } else {
+            // Fallback to reading from the file system if not found in IndexedDB
+            const content = await this.fs.promises.readFile(normalizedPath, { encoding: 'utf8' });
+            files.set(normalizedPath, content);
+          }
         } catch (err) {
           // Skip files that can't be read
           warn(`Skipping file ${filepath} in commit due to error:`, err);
@@ -452,14 +554,14 @@ export class GitService {
         author: {
           name: author.name,
           email: author.email,
-          timestamp
+          timestamp,
         },
         parent,
-        files
+        files,
       });
 
-      // Clear staged files
-      this.stagedFiles.clear();
+      // Clear staged files from IndexedDB
+      await this.resetGitIndex();
 
       info(`Commit created: ${oid} (browser-compatible mock)`);
       return oid;
@@ -470,11 +572,13 @@ export class GitService {
   }
 
   // Get repository status
-  async status(options: {
-    skip?: number;
-    limit?: number;
-    filter?: 'all' | 'modified' | 'staged' | 'untracked'
-  } = {}): Promise<{
+  async status(
+    options: {
+      skip?: number;
+      limit?: number;
+      filter?: 'all' | 'modified' | 'staged' | 'untracked';
+    } = {},
+  ): Promise<{
     files: Array<{ file: string; head: number; workdir: number; stage: number }>;
     hasMore: boolean;
     total: number;
@@ -496,21 +600,24 @@ export class GitService {
       for (const [path, file] of files) {
         if (file.type === 'file' && !path.startsWith('/.git/')) {
           const relativePath = path.startsWith('/') ? path.substring(1) : path;
+          // Normalize the path for consistency
+          const normalizedPath = relativePath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
 
           // Check if file is in the latest commit
-          const inHead = commitFiles.has(relativePath) ? 1 : 0;
+          const inHead = commitFiles.has(normalizedPath) ? 1 : 0;
 
-          // Check if file is staged
-          const inStage = this.stagedFiles.has(relativePath) ? 2 : 0;
+          // Check if file is staged (using IndexedDB)
+          const isStaged = await this.isFileStaged(normalizedPath);
+          const inStage = isStaged ? 2 : 0;
 
           // Always consider the file as modified in workdir for simplicity
           const inWorkdir = 2;
 
           allFiles.push({
-            file: relativePath,
+            file: normalizedPath,
             head: inHead,
             workdir: inWorkdir,
-            stage: inStage
+            stage: inStage,
           });
         }
       }
@@ -518,11 +625,15 @@ export class GitService {
       // Apply filtering
       let filteredFiles = allFiles;
       if (filter === 'modified') {
-        filteredFiles = allFiles.filter(file => file.head === 1 && file.workdir === 2 && file.stage === 0);
+        filteredFiles = allFiles.filter(
+          (file) => file.head === 1 && file.workdir === 2 && file.stage === 0,
+        );
       } else if (filter === 'staged') {
-        filteredFiles = allFiles.filter(file => file.stage === 2);
+        filteredFiles = allFiles.filter((file) => file.stage === 2);
       } else if (filter === 'untracked') {
-        filteredFiles = allFiles.filter(file => file.head === 0 && file.workdir === 2 && file.stage === 0);
+        filteredFiles = allFiles.filter(
+          (file) => file.head === 0 && file.workdir === 2 && file.stage === 0,
+        );
       }
 
       // Apply pagination
@@ -532,7 +643,7 @@ export class GitService {
       return {
         files: paginatedFiles,
         hasMore,
-        total: filteredFiles.length
+        total: filteredFiles.length,
       };
     } catch (err) {
       error('Failed to get status:', err);
@@ -601,7 +712,10 @@ export class GitService {
   }
 
   // Get commit log
-  async log(options: { depth?: number; skip?: number; limit?: number } = {}): Promise<{ commits: any[]; hasMore: boolean }> {
+  async log(options: { depth?: number; skip?: number; limit?: number } = {}): Promise<{
+    commits: any[];
+    hasMore: boolean;
+  }> {
     try {
       const { depth = 50, skip = 0, limit = 10 } = options;
 
@@ -609,7 +723,7 @@ export class GitService {
       const allCommits = this.commits.slice(-depth).reverse();
 
       // Format commits to match isomorphic-git format
-      const formattedCommits = allCommits.map(commit => ({
+      const formattedCommits = allCommits.map((commit) => ({
         oid: commit.oid,
         commit: {
           message: commit.message,
@@ -624,7 +738,7 @@ export class GitService {
             timestamp: commit.author.timestamp,
           },
         },
-        payload: ''
+        payload: '',
       }));
 
       // Apply pagination
@@ -633,7 +747,7 @@ export class GitService {
 
       return {
         commits: paginatedCommits,
-        hasMore
+        hasMore,
       };
     } catch (err) {
       error('Failed to get commit log:', err);
@@ -641,32 +755,35 @@ export class GitService {
     }
   }
 
-
-
   // File-level Git operations
-  async getFileBlame(filepath: string): Promise<Array<{
-    commit: {
-      oid: string;
-      message: string;
-      author: {
-        name: string;
-        email: string;
-        timestamp: number;
+  async getFileBlame(filepath: string): Promise<
+    Array<{
+      commit: {
+        oid: string;
+        message: string;
+        author: {
+          name: string;
+          email: string;
+          timestamp: number;
+        };
       };
-    };
-    line: number;
-    content: string;
-  }>> {
+      line: number;
+      content: string;
+    }>
+  > {
     try {
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
       // Get the file content
-      const content = await this.fs.promises.readFile(filepath, { encoding: 'utf8' });
+      const content = await this.fs.promises.readFile(normalizedPath, { encoding: 'utf8' });
       const lines = content.split('\n');
 
       // Find the latest commit that modified this file
       let latestCommit = null;
       for (let i = this.commits.length - 1; i >= 0; i--) {
         const commit = this.commits[i];
-        if (commit.files.has(filepath)) {
+        if (commit.files.has(normalizedPath)) {
           latestCommit = commit;
           break;
         }
@@ -710,21 +827,26 @@ export class GitService {
   }
 
   // Get file history
-  async getFileHistory(filepath: string): Promise<Array<{
-    oid: string;
-    message: string;
-    author: {
-      name: string;
-      email: string;
-      timestamp: number;
-    };
-    date: Date;
-  }>> {
+  async getFileHistory(filepath: string): Promise<
+    Array<{
+      oid: string;
+      message: string;
+      author: {
+        name: string;
+        email: string;
+        timestamp: number;
+      };
+      date: Date;
+    }>
+  > {
     try {
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
       // Find all commits that modified this file
       const fileCommits = this.commits
-        .filter(commit => commit.files.has(filepath))
-        .map(commit => ({
+        .filter((commit) => commit.files.has(normalizedPath))
+        .map((commit) => ({
           oid: commit.oid,
           message: commit.message,
           author: {
@@ -743,7 +865,11 @@ export class GitService {
   }
 
   // Get file diff between two commits
-  async getFileDiff(filepath: string, oldOid?: string, newOid?: string): Promise<{
+  async getFileDiff(
+    filepath: string,
+    oldOid?: string,
+    newOid?: string,
+  ): Promise<{
     oldContent: string;
     newContent: string;
     diff: Array<{
@@ -756,12 +882,15 @@ export class GitService {
     }>;
   }> {
     try {
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
       let oldContent = '';
       let newContent = '';
 
       // Get the current content
       try {
-        newContent = await this.fs.promises.readFile(filepath, { encoding: 'utf8' });
+        newContent = await this.fs.promises.readFile(normalizedPath, { encoding: 'utf8' });
       } catch (err) {
         // File might not exist in the current state
         newContent = '';
@@ -769,16 +898,16 @@ export class GitService {
 
       // Find the old content
       if (oldOid) {
-        const oldCommit = this.commits.find(commit => commit.oid === oldOid);
-        if (oldCommit && oldCommit.files.has(filepath)) {
-          oldContent = oldCommit.files.get(filepath) || '';
+        const oldCommit = this.commits.find((commit) => commit.oid === oldOid);
+        if (oldCommit && oldCommit.files.has(normalizedPath)) {
+          oldContent = oldCommit.files.get(normalizedPath) || '';
         }
       } else if (this.commits.length > 0) {
         // Use the latest commit if no oldOid specified
         for (let i = this.commits.length - 1; i >= 0; i--) {
           const commit = this.commits[i];
-          if (commit.files.has(filepath)) {
-            oldContent = commit.files.get(filepath) || '';
+          if (commit.files.has(normalizedPath)) {
+            oldContent = commit.files.get(normalizedPath) || '';
             break;
           }
         }
@@ -861,11 +990,13 @@ export class GitService {
     }
   }
 
-  async listStashes(): Promise<Array<{
-    id: string;
-    message: string;
-    date: Date;
-  }>> {
+  async listStashes(): Promise<
+    Array<{
+      id: string;
+      message: string;
+      date: Date;
+    }>
+  > {
     // In our mock implementation, we don't actually store stashes
     return [];
   }
@@ -876,6 +1007,69 @@ export class GitService {
 
   async dropStash(stashId: string): Promise<void> {
     info(`Stash dropped: ${stashId} (browser-compatible mock)`);
+  }
+
+  // Helper method to get the IndexedDB key for a staged file
+  private getStagedFileKey(filepath: string): string {
+    // Normalize path to ensure consistent keys in browser environments
+    const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+    return `${STAGED_FILE_PREFIX}${normalizedPath}`;
+  }
+
+  // Helper method to check if a file is staged
+  private async isFileStaged(filepath: string): Promise<boolean> {
+    try {
+      // Normalize path to handle various path formats
+      const normalizedPath = filepath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+
+      // Try to check if the file is staged using both the normalized path and the original path
+      try {
+        const stagedFile = await databaseService.getFile(this.getStagedFileKey(normalizedPath));
+        if (stagedFile) {
+          return true;
+        }
+      } catch (getErr) {
+        // Ignore error and try the original path
+      }
+
+      // Try with the original path as a fallback
+      const stagedFile = await databaseService.getFile(this.getStagedFileKey(filepath));
+      return !!stagedFile;
+    } catch (err) {
+      error(`Failed to check if file is staged: ${filepath}`, err);
+      return false;
+    }
+  }
+
+  // Helper method to get all staged files
+  private async getStagedFiles(): Promise<string[]> {
+    try {
+      // Since we can't directly query IndexedDB for files with a specific prefix,
+      // we'll use a workaround by storing a list of staged files in a special entry
+
+      // Get all files in the working directory
+      const store = this.fs.getFileStore();
+      const files = store.files;
+      const stagedFiles: string[] = [];
+
+      // Check each file if it's staged
+      for (const [path, file] of files) {
+        if (file.type === 'file' && !path.startsWith('/.git/')) {
+          const relativePath = path.startsWith('/') ? path.substring(1) : path;
+          // Normalize the path for consistency
+          const normalizedPath = relativePath.replace(/\/+/g, '/').replace(/^\/$/, '') || '/';
+          const isStaged = await this.isFileStaged(normalizedPath);
+          if (isStaged) {
+            stagedFiles.push(normalizedPath);
+          }
+        }
+      }
+
+      return stagedFiles;
+    } catch (err) {
+      error('Failed to get staged files', err);
+      return [];
+    }
   }
 
   // Helper method to generate a random OID (commit hash)
