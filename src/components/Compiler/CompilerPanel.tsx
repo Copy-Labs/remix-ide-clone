@@ -7,6 +7,7 @@ import { selectBaseClass } from '@/utils/constant.ts';
 import { Separator } from '@/components/ui/separator.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
+import { cn } from '@/lib/utils.ts';
 
 const CompilerPanel: React.FC = () => {
   const {
@@ -186,7 +187,7 @@ const CompilerPanel: React.FC = () => {
             ) : availableVersions.length === 0 ? (
               'Loading compiler...'
             ) : (
-              'Compile'
+              compilationResult ? 'Re-compile' : 'Compile'
             )}
           </Button>
         </div>
@@ -194,13 +195,14 @@ const CompilerPanel: React.FC = () => {
         {/* Compilation Results */}
         {compilationResult && (
           <div className="space-y-3">
+            <Separator className={'my-6'} />
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium text-gray-900 dark:text-white uppercase tracking-wide">
                 Results
               </h3>
               <button
                 onClick={clearCompilationResults}
-                className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-1"
+                className="text-xs text-muted-foreground px-1"
               >
                 Clear
               </button>
@@ -208,13 +210,13 @@ const CompilerPanel: React.FC = () => {
 
             {/* Summary */}
             <div className="grid grid-cols-2 gap-1.5 text-xs">
-              <div className="bg-gray-50 dark:bg-gray-700 p-1.5 rounded">
-                <div className="text-gray-600 dark:text-gray-400 text-xs">Contracts</div>
-                <div className="font-medium text-gray-900 dark:text-white text-sm">
+              <div className="bg-border p-1.5 rounded-sm">
+                <div className="text-muted-foreground text-xs">Contracts</div>
+                <div className="font-medium text-foreground text-sm">
                   {summary.successfulContracts}/{summary.totalContracts}
                 </div>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-700 p-1.5 rounded">
+              <div className="bg-border p-1.5 rounded-sm">
                 <div className="text-gray-600 dark:text-gray-400 text-xs">Errors</div>
                 <div
                   className={`font-medium text-sm ${summary.totalErrors > 0 ? 'text-red-600' : 'text-green-600'}`}
@@ -274,7 +276,7 @@ const CompilerPanel: React.FC = () => {
                   {Object.keys(compilationResult.contracts).map((contractName) => (
                     <div
                       key={contractName}
-                      className={`w-full p-1.5 rounded border cursor-pointer transition-colors ${
+                      className={`w-full p-1.5 rounded-sm border cursor-pointer transition-colors ${
                         selectedContract === contractName
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
@@ -295,12 +297,12 @@ const CompilerPanel: React.FC = () => {
 
             {/* Selected Contract Details */}
             {selectedContractData && (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg py-3 space-y-3">
+              <div className="bg-secondary rounded-lg p-3 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-                    Contract Details
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                    Contract Name
                   </h4>
-                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                  <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-sm">
                     {selectedContract}
                   </div>
                 </div>
@@ -308,19 +310,19 @@ const CompilerPanel: React.FC = () => {
                 {/* Basic Details - Always Visible */}
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Functions:</span>
+                    <span className="text-muted-foreground">Functions:</span>
                     <span className="text-gray-900 dark:text-white">
                       {selectedContractData.abi.filter((item: any) => item.type === 'function').length}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Events:</span>
+                    <span className="text-muted-foreground">Events:</span>
                     <span className="text-gray-900 dark:text-white">
                       {selectedContractData.abi.filter((item: any) => item.type === 'event').length}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Size:</span>
+                    <span className="text-muted-foreground">Size:</span>
                     <span className="text-gray-900 dark:text-white">
                       {(selectedContractData.bytecode.length / 2).toLocaleString()} bytes
                       {!isContractSizeValid(selectedContractData.bytecode) && (
@@ -332,39 +334,39 @@ const CompilerPanel: React.FC = () => {
 
                 {/* More Info Accordion */}
                 <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="more-info" className="border-gray-200 dark:border-gray-600">
-                    <AccordionTrigger className="text-xs font-medium text-gray-700 dark:text-gray-300 py-2 hover:no-underline">
+                  <AccordionItem value="more-info" className="border-border">
+                    <AccordionTrigger className="text-xs font-medium text-foreground/85 py-2">
                       More Info
                     </AccordionTrigger>
                     <AccordionContent className="pt-2 pb-0">
                       <div className="space-y-3">
                         {/* Contract Overview */}
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-white dark:bg-gray-700 p-2 rounded border">
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Contract Size</div>
-                            <div className="flex items-center gap-1">
-                              <span className={`text-xs font-medium ${
-                                !isContractSizeValid(selectedContractData.bytecode) 
-                                  ? 'text-red-600 dark:text-red-400' 
-                                  : 'text-green-600 dark:text-green-400'
-                              }`}>
+                          <div className="bg-border p-2 rounded-sm border">
+                            <div className="text-xs text-muted-foreground mb-0.5">Contract Size</div>
+                            <div className="flex items-center gap-1 text-base">
+                              <span className={cn('text-xs font-medium',
+                                !isContractSizeValid(selectedContractData.bytecode)
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-green-600 dark:text-green-400',
+                              )}>
                                 {(selectedContractData.bytecode.length / 2).toLocaleString()} bytes
                               </span>
                               {!isContractSizeValid(selectedContractData.bytecode) && (
                                 <span className="text-xs text-red-500 font-medium" title="Exceeds 24KB limit">⚠️</span>
                               )}
                             </div>
-                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                              {((selectedContractData.bytecode.length / 2) / 24576 * 100).toFixed(1)}% of 24KB limit
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {((selectedContractData.bytecode.length / 2) / 24576 * 100).toFixed(2)}% of 24KB limit
                             </div>
                           </div>
 
-                          <div className="bg-white dark:bg-gray-700 p-2 rounded border">
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Total Elements</div>
+                          <div className="bg-border p-2 rounded-sm border">
+                            <div className="text-xs text-muted-foreground mb-0.5">Total Elements</div>
                             <div className="text-xs font-medium text-gray-900 dark:text-white">
                               {selectedContractData.abi.length} items
                             </div>
-                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                            <div className="text-xs text-muted-foreground mt-0.5">
                               in ABI
                             </div>
                           </div>
@@ -372,13 +374,13 @@ const CompilerPanel: React.FC = () => {
 
                         {/* ABI Breakdown */}
                         <div className="space-y-2">
-                          <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                          <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                             ABI Elements
                           </h5>
 
                           <div className="grid grid-cols-2 gap-1.5 text-xs">
                             {/* Functions */}
-                            <div className="flex justify-between items-center py-1 px-2 bg-white dark:bg-gray-700 rounded border">
+                            <div className="flex justify-between items-center py-1 px-2 bg-border rounded-sm border">
                               <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                 <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                                 Functions
@@ -389,7 +391,7 @@ const CompilerPanel: React.FC = () => {
                             </div>
 
                             {/* Events */}
-                            <div className="flex justify-between items-center py-1 px-2 bg-white dark:bg-gray-700 rounded border">
+                            <div className="flex justify-between items-center py-1 px-2 bg-border rounded-sm border">
                               <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                 Events
@@ -400,7 +402,7 @@ const CompilerPanel: React.FC = () => {
                             </div>
 
                             {/* Constructor */}
-                            <div className="flex justify-between items-center py-1 px-2 bg-white dark:bg-gray-700 rounded border">
+                            <div className="flex justify-between items-center py-1 px-2 bg-border rounded-sm border">
                               <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                 <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                                 Constructor
@@ -411,7 +413,7 @@ const CompilerPanel: React.FC = () => {
                             </div>
 
                             {/* Errors */}
-                            <div className="flex justify-between items-center py-1 px-2 bg-white dark:bg-gray-700 rounded border">
+                            <div className="flex justify-between items-center py-1 px-2 bg-border rounded-sm border">
                               <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                                 <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                                 Errors
@@ -426,7 +428,7 @@ const CompilerPanel: React.FC = () => {
                         {/* Function Details */}
                         {selectedContractData.abi.filter((item: any) => item.type === 'function').length > 0 && (
                           <div className="space-y-1.5">
-                            <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               Function Types
                             </h5>
                             <div className="space-y-1">
@@ -440,25 +442,25 @@ const CompilerPanel: React.FC = () => {
                                 return (
                                   <div className="grid grid-cols-2 gap-1 text-xs">
                                     {viewFunctions.length > 0 && (
-                                      <div className="flex justify-between py-0.5 px-1.5 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-700 dark:text-blue-300">
+                                      <div className="flex justify-between py-1.5 px-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-sm text-blue-700 dark:text-blue-300 border">
                                         <span>View</span>
                                         <span className="font-medium">{viewFunctions.length}</span>
                                       </div>
                                     )}
                                     {pureFunctions.length > 0 && (
-                                      <div className="flex justify-between py-0.5 px-1.5 bg-green-50 dark:bg-green-900/20 rounded text-green-700 dark:text-green-300">
+                                      <div className="flex justify-between py-1.5 px-1.5 bg-green-50 dark:bg-green-900/20 rounded-sm text-green-700 dark:text-green-300 border">
                                         <span>Pure</span>
                                         <span className="font-medium">{pureFunctions.length}</span>
                                       </div>
                                     )}
                                     {payableFunctions.length > 0 && (
-                                      <div className="flex justify-between py-0.5 px-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded text-yellow-700 dark:text-yellow-300">
+                                      <div className="flex justify-between py-1.5 px-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-sm text-yellow-700 dark:text-yellow-300 border">
                                         <span>Payable</span>
                                         <span className="font-medium">{payableFunctions.length}</span>
                                       </div>
                                     )}
                                     {(publicFunctions.length - payableFunctions.length) > 0 && (
-                                      <div className="flex justify-between py-0.5 px-1.5 bg-gray-50 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                                      <div className="flex justify-between py-1.5 px-1.5 bg-gray-50 dark:bg-gray-700 rounded-sm text-gray-700 dark:text-gray-300 border">
                                         <span>State-changing</span>
                                         <span className="font-medium">{publicFunctions.length - payableFunctions.length}</span>
                                       </div>
