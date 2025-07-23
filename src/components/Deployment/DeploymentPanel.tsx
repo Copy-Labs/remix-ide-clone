@@ -21,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils.ts';
+import { LucideLoader2 } from 'lucide-react';
 
 const DeploymentPanel: React.FC = () => {
   const {
@@ -32,12 +34,14 @@ const DeploymentPanel: React.FC = () => {
     selectedNetwork,
     availableNetworks,
     deployedContracts,
+    autoVerify,
     connectWallet,
     disconnectWallet,
     switchNetwork,
     deployContract,
     callContractMethod,
     getDeployedContractsByNetwork,
+    setAutoVerify,
   } = useDeploymentStore();
 
   const {
@@ -282,11 +286,11 @@ const DeploymentPanel: React.FC = () => {
   return (
     <div className="h-full">
       {/* Header */}
-      <div className="p-4 border-b border-muted">
+      {/*<div className="p-4 border-b border-muted">
         <div className="text-sm font-semibold text-foreground">
           Deployment & Interaction
         </div>
-      </div>
+      </div>*/}
 
       <Accordion
         type="single"
@@ -397,6 +401,21 @@ const DeploymentPanel: React.FC = () => {
                       Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei
                     </div>
                   )}
+
+                  {/* Auto-verify Setting */}
+                  <div className="mt-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={autoVerify}
+                        onChange={(e) => setAutoVerify(e.target.checked)}
+                        className="mr-2"
+                      />
+                      <span className="text-xs font-medium text-muted-foreground">
+                      Auto-verify contracts on block explorer
+                    </span>
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -509,6 +528,21 @@ const DeploymentPanel: React.FC = () => {
                     Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei
                   </div>
                 )}
+
+                {/* Auto-verify Setting */}
+                <div className="mt-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={autoVerify}
+                      onChange={(e) => setAutoVerify(e.target.checked)}
+                      className="mr-2"
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Auto-verify contracts on block explorer
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
           )}
@@ -532,11 +566,11 @@ const DeploymentPanel: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                <div className="p-3 bg-secondary rounded-md">
                   <div className="text-sm font-medium text-gray-900 dark:text-white">
                     {compiledContract.name}
                   </div>
-                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     Bytecode Size: {compiledContract.bytecode.length / 2} bytes
                   </div>
                 </div>
@@ -567,15 +601,16 @@ const DeploymentPanel: React.FC = () => {
                 <button
                   onClick={handleDeploy}
                   disabled={isDeploying}
-                  className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={cn('w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
                     isDeploying
                       ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
-                  }`}
+                      : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
+                  )}
                 >
                   {isDeploying ? (
                     <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>*/}
+                      <LucideLoader2 size={16} className="animate-spin" />
                       Deploying...
                     </div>
                   ) : (
