@@ -660,18 +660,88 @@ describe('GitStore', () => {
     });
 
     describe('getGithubRepos', () => {
-      it('should get GitHub repositories successfully', async () => {
+      it('should get GitHub repositories successfully with pagination', async () => {
         store.config.github.token = 'test_token';
+        store.isGithubConnected = true;
+
         const repos = [
           { id: 1, name: 'repo1', description: 'First repo' },
           { id: 2, name: 'repo2', description: 'Second repo' }
         ];
-        mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({ data: repos });
+        mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
+          data: repos,
+          headers: {
+            link: '<https://api.github.com/user/repos?page=2>; rel="next"',
+            'x-total-count': '10'
+          }
+        });
 
         await store.getGithubRepos();
 
+        expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
+          page: 1,
+          per_page: 30,
+          sort: 'updated',
+          direction: 'desc',
+        });
         expect(store.githubRepos).toEqual(repos);
+        expect(store.githubRepoPagination.page).toBe(1);
+        expect(store.githubRepoPagination.hasNextPage).toBe(true);
+        expect(store.githubRepoPagination.totalCount).toBe(10);
         expect(store.error).toBe(null);
+      });
+
+      it('should handle pagination parameters', async () => {
+        store.config.github.token = 'test_token';
+        store.isGithubConnected = true;
+
+        const repos = [{ id: 3, name: 'repo3', description: 'Third repo' }];
+        mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
+          data: repos,
+          headers: {
+            link: '',  // No next page
+            'x-total-count': '3'
+          }
+        });
+
+        await store.getGithubRepos({ page: 2, perPage: 2 });
+
+        expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
+          page: 2,
+          per_page: 2,
+          sort: 'updated',
+          direction: 'desc',
+        });
+        expect(store.githubRepos).toEqual(repos);
+        expect(store.githubRepoPagination.page).toBe(2);
+        expect(store.githubRepoPagination.perPage).toBe(2);
+        expect(store.githubRepoPagination.hasNextPage).toBe(false);
+        expect(store.githubRepoPagination.totalCount).toBe(3);
+      });
+
+      it('should reset pagination when resetPagination is true', async () => {
+        store.config.github.token = 'test_token';
+        store.isGithubConnected = true;
+        store.githubRepoPagination.page = 3;
+
+        const repos = [{ id: 1, name: 'repo1', description: 'First repo' }];
+        mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
+          data: repos,
+          headers: {
+            link: '',
+            'x-total-count': '1'
+          }
+        });
+
+        await store.getGithubRepos({ resetPagination: true });
+
+        expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
+          page: 1,  // Should be reset to 1
+          per_page: 30,
+          sort: 'updated',
+          direction: 'desc',
+        });
+        expect(store.githubRepoPagination.page).toBe(1);
       });
 
       it('should handle get GitHub repos without token', async () => {
@@ -679,7 +749,7 @@ describe('GitStore', () => {
 
         await store.getGithubRepos();
 
-        expect(store.error).toBe('GitHub token not configured');
+        expect(store.error).toBe('Not connected to GitHub');
       });
 
       it('should handle get GitHub repos errors', async () => {
@@ -690,6 +760,60 @@ describe('GitStore', () => {
         await store.getGithubRepos();
 
         expect(store.error).toBe('API rate limit exceeded');
+      });
+    });
+
+    describe('loadMoreGithubRepos', () => {
+      it('should load more GitHub repositories', async () => {
+        store.config.github.token = 'test_token';
+        store.isGithubConnected = true;
+        store.githubRepos = [{ id: 1, name: 'repo1', description: 'First repo' }];
+        store.githubRepoPagination = {
+          page: 1,
+          perPage: 1,
+          hasNextPage: true,
+          totalCount: 2
+        };
+
+        const moreRepos = [{ id: 2, name: 'repo2', description: 'Second repo' }];
+        mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
+          data: moreRepos,
+          headers: {
+            link: '',
+            'x-total-count': '2'
+          }
+        });
+
+        await store.loadMoreGithubRepos();
+
+        expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
+          page: 2,
+          per_page: 1,
+          sort: 'updated',
+          direction: 'desc',
+        });
+        expect(store.githubRepos).toEqual([
+          { id: 1, name: 'repo1', description: 'First repo' },
+          { id: 2, name: 'repo2', description: 'Second repo' }
+        ]);
+        expect(store.githubRepoPagination.page).toBe(2);
+      });
+
+      it('should not load more if there is no next page', async () => {
+        store.config.github.token = 'test_token';
+        store.isGithubConnected = true;
+        store.githubRepos = [{ id: 1, name: 'repo1', description: 'First repo' }];
+        store.githubRepoPagination = {
+          page: 1,
+          perPage: 10,
+          hasNextPage: false,
+          totalCount: 1
+        };
+
+        await store.loadMoreGithubRepos();
+
+        expect(mockOctokit.rest.repos.listForAuthenticatedUser).not.toHaveBeenCalled();
+        expect(store.githubRepos).toEqual([{ id: 1, name: 'repo1', description: 'First repo' }]);
       });
     });
 
