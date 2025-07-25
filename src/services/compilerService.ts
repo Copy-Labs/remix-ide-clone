@@ -1,5 +1,6 @@
 import { solidityCompiler, getCompilerVersions } from '@agnostico/browser-solidity-compiler';
 import type { CompilationResult, CompilerError, CompilerWarning, CompiledContract } from '@/types';
+import { debug } from '@/services/loggerService.ts';
 
 /**
  * Service for Solidity compilation using @agnostico/browser-solidity-compiler
@@ -290,6 +291,7 @@ export class CompilerService {
     }
 
     // Process contracts - handle the specific output format from solidityCompiler
+    // debug('Compiler Service', 'output.contracts', output.contracts);
     if (output.contracts && output.contracts.Compiled_Contracts) {
       for (const [contractName, contractData] of Object.entries(output.contracts.Compiled_Contracts)) {
         contracts[contractName] = this.parseContract(contractName, contractData as any, 'Compiled_Contracts');
