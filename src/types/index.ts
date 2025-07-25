@@ -125,6 +125,7 @@ export interface DeploymentState {
   balance: string | null;
   gasPrice: string | null;
   gasLimit: string;
+  autoVerify: boolean;
 }
 
 export interface DeployedContract {
@@ -137,6 +138,10 @@ export interface DeployedContract {
   transactionHash: string;
   deploymentCost: string;
   constructorArgs: any[];
+  shouldVerify?: boolean;
+  verified?: boolean;
+  verificationUrl?: string;
+  metadata?: string;
 }
 
 export interface Network {

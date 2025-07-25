@@ -74,6 +74,7 @@ export class Web3Service {
       rpcUrl: 'http://localhost:8545',
       chainId: 1337,
       symbol: 'ETH',
+      blockExplorer: 'http://localhost:8545',
       isTestnet: true
     }
   ];
@@ -427,6 +428,62 @@ export class Web3Service {
   }
 
   /**
+   * Check if a contract exists at a given address
+   * @param address The address to check
+   * @returns Whether a contract exists at the address
+   */
+  public async contractExists(address: string): Promise<boolean> {
+    try {
+      if (!this.web3 || !address) {
+        return false;
+      }
+
+      // Get the code at the address
+      const code = await this.web3.eth.getCode(address);
+
+      // If there's code at the address (not "0x" or "0x0"), a contract exists there
+      return code !== '0x' && code !== '0x0';
+    } catch (err) {
+      error('Web3Service', `Failed to check if contract exists at ${address}`, err);
+      return false;
+    }
+  }
+
+  /**
+   * Wait for a contract to be deployed at a given address
+   * @param address The contract address
+   * @param maxAttempts Maximum number of attempts to check
+   * @param interval Interval between attempts in milliseconds
+   * @returns Whether the contract was deployed successfully
+   */
+  public async waitForContract(address: string, maxAttempts: number = 10, interval: number = 2000): Promise<boolean> {
+    try {
+      if (!this.web3 || !address) {
+        return false;
+      }
+
+      let attempts = 0;
+      while (attempts < maxAttempts) {
+        const exists = await this.contractExists(address);
+        if (exists) {
+          info('Web3Service', `Contract confirmed at ${address} after ${attempts + 1} attempts`);
+          return true;
+        }
+
+        // Wait before next attempt
+        await new Promise(resolve => setTimeout(resolve, interval));
+        attempts++;
+      }
+
+      warn('Web3Service', `Contract not found at ${address} after ${maxAttempts} attempts`);
+      return false;
+    } catch (err) {
+      error('Web3Service', `Failed to wait for contract at ${address}`, err);
+      return false;
+    }
+  }
+
+  /**
    * Deploy a contract
    * @param abi The contract ABI
    * @param bytecode The contract bytecode
@@ -562,7 +619,8 @@ export class Web3Service {
       }
 
       // Get chain ID
-      const chainId = await this.web3.eth.getChainId();
+      const _chainId = await this.web3.eth.getChainId();
+      const chainId = Number(_chainId);
       this.chainId = chainId;
 
       // Find network by chain ID
@@ -578,7 +636,8 @@ export class Web3Service {
           rpcUrl: '',
           chainId: chainId,
           symbol: 'ETH', // Default symbol
-          isTestnet: chainId !== 1 // Assume testnet if not mainnet
+          blockExplorer: '', // Empty string as default
+          isTestnet: chainId !== 1, // Assume testnet if not mainnet
         };
       }
 

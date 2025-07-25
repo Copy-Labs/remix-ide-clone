@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useDeploymentStore } from '@/stores/deploymentStore';
 import { useCompilerStore } from '@/stores/compilerStore';
 import type { CompiledContract } from '@/types';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import { verificationService } from '@/services/verificationService';
 import { Button } from '@/components/ui/button.tsx';
 import {
   Select,
@@ -42,6 +43,7 @@ const DeploymentPanel: React.FC = () => {
     callContractMethod,
     getDeployedContractsByNetwork,
     setAutoVerify,
+    verifyContract,
   } = useDeploymentStore();
 
   const {
@@ -58,6 +60,13 @@ const DeploymentPanel: React.FC = () => {
   const [methodResult, setMethodResult] = useState<any>(null);
   const [customGasLimit, setCustomGasLimit] = useState<string>(gasLimit);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
+  // Verification settings state
+  const [apiKeys, setApiKeys] = useState<Map<string, string>>(new Map());
+  const [selectedExplorer, setSelectedExplorer] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [showVerificationSettings, setShowVerificationSettings] = useState<boolean>(false);
 
   // Get the compiled contract
   const compiledContract = getSelectedContract();
@@ -283,6 +292,80 @@ const DeploymentPanel: React.FC = () => {
     return parseFloat(balance).toFixed(6);
   };
 
+  // Load API keys when component mounts
+  useEffect(() => {
+    const keys = verificationService.getAllApiKeys();
+    setApiKeys(keys);
+  }, []);
+
+  // Handle API key change
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+  };
+
+  // Handle contract verification
+  const handleVerifyContract = async (contractAddress: string) => {
+    setIsVerifying(true);
+    try {
+      await verifyContract(contractAddress);
+      // toast.success('Contract verified successfully');
+    } catch (error) {
+      console.error('Failed to verify contract:', error);
+      toast.error('Failed to verify contract');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Handle explorer selection
+  const handleExplorerChange = (value: string) => {
+    setSelectedExplorer(value);
+    // If we already have a key for this explorer, load it
+    const existingKey = apiKeys.get(value);
+    if (existingKey) {
+      setApiKey(existingKey);
+    } else {
+      setApiKey('');
+    }
+  };
+
+  // Save API key
+  const handleSaveApiKey = () => {
+    if (!selectedExplorer || !apiKey) {
+      toast.error('Please select an explorer and enter an API key');
+      return;
+    }
+
+    // Save to verification service
+    verificationService.setApiKey(selectedExplorer, apiKey);
+
+    // Update local state
+    const newApiKeys = new Map(apiKeys);
+    newApiKeys.set(selectedExplorer, apiKey);
+    setApiKeys(newApiKeys);
+
+    toast.success(`API key saved for ${selectedExplorer}`);
+  };
+
+  // Remove API key
+  const handleRemoveApiKey = (explorer: string) => {
+    // Remove from verification service
+    verificationService.setApiKey(explorer, '');
+
+    // Update local state
+    const newApiKeys = new Map(apiKeys);
+    newApiKeys.delete(explorer);
+    setApiKeys(newApiKeys);
+
+    // If this was the selected explorer, reset the form
+    if (explorer === selectedExplorer) {
+      setSelectedExplorer('');
+      setApiKey('');
+    }
+
+    toast.success(`API key removed for ${explorer}`);
+  };
+
   return (
     <div className="h-full">
       {/* Header */}
@@ -402,23 +485,132 @@ const DeploymentPanel: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Auto-verify Setting */}
-                  <div className="mt-3">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={autoVerify}
-                        onChange={(e) => setAutoVerify(e.target.checked)}
-                        className="mr-2"
-                      />
-                      <span className="text-xs font-medium text-muted-foreground">
-                      Auto-verify contracts on block explorer
-                    </span>
-                    </label>
-                  </div>
                 </div>
               </div>
             )}
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="item-2" disabled={!account}>
+          <AccordionTrigger>Verification Settings</AccordionTrigger>
+          <AccordionContent className="flex flex-col gap-4 text-balance">
+            {/* Auto-verify Setting */}
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={autoVerify}
+                  onChange={(e) => setAutoVerify(e.target.checked)}
+                  className="mr-2"
+                />
+                <span className="text-sm font-medium text-foreground">
+                  Auto-verify contracts on block explorer
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                When enabled, contracts will be automatically verified on the block explorer after deployment.
+                You need to provide API keys for the block explorers you want to use.
+              </p>
+            </div>
+
+            {/* API Key Configuration */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-foreground">Block Explorer API Keys</h4>
+
+              {/* Current API Keys */}
+              {apiKeys.size > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Your saved API keys:</p>
+                  <div className="bg-secondary rounded-md p-2">
+                    {Array.from(apiKeys.entries()).map(([explorer, key]) => (
+                      <div key={explorer} className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                        <span className="text-xs font-medium">{explorer}</span>
+                        <div className="flex items-center">
+                          <span className="text-xs text-muted-foreground mr-2">
+                            {key.substring(0, 4)}...{key.substring(key.length - 4)}
+                          </span>
+                          <Button
+                            onClick={() => handleRemoveApiKey(explorer)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No API keys configured. Add API keys below to enable contract verification.
+                </p>
+              )}
+
+              {/* Add New API Key */}
+              <div className="space-y-3 pt-2">
+                <h5 className="text-xs font-medium text-foreground">Add New API Key</h5>
+
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Block Explorer
+                  </label>
+                  <Select
+                    value={selectedExplorer}
+                    onValueChange={handleExplorerChange}
+                  >
+                    <SelectTrigger className="w-full text-xs">
+                      <SelectValue placeholder="Select Block Explorer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Ethereum</SelectLabel>
+                        <SelectItem value="etherscan">Etherscan (Mainnet)</SelectItem>
+                        <SelectItem value="goerli.etherscan">Etherscan (Goerli)</SelectItem>
+                        <SelectItem value="sepolia.etherscan">Etherscan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Polygon</SelectLabel>
+                        <SelectItem value="polygonscan">Polygonscan (Mainnet)</SelectItem>
+                        <SelectItem value="mumbai.polygonscan">Polygonscan (Mumbai)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Other Networks</SelectLabel>
+                        <SelectItem value="bscscan">BSCScan (BNB Chain)</SelectItem>
+                        <SelectItem value="arbiscan">Arbiscan (Arbitrum)</SelectItem>
+                        <SelectItem value="optimistic.etherscan">Optimistic Etherscan</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    API Key
+                  </label>
+                  <Input
+                    type="text"
+                    value={apiKey}
+                    onChange={handleApiKeyChange}
+                    placeholder="Enter your API key"
+                    className="text-xs"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You can get API keys from the respective block explorer websites.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleSaveApiKey}
+                  className="w-full"
+                  size="sm"
+                  disabled={!selectedExplorer || !apiKey}
+                >
+                  Save API Key
+                </Button>
+              </div>
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
@@ -654,15 +846,59 @@ const DeploymentPanel: React.FC = () => {
               {selectedDeployedContractData && (
                 <div className="space-y-3">
                   <div className="p-3 bg-secondary rounded-md">
-                    <div className="text-sm font-medium text-foreground">
-                      {selectedDeployedContractData.name}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">
+                          {selectedDeployedContractData.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground break-all">
+                          Address: {selectedDeployedContractData.address}
+                        </div>
+                        <div className="mt-1 text-xs text-green-600">
+                          Deployed: {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
+                        </div>
+                      </div>
+                      {selectedDeployedContractData.verified !== undefined && (
+                        <div className={`px-2 py-1 text-xs rounded ${
+                          selectedDeployedContractData.verified 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
+                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                        }`}>
+                          {selectedDeployedContractData.verified ? 'Verified' : 'Not Verified'}
+                        </div>
+                      )}
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground break-all">
-                      Address: {selectedDeployedContractData.address}
-                    </div>
-                    <div className="mt-1 text-xs text-green-600">
-                      Deployed: {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
-                    </div>
+                    {selectedDeployedContractData.verified && selectedDeployedContractData.verificationUrl && (
+                      <div className="mt-2">
+                        <a
+                          href={selectedDeployedContractData.verificationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          View on Block Explorer
+                        </a>
+                      </div>
+                    )}
+                    {selectedDeployedContractData.verified === false && (
+                      <div className="mt-2">
+                        <Button
+                          onClick={() => handleVerifyContract(selectedDeployedContractData.address)}
+                          size="sm"
+                          className="text-xs"
+                          disabled={isVerifying}
+                        >
+                          {isVerifying ? (
+                            <div className="flex items-center">
+                              <LucideLoader2 size={12} className="animate-spin mr-1" />
+                              Verifying...
+                            </div>
+                          ) : (
+                            'Verify Contract'
+                          )}
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Method Selection */}

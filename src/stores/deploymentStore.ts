@@ -5,7 +5,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DeploymentState, DeployedContract, Network, CompiledContract } from '@/types';
 import { web3Service } from '@/services/web3Service';
 import { debug, info, warn, error } from '@/services/loggerService';
-import toast from 'react-hot-toast';
+import { verificationService } from '@/services/verificationService';
+import { useCompilerStore } from '@/stores/compilerStore';
+import { toast } from 'sonner';
 
 interface DeploymentStoreActions {
   // Connection actions
@@ -29,11 +31,17 @@ interface DeploymentStoreActions {
     options?: any
   ) => Promise<any>;
 
+  // Verification actions
+  verifyContract: (contractAddress: string) => Promise<boolean>;
+
   // Utility functions
   getDeployedContract: (address: string) => DeployedContract | null;
   getDeployedContractsByNetwork: (networkId: string) => DeployedContract[];
   updateAccountInfo: () => Promise<void>;
   estimateGas: (tx: any) => Promise<number>;
+
+  // Auto-verify settings
+  setAutoVerify: (autoVerify: boolean) => void;
 
   // State synchronization
   syncWithWallet: () => Promise<void>;
@@ -50,6 +58,7 @@ const initialState: DeploymentState = {
   balance: null,
   gasPrice: null,
   gasLimit: '3000000',
+  autoVerify: true,
 };
 
 export const useDeploymentStore = create<DeploymentStore>()(
@@ -86,7 +95,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
             state.gasPrice = null;
           });
 
-          toast('Wallet disconnected');
+          toast.info('Wallet disconnected');
         },
 
         switchNetwork: async (chainId: number) => {
@@ -138,70 +147,115 @@ export const useDeploymentStore = create<DeploymentStore>()(
               state.isDeploying = true;
             });
 
-            // Show toast notification
-            const deployToast = toast.loading('Deploying contract...');
-
             // Set gas limit if not provided
             if (!options.gas && !options.gasLimit) {
               options.gas = parseInt(get().gasLimit);
             }
 
-            // Deploy the contract
-            const result = await web3Service.deployContract(
-              contract.abi,
-              contract.bytecode,
-              args,
-              options
-            );
+            // Show a toast indicating that the deployment process is starting
+            const toastId = toast.loading('Preparing to deploy contract. Please confirm the transaction in your wallet...');
 
-            if (!result) {
-              toast.error('Failed to deploy contract', { id: deployToast });
+            try {
+              // Deploy the contract
+              // Note: This will wait for the user to confirm the transaction in their wallet
+              const result = await web3Service.deployContract(
+                contract.abi,
+                contract.bytecode,
+                args,
+                options
+              );
+
+              if (!result) {
+                toast.error('Failed to deploy contract', { id: toastId });
+                set((state) => {
+                  state.isDeploying = false;
+                });
+                return null;
+              }
+
+              // Show success toast
+              toast.success(`Contract deployed at ${result.address}`, { id: toastId });
+
+              // Get current timestamp
+              const deployedAt = Date.now();
+
+              // Get current network
+              const network = web3Service.getNetwork();
+
+              if (!network) {
+                toast.error('Network information not available', { id: toastId });
+                set((state) => {
+                  state.isDeploying = false;
+                });
+                return null;
+              }
+
+              // Create deployed contract object
+              const deployedContract: DeployedContract = {
+                name: contract.name,
+                address: result.address,
+                abi: contract.abi,
+                bytecode: contract.bytecode,
+                network: network.id,
+                deployedAt,
+                transactionHash: result.transactionHash,
+                deploymentCost: '0', // Will be updated when tx receipt is available
+                constructorArgs: args,
+                shouldVerify: get().autoVerify,
+                verified: false,
+                metadata: contract.metadata, // Store metadata for later verification
+              };
+
+              // Add to deployed contracts
+              set((state) => {
+                state.deployedContracts.set(result.address, deployedContract);
+                state.isDeploying = false;
+              });
+
+              // Auto-verify contract if enabled
+              if (deployedContract.shouldVerify && result.address) {
+                // We'll return the deployed contract first and let the verification happen separately
+                // This ensures the deployment completes before verification starts
+                toast.info(`Contract deployed successfully. Waiting for blockchain confirmation before verification...`);
+
+                // Start a background process to wait for the contract to be confirmed on the blockchain
+                // before attempting verification
+                (async () => {
+                  try {
+                    // Wait for the contract to be confirmed on the blockchain
+                    const contractConfirmed = await web3Service.waitForContract(result.address, 15, 2000);
+
+                    if (contractConfirmed) {
+                      // Contract is confirmed, proceed with verification
+                      toast.info(`Contract confirmed on blockchain. Starting verification process...`);
+                      // Skip the existence check since we've already confirmed the contract exists
+                      await get().verifyContract(result.address, true);
+                    } else {
+                      // Contract not confirmed after multiple attempts
+                      toast.error(`Contract not confirmed on blockchain after multiple attempts. Verification skipped.`);
+                      error('DeploymentStore', `Contract not confirmed on blockchain at ${result.address}. Verification skipped.`);
+                    }
+                  } catch (err) {
+                    toast.error(`Error waiting for contract confirmation: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                    error('DeploymentStore', 'Error waiting for contract confirmation', err);
+                  }
+                })();
+              }
+
+              return deployedContract;
+            } catch (err) {
+              error('DeploymentStore', 'Failed to deploy contract', err);
+              toast.error(`Failed to deploy contract: ${err instanceof Error ? err.message : 'Unknown error'}`, { id: toastId });
+
               set((state) => {
                 state.isDeploying = false;
               });
+
               return null;
             }
-
-            // Get current timestamp
-            const deployedAt = Date.now();
-
-            // Get current network
-            const network = web3Service.getNetwork();
-
-            if (!network) {
-              toast.error('Network information not available', { id: deployToast });
-              set((state) => {
-                state.isDeploying = false;
-              });
-              return null;
-            }
-
-            // Create deployed contract object
-            const deployedContract: DeployedContract = {
-              name: contract.name,
-              address: result.address,
-              abi: contract.abi,
-              bytecode: contract.bytecode,
-              network: network.id,
-              deployedAt,
-              transactionHash: result.transactionHash,
-              deploymentCost: '0', // Will be updated when tx receipt is available
-              constructorArgs: args,
-            };
-
-            // Add to deployed contracts
-            set((state) => {
-              state.deployedContracts.set(result.address, deployedContract);
-              state.isDeploying = false;
-            });
-
-            // Show success notification
-            toast.success(`Contract deployed at ${result.address}`, { id: deployToast });
-
-            return deployedContract;
-          } catch (err) {
-            error('DeploymentStore', 'Failed to deploy contract', err);
-            toast.error('Failed to deploy contract');
+          } catch (outerErr) {
+            error('DeploymentStore', 'Unexpected error in deployContract', outerErr);
+            toast.error('Unexpected error occurred during contract deployment');
 
             set((state) => {
               state.isDeploying = false;
@@ -216,7 +270,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
             state.deployedContracts.clear();
           });
 
-          toast('Cleared deployed contracts');
+          toast.info('Cleared deployed contracts');
         },
 
         removeDeployedContract: (address: string) => {
@@ -224,7 +278,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
             state.deployedContracts.delete(address);
           });
 
-          toast(`Removed contract at ${address}`);
+          toast.info(`Removed contract at ${address}`);
         },
 
         callContractMethod: async (
@@ -246,31 +300,37 @@ export const useDeploymentStore = create<DeploymentStore>()(
               return null;
             }
 
-            // Show toast notification for write operations
+            // Get method info
             const methodAbi = deployedContract.abi.find(item => item.name === method);
             const isReadOperation = methodAbi?.stateMutability === 'view' || methodAbi?.stateMutability === 'pure';
 
-            let toastId;
-            if (!isReadOperation) {
-              toastId = toast.loading(`Calling ${method}...`);
-            }
-
             // Call the contract method
-            const result = await web3Service.callContractMethod(
-              contractAddress,
-              deployedContract.abi,
-              method,
-              args,
-              options
-            );
-
-            // Update toast notification
-            if (!isReadOperation && toastId) {
-              if (result) {
-                toast.success(`${method} called successfully`, { id: toastId });
-              } else {
-                toast.error(`Failed to call ${method}`, { id: toastId });
-              }
+            let result;
+            if (isReadOperation) {
+              // For read operations, don't show a toast
+              result = await web3Service.callContractMethod(
+                contractAddress,
+                deployedContract.abi,
+                method,
+                args,
+                options
+              );
+            } else {
+              // For write operations, use toast.promise
+              result = await toast.promise(
+                web3Service.callContractMethod(
+                  contractAddress,
+                  deployedContract.abi,
+                  method,
+                  args,
+                  options
+                ),
+                {
+                  loading: `Calling ${method}...`,
+                  success: (result) => result ? `${method} called successfully` : `Failed to call ${method}`,
+                  error: `Failed to call ${method}`
+                }
+              );
             }
 
             return result;
@@ -349,6 +409,155 @@ export const useDeploymentStore = create<DeploymentStore>()(
             error('DeploymentStore', 'Failed to sync with wallet', err);
           }
         },
+
+        setAutoVerify: (autoVerify: boolean) => {
+          set((state) => {
+            state.autoVerify = autoVerify;
+          });
+
+          debug('DeploymentStore', 'Auto-verify setting updated', { autoVerify });
+        },
+
+        verifyContract: async (contractAddress: string, skipExistenceCheck: boolean = false) => {
+          try {
+            // First check if the contract address is valid
+            if (!contractAddress || !contractAddress.startsWith('0x')) {
+              const errorMsg = `Missing or invalid contractAddress (should start with 0x): ${contractAddress}`;
+              error('DeploymentStore', errorMsg);
+              toast.error(`Verification failed: ${errorMsg}`);
+              return false;
+            }
+
+            // Check if the contract exists in our store
+            const deployedContract = get().getDeployedContract(contractAddress);
+            if (!deployedContract) {
+              error('DeploymentStore', `Contract not found in deployment store: ${contractAddress}`);
+              toast.error(`Verification failed: Contract not found in deployment store`);
+              return false;
+            }
+
+            // Get network information
+            const network = web3Service.getNetwork();
+            if (!network) {
+              error('DeploymentStore', 'Network information not available');
+              toast.error('Verification failed: Network information not available');
+              return false;
+            }
+
+            // Check if the contract exists on the blockchain (skip if called after waitForContract)
+            if (!skipExistenceCheck) {
+              const contractExists = await web3Service.contractExists(contractAddress);
+              if (!contractExists) {
+                const errorMsg = `Contract not found on blockchain at address ${contractAddress}`;
+                error('DeploymentStore', errorMsg);
+                toast.error(`Verification failed: ${errorMsg}`);
+                return false;
+              }
+            }
+
+            info('DeploymentStore', `Verifying contract ${deployedContract.name} on ${network.id}...`);
+
+            // Check if network is supported for verification
+            if (!verificationService.isNetworkSupported(network)) {
+              toast.error(`Verification not supported for ${network.name}`);
+              return false;
+            }
+
+            // Check if we have an API key for this network
+            if (!verificationService.hasApiKey(network)) {
+              toast.error(`API key not found for ${network.name}. Please add an API key in settings.`);
+              return false;
+            }
+
+            // Create a detailed verification toast
+            const verificationToastId = toast.loading(`Verifying contract ${deployedContract.name} on ${network.name}... This may take a few moments.`);
+
+            // First check if the deployed contract has metadata
+            let compiledContract: CompiledContract | null = null;
+
+            if (deployedContract.metadata) {
+              // Use the metadata from the deployed contract
+              compiledContract = {
+                name: deployedContract.name,
+                bytecode: deployedContract.bytecode,
+                deployedBytecode: '', // Not needed for verification
+                abi: deployedContract.abi,
+                metadata: deployedContract.metadata,
+                devdoc: {}, // Not needed for verification
+                userdoc: {}, // Not needed for verification
+                storageLayout: {}, // Not needed for verification
+                gasEstimates: {}, // Not needed for verification
+                assembly: {}, // Not needed for verification
+              };
+            } else {
+              // Fall back to the compiler store if metadata is not stored with the deployed contract
+              const compilerStore = useCompilerStore.getState();
+              compiledContract = compilerStore.getContractByName(deployedContract.name);
+
+              if (!compiledContract) {
+                const errorMsg = `Compiled contract data not found for ${deployedContract.name}`;
+                error('DeploymentStore', errorMsg);
+                toast.error(`Verification failed: ${errorMsg}. Please recompile the contract.`, { id: verificationToastId });
+                return false;
+              }
+            }
+
+            // Ensure we have metadata for verification
+            if (!compiledContract.metadata) {
+              const errorMsg = `Contract metadata not found for ${deployedContract.name}`;
+              error('DeploymentStore', errorMsg);
+              toast.error(`Verification failed: ${errorMsg}. Please recompile the contract.`, { id: verificationToastId });
+              return false;
+            }
+
+            console.log('DeploymentStore::', deployedContract, compiledContract);
+
+            // Call the verification service
+            const result = await verificationService.verifyContract(deployedContract, compiledContract);
+            console.log('DeploymentStore::Verification Result', result);
+
+            // Update the toast based on the result
+            if (result.success) {
+              toast.success(`Contract ${deployedContract.name} verified successfully! The code is now publicly viewable on the block explorer.`, { id: verificationToastId });
+            } else {
+              toast.error(`Verification failed: ${result.message}.`, { id: verificationToastId });
+            }
+
+            if (result.success) {
+              // Update the deployed contract with verification info
+              set((state) => {
+                const contract = state.deployedContracts.get(contractAddress);
+                if (contract) {
+                  contract.verified = true;
+                  if (result.url) {
+                    contract.verificationUrl = result.url;
+                  } else if (network.blockExplorer) {
+                    contract.verificationUrl = `${network.blockExplorer}/address/${contractAddress}#code`;
+                  }
+                  state.deployedContracts.set(contractAddress, contract);
+                }
+              });
+
+              info('DeploymentStore', `Contract ${deployedContract.name} verified successfully`);
+              return true;
+            } else {
+              set((state) => {
+                const contract = state.deployedContracts.get(contractAddress);
+                if (contract) {
+                  contract.verified = false;
+                  state.deployedContracts.set(contractAddress, contract);
+                }
+              });
+
+              error('DeploymentStore', `Contract ${deployedContract.name} verification failed: ${result.message}`);
+              return false;
+            }
+          } catch (err) {
+            error('DeploymentStore', 'Failed to verify contract', err);
+            toast.error('Failed to verify contract');
+            return false;
+          }
+        },
       })),
       {
         name: 'deployment-storage',
@@ -362,6 +571,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
             deployedContractsArray,
             selectedNetwork: state.selectedNetwork,
             gasLimit: state.gasLimit,
+            autoVerify: state.autoVerify,
           };
         },
         // Custom merge function to handle Map reconstruction
@@ -379,6 +589,10 @@ export const useDeploymentStore = create<DeploymentStore>()(
 
           if (persistedState.gasLimit) {
             mergedState.gasLimit = persistedState.gasLimit;
+          }
+
+          if (persistedState.autoVerify !== undefined) {
+            mergedState.autoVerify = persistedState.autoVerify;
           }
 
           return mergedState;
