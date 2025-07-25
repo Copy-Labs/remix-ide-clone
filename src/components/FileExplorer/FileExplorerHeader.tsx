@@ -68,7 +68,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
             File Explorer
           </h2>
           {isInitialized && currentBranch && (
-            <div className="flex items-center mt-1 text-xs text-gray-600 dark:text-gray-400">
+            <div className="flex items-center mt-1 text-xs text-muted-foreground">
               <GitBranch size={12} className="mr-1" />
               <span className="mr-2">{currentBranch}</span>
               {changesCount > 0 && (
