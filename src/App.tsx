@@ -12,6 +12,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Separator } from '@/components/ui/separator.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card.tsx';
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
@@ -27,7 +35,7 @@ import { Toaster } from '@/components/ui/sonner.tsx';
 type MainView = 'editor' | 'plugins';
 
 function App() {
-  const { files, activeFile, openTabs, createFile, openFile } = useFileStore();
+  const { files, activeFile, openTabs, createFile, createFolder, openFile } = useFileStore();
   const { theme } = useEditorStore();
   const { registerPlugin } = usePluginStore();
   const [showPluginPanel, setShowPluginPanel] = useState(false);
@@ -35,8 +43,13 @@ function App() {
 
   // Initialize sample files on first load
   React.useEffect(() => {
-    if (files.size === 0) {
-      // Create sample Solidity contract
+    // Check if specific files exist
+    const contractExists = Array.from(files.keys()).some(path => path === '/contracts/SimpleStorage.sol');
+    const scriptExists = Array.from(files.keys()).some(path => path === '/scripts/example.js');
+    const testExists = Array.from(files.keys()).some(path => path === '/tests/SimpleStorage.test.js');
+
+    // Create sample Solidity contract if it doesn't exist
+    if (!contractExists) {
       const sampleContract = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -67,7 +80,17 @@ contract SimpleStorage {
     }
 }`;
 
-      // Create sample JavaScript file
+      // Create directory first if it doesn't exist
+      if (!Array.from(files.keys()).some(path => path === '/contracts')) {
+        createFolder('/contracts');
+      }
+
+      // Then create file
+      createFile('/contracts/SimpleStorage.sol', sampleContract);
+    }
+
+    // Create sample JavaScript file if it doesn't exist
+    if (!scriptExists) {
       const sampleJS = `// Sample JavaScript file
 console.log("Hello, Remix IDE Clone!");
 
@@ -80,13 +103,64 @@ function calculateSum(a, b) {
 const result = calculateSum(5, 3);
 console.log("Result:", result);`;
 
-      createFile('/contracts/SimpleStorage.sol', sampleContract);
-      createFile('/scripts/example.js', sampleJS);
+      // Create directory first if it doesn't exist
+      if (!Array.from(files.keys()).some(path => path === '/scripts')) {
+        createFolder('/scripts');
+      }
 
-      // Open the Solidity file by default
-      openFile('/contracts/SimpleStorage.sol');
+      // Then create file
+      createFile('/scripts/example.js', sampleJS);
     }
-  }, [files.size, createFile, openFile]);
+
+    // Create sample test file for SimpleStorage contract if it doesn't exist
+    if (!testExists) {
+      const sampleTest = `// Test file for SimpleStorage contract
+const { expect } = require("chai");
+
+describe("SimpleStorage Contract", function() {
+  let simpleStorage;
+
+  beforeEach(async function() {
+    // Deploy a new SimpleStorage contract for each test
+    const SimpleStorage = await ethers.getContractFactory("SimpleStorage");
+    simpleStorage = await SimpleStorage.deploy();
+    await simpleStorage.deployed();
+  });
+
+  it("Should return 0 initially", async function() {
+    // Initial value should be 0
+    expect(await simpleStorage.get()).to.equal(0);
+  });
+
+  it("Should set and retrieve the value correctly", async function() {
+    // Set the value to 42
+    const setTx = await simpleStorage.set(42);
+    await setTx.wait();
+
+    // Get the value and check if it's 42
+    expect(await simpleStorage.get()).to.equal(42);
+  });
+
+  it("Should emit ValueChanged event when setting a value", async function() {
+    // Check if the ValueChanged event is emitted with the correct value
+    await expect(simpleStorage.set(100))
+      .to.emit(simpleStorage, "ValueChanged")
+      .withArgs(100);
+  });
+});`;
+
+      // Create directory first if it doesn't exist
+      if (!Array.from(files.keys()).some(path => path === '/tests')) {
+        createFolder('/tests');
+      }
+
+      // Then create file
+      createFile('/tests/SimpleStorage.test.js', sampleTest);
+    }
+
+    // Always open the Solidity file by default
+    // openFile('/contracts/SimpleStorage.sol');
+  }, [files, createFile, createFolder, openFile]);
 
   // Initialize plugins on first load
   React.useEffect(() => {
@@ -141,7 +215,7 @@ console.log("Result:", result);`;
         >
           <AppSidebar />
           <SidebarInset className={'h-screen overflow-y-auto'}>
-            <div className="bg-card sticky top-0 flex shrink-0 items-center gap-2 border-b border-border p-4 overflow-x-auto z-10 max-w-[calc(100%-var(--sidebar-width-icon)+var(--sidebar-width-icon))]!">
+            <div className="bg-card sticky top-0 flex shrink-0 items-center gap-2 border-b border-border px-4 py-2 overflow-x-auto z-10 max-w-[calc(100%-var(--sidebar-width-icon)+var(--sidebar-width-icon))]!">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
               <div className="flex-1 space-x-1 overflow-x-auto w-full">
@@ -232,41 +306,150 @@ console.log("Result:", result);`;
                       </div>
                     </div>
                   ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">📝</div>
-                        <h2 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-                          Welcome to Remix IDE Clone
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">
-                          Select a file from the explorer to start editing, or use the Plugin
-                          Manager to configure your development environment
-                        </p>
-                        <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto">
-                          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                              Features
-                            </h3>
-                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                              <li>✅ Modern React + TypeScript</li>
-                              <li>✅ Zustand State Management</li>
-                              <li>✅ Tailwind CSS Styling</li>
-                              <li>✅ Monaco Editor Integration</li>
-                              <li>✅ Solidity Compilation</li>
-                              <li>✅ Web3 Deployment</li>
-                            </ul>
+                    <div className="h-full flex items-center justify-center p-6">
+                      <div className="max-w-4xl w-full">
+                        <div className="text-center mb-8">
+                          <div className="inline-flex items-center justify-center bg-primary/10 p-3 rounded-full mb-4">
+                            <div className="text-4xl">🚀</div>
                           </div>
-                          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                              Quick Start
-                            </h3>
-                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                              <li>1. Open Example.sol</li>
-                              <li>2. Edit the contract</li>
-                              <li>3. Compile with Solidity</li>
-                              <li>4. Deploy to testnet</li>
-                              <li>5. Interact with contract</li>
-                            </ul>
+                          <h1 className="text-3xl font-bold tracking-tight mb-2">
+                            Welcome to Solide
+                          </h1>
+                          <div className="font-bold text-muted-foreground text-lg">A Modern Remix IDE alternative</div>
+                          <p className="text-muted-foreground max-w-2xl mx-auto">
+                            A modern Solidity development environment with powerful features for smart contract development
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-6 mb-8">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Create</CardTitle>
+                              <CardDescription>Start building your smart contracts</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Open the file explorer</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Create or edit Solidity files</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Use Monaco Editor with syntax highlighting</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                            <CardFooter>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => openFile('/contracts/SimpleStorage.sol')}
+                              >
+                                Open Example Contract
+                              </Button>
+                            </CardFooter>
+                          </Card>
+
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Compile</CardTitle>
+                              <CardDescription>Compile your smart contracts</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Select Solidity compiler version</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Configure compilation settings</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>View compilation output and errors</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                            <CardFooter>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setMainView('plugins')}
+                              >
+                                Open Compiler Plugin
+                              </Button>
+                            </CardFooter>
+                          </Card>
+
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Deploy</CardTitle>
+                              <CardDescription>Deploy and interact with contracts</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Connect to Ethereum networks</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Deploy contracts to testnet or mainnet</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Interact with deployed contracts</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Interact with multiple instances of deployed contracts.</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                            <CardFooter>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setMainView('plugins')}
+                              >
+                                Open Deployment Plugin
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        </div>
+
+                        <div className="hidden bg-card border rounded-lg p-6">
+                          <h2 className="text-xl font-semibold mb-4">Technology Stack</h2>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Modern React + TypeScript</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Zustand State Management</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Tailwind CSS Styling</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Monaco Editor Integration</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Solidity Compilation</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className="mr-2 h-5 w-5 text-primary">✓</div>
+                              <span>Web3 Deployment</span>
+                            </div>
                           </div>
                         </div>
                       </div>
