@@ -4,6 +4,7 @@ import {
   Code,
   Command,
   GitBranch,
+  Github,
   LucideFile,
   LucidePlay,
   LucideRefreshCw,
@@ -33,6 +34,7 @@ import ErrorBoundary from '@/components/ErrorBoundary.tsx';
 import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
 import GitPanel from '@/components/Git/GitPanel.tsx';
+import GithubPanel from '@/components/Git/GithubPanel.tsx';
 // import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
 import DebuggerPanel from '@/components/Debugger/DebuggerPanel.tsx';
 import CollaborationPluginUI from '@/components/PluginUI/CollaborationPluginUI.tsx';
@@ -127,6 +129,18 @@ const data = {
       component: (
         <ErrorBoundary>
           <GitPanel />
+        </ErrorBoundary>
+      ),
+    },
+    {
+      key: 'github',
+      title: 'GitHub',
+      url: '#',
+      icon: Github,
+      isActive: false,
+      component: (
+        <ErrorBoundary>
+          <GithubPanel />
         </ErrorBoundary>
       ),
     },

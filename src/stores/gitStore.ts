@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { gitService } from '@/services/gitService';
+import { githubService } from '@/services/githubService';
 import { debug, error, info } from '@/services/loggerService';
 import { createIndexedDBStorage } from '@/utils/indexedDBStorage';
 
@@ -42,6 +43,10 @@ export interface GitConfig {
   user: {
     name: string;
     email: string;
+  };
+  github: {
+    token: string | undefined;
+    username: string | undefined;
   };
 }
 
@@ -104,6 +109,10 @@ export interface GitState {
   showBlame: boolean;
   showDiff: boolean;
 
+  // GitHub integration
+  githubRepos: any[];
+  isGithubConnected: boolean;
+
   // Pagination state
   commitPagination: {
     skip: number;
@@ -117,6 +126,12 @@ export interface GitState {
     hasMore: boolean;
     total: number;
     filter: 'all' | 'modified' | 'staged' | 'untracked';
+  };
+  githubRepoPagination: {
+    page: number;
+    perPage: number;
+    hasNextPage: boolean;
+    totalCount: number;
   };
 }
 
@@ -160,6 +175,17 @@ export interface GitActions {
   // Configuration
   setConfig: (config: Partial<GitConfig>) => void;
 
+  // GitHub integration
+  connectGithub: (token: string) => Promise<void>;
+  disconnectGithub: () => void;
+  getGithubRepos: (options?: {
+    page?: number;
+    perPage?: number;
+    resetPagination?: boolean;
+  }) => Promise<void>;
+  loadMoreGithubRepos: () => Promise<void>;
+  createGithubRepo: (name: string, options?: { description?: string; private?: boolean }) => Promise<void>;
+
   // JetBrains-style Git integration
   // File-level operations
   getFileBlame: (filepath: string) => Promise<void>;
@@ -196,6 +222,10 @@ const initialState: GitState = {
       name: '',
       email: '',
     },
+    github: {
+      token: undefined,
+      username: undefined,
+    },
   },
   isLoading: false,
   error: null,
@@ -208,6 +238,10 @@ const initialState: GitState = {
   selectedCommit: null,
   showBlame: false,
   showDiff: false,
+
+  // GitHub integration
+  githubRepos: [],
+  isGithubConnected: false,
 
   // Pagination state
   commitPagination: {
@@ -222,6 +256,12 @@ const initialState: GitState = {
     hasMore: false,
     total: 0,
     filter: 'all',
+  },
+  githubRepoPagination: {
+    page: 1,
+    perPage: 30,
+    hasNextPage: false,
+    totalCount: 0,
   },
 };
 
@@ -933,6 +973,142 @@ export const useGitStore = create<GitStore>()(
             state.selectedCommit = commitOid;
           });
         },
+
+        // GitHub integration
+        connectGithub: async (token: string) => {
+          try {
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const { username } = await githubService.authenticate(token);
+
+            set((state) => {
+              // Ensure github object exists in config
+              if (!state.config.github) {
+                state.config.github = {
+                  token: undefined,
+                  username: undefined,
+                };
+              }
+              state.config.github.token = token;
+              state.config.github.username = username;
+              state.isGithubConnected = true;
+              state.isLoading = false;
+            });
+
+            // Get repositories after successful connection
+            await get().getGithubRepos();
+
+            info('GitStore', `Connected to GitHub as ${username}`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitHub';
+            error('GitStore', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        disconnectGithub: () => {
+          githubService.disconnect();
+
+          set((state) => {
+            state.config.github.token = undefined;
+            state.config.github.username = undefined;
+            state.isGithubConnected = false;
+            state.githubRepos = [];
+          });
+
+          info('GitStore', 'Disconnected from GitHub');
+        },
+
+        getGithubRepos: async (options = {}) => {
+          try {
+            if (!get().isGithubConnected) {
+              throw new Error('Not connected to GitHub');
+            }
+
+            const { page = 1, perPage = 30, resetPagination = false } = options;
+
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+              if (resetPagination) {
+                state.githubRepoPagination.page = 1;
+              }
+            });
+
+            const currentPage = resetPagination ? 1 : page;
+            const { repositories, hasNextPage, totalCount } = await githubService.listRepositories(currentPage, perPage);
+
+            set((state) => {
+              if (resetPagination || currentPage === 1) {
+                state.githubRepos = repositories;
+              } else {
+                state.githubRepos = [...state.githubRepos, ...repositories];
+              }
+              state.githubRepoPagination.page = currentPage;
+              state.githubRepoPagination.perPage = perPage;
+              state.githubRepoPagination.hasNextPage = hasNextPage;
+              state.githubRepoPagination.totalCount = totalCount;
+              state.isLoading = false;
+            });
+
+            debug('GitStore', `Found ${repositories.length} GitHub repositories (page ${currentPage}, total: ${totalCount})`);
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to get GitHub repositories';
+            error('GitStore', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
+
+        loadMoreGithubRepos: async () => {
+          const { githubRepoPagination } = get();
+          if (!githubRepoPagination.hasNextPage) return;
+
+          await get().getGithubRepos({
+            page: githubRepoPagination.page + 1,
+            perPage: githubRepoPagination.perPage,
+          });
+        },
+
+        createGithubRepo: async (name: string, options = {}) => {
+          try {
+            if (!get().isGithubConnected) {
+              throw new Error('Not connected to GitHub');
+            }
+
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
+
+            const repo = await githubService.createRepository(name, options);
+
+            // Refresh the list of repositories
+            await get().getGithubRepos();
+
+            set((state) => {
+              state.isLoading = false;
+            });
+
+            info('GitStore', `Created GitHub repository ${name}`);
+            return repo;
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : `Failed to create GitHub repository ${name}`;
+            error('GitStore', errorMessage);
+            set((state) => {
+              state.error = errorMessage;
+              state.isLoading = false;
+            });
+          }
+        },
       })),
       {
         name: 'git-store',
@@ -942,6 +1118,8 @@ export const useGitStore = create<GitStore>()(
           isInitialized: state.isInitialized,
           branches: state.branches,
           currentBranch: state.currentBranch,
+          isGithubConnected: state.isGithubConnected,
+          githubRepos: state.githubRepos,
         }),
         onRehydrateStorage: (state) => {
           // Return a function that will be called when the store is rehydrated
@@ -956,6 +1134,19 @@ export const useGitStore = create<GitStore>()(
               const store = useGitStore.getState();
               if (store._onHydrate) {
                 store._onHydrate(rehydratedState);
+              }
+
+              // Restore GitHub authentication if connected
+              if (rehydratedState.isGithubConnected &&
+                  rehydratedState.config?.github?.token) {
+                // Re-authenticate with GitHub using the stored token
+                // We use a silent approach to avoid disrupting the user experience
+                githubService.authenticate(rehydratedState.config.github.token)
+                  .catch(err => {
+                    // If authentication fails, update the store to reflect disconnected state
+                    console.error('Failed to restore GitHub authentication:', err);
+                    store.disconnectGithub();
+                  });
               }
             }
           };
