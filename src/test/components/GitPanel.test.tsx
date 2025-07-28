@@ -22,8 +22,9 @@ vi.mock('@/components/ui/scroll-area', () => ({
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
+  Dialog: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog">{children}</div>
+  ),
   DialogContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-content">{children}</div>
   ),
@@ -108,7 +109,7 @@ describe('GitPanel', () => {
         screen.getByText('Initialize a git repository or clone an existing one to get started.'),
       ).toBeInTheDocument();
       expect(screen.getByText('Initialize Repository')).toBeInTheDocument();
-      expect(screen.getByText('Clone Repository')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Clone Repository' })).toBeInTheDocument();
     });
 
     it('should call initRepository when Initialize Repository button is clicked', async () => {

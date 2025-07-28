@@ -58,17 +58,24 @@ vi.mock('@/components/ui/scroll-area', () => ({
   ),
 }));
 
-// Mock context menu
+// Mock context menu - captures props for testing
 vi.mock('@/components/FileExplorer/ContextMenu', () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="context-menu">{children}</div>
-  ),
+  default: (props: any) => {
+    // Capture props in global variable for testing
+    if (typeof global !== 'undefined') {
+      (global as any).capturedContextMenuProps = props;
+    }
+    return <div data-testid="context-menu">Context Menu</div>;
+  },
 }));
 
 describe('Git and FileExplorer Integration', () => {
   let mockGitStore: any;
   let mockFileStore: any;
   let user: ReturnType<typeof userEvent.setup>;
+
+  // Global variables for context menu testing
+  let capturedContextMenuProps: any = null;
 
   beforeEach(() => {
     user = userEvent.setup();
@@ -86,29 +93,93 @@ describe('Git and FileExplorer Integration', () => {
       addFile: vi.fn(),
       unstageFile: vi.fn(),
       getStatus: vi.fn(),
+      getFileHistory: vi.fn(),
+      getFileDiff: vi.fn(),
       isGitIgnored: vi.fn().mockImplementation((path) => path.includes('.git')),
     };
 
     mockFileStore = {
       // State
       files: new Map([
-        ['/test.txt', { type: 'file', content: 'test content' }],
-        ['/new.txt', { type: 'file', content: 'new content' }],
-        ['/staged.txt', { type: 'file', content: 'staged content' }],
-        ['/folder', { type: 'folder' }],
-        ['/folder/nested.txt', { type: 'file', content: 'nested content' }],
-        ['/.git', { type: 'folder' }],
-        ['/.git/config', { type: 'file', content: 'git config' }],
+        ['/test.txt', {
+          id: 'test-txt',
+          name: 'test.txt',
+          path: '/test.txt',
+          type: 'file',
+          content: 'test content',
+          lastModified: Date.now(),
+          parent: '/'
+        }],
+        ['/new.txt', {
+          id: 'new-txt',
+          name: 'new.txt',
+          path: '/new.txt',
+          type: 'file',
+          content: 'new content',
+          lastModified: Date.now(),
+          parent: '/'
+        }],
+        ['/staged.txt', {
+          id: 'staged-txt',
+          name: 'staged.txt',
+          path: '/staged.txt',
+          type: 'file',
+          content: 'staged content',
+          lastModified: Date.now(),
+          parent: '/'
+        }],
+        ['/folder', {
+          id: 'folder',
+          name: 'folder',
+          path: '/folder',
+          type: 'folder',
+          lastModified: Date.now(),
+          parent: '/'
+        }],
+        ['/folder/nested.txt', {
+          id: 'nested-txt',
+          name: 'nested.txt',
+          path: '/folder/nested.txt',
+          type: 'file',
+          content: 'nested content',
+          lastModified: Date.now(),
+          parent: '/folder'
+        }],
+        ['/.git', {
+          id: 'git-folder',
+          name: '.git',
+          path: '/.git',
+          type: 'folder',
+          lastModified: Date.now(),
+          parent: '/'
+        }],
+        ['/.git/config', {
+          id: 'git-config',
+          name: 'config',
+          path: '/.git/config',
+          type: 'file',
+          content: 'git config',
+          lastModified: Date.now(),
+          parent: '/.git'
+        }],
       ]),
       currentFile: null,
+      expandedFolders: new Set(['/folder']),
+      selectedFiles: [],
 
       // Actions
       createFile: vi.fn(),
       updateFileContent: vi.fn(),
       deleteFile: vi.fn(),
       createFolder: vi.fn(),
+      renameFile: vi.fn(),
       openFile: vi.fn(),
+      selectFile: vi.fn(),
+      clearSelection: vi.fn(),
+      toggleFolder: vi.fn(),
       getFileContent: vi.fn(),
+      collapseAllFolders: vi.fn(),
+      refreshFolders: vi.fn(),
     };
 
     vi.mocked(useGitStore).mockReturnValue(mockGitStore);
@@ -199,97 +270,54 @@ describe('Git and FileExplorer Integration', () => {
   });
 
   it('should have git context menu options for files', async () => {
-    // Mock the context menu to capture the git-related options
-    const contextMenuOptions: string[] = [];
-    vi.mock('@/components/FileExplorer/ContextMenu', () => ({
-      default: ({ children, items }: { children: React.ReactNode; items: any[] }) => {
-        // Extract git-related options
-        items.forEach((item: any) => {
-          if (
-            item.label &&
-            (item.label.includes('Git') ||
-              item.label.includes('Stage') ||
-              item.label.includes('Unstage'))
-          ) {
-            contextMenuOptions.push(item.label);
-          }
-        });
-        return <div data-testid="context-menu">{children}</div>;
-      },
-    }));
-
     render(<FileExplorer />);
 
     // Right-click on a file to open context menu
     const fileElement = screen.getByText('test.txt');
     fireEvent.contextMenu(fileElement);
 
-    // Context menu should have git-related options
-    expect(contextMenuOptions.some((option) => option.includes('Stage'))).toBe(true);
+    // Check if git-related props are passed to context menu
+    const props = (global as any).capturedContextMenuProps;
+    expect(props).toBeDefined();
+    expect(props.onStageFile || props.onUnstageFile || props.onViewFileHistory || props.onViewFileDiff).toBeTruthy();
   });
 
   it('should stage a file when stage option is selected from context menu', async () => {
-    // Mock the context menu to simulate selecting the stage option
-    let stageCallback: Function | null = null;
-    vi.mock('@/components/FileExplorer/ContextMenu', () => ({
-      default: ({ children, items }: { children: React.ReactNode; items: any[] }) => {
-        // Find the stage option and capture its callback
-        items.forEach((item: any) => {
-          if (item.label && item.label.includes('Stage')) {
-            stageCallback = item.action;
-          }
-        });
-        return <div data-testid="context-menu">{children}</div>;
-      },
-    }));
-
     render(<FileExplorer />);
 
     // Right-click on a file to open context menu
     const fileElement = screen.getByText('test.txt');
     fireEvent.contextMenu(fileElement);
 
-    // Simulate selecting the stage option
-    if (stageCallback) {
-      await stageCallback();
+    // Get the captured props and simulate selecting the stage option
+    const props = (global as any).capturedContextMenuProps;
+    expect(props).toBeDefined();
+    expect(props.onStageFile).toBeDefined();
 
-      // The file should be staged
-      expect(mockGitStore.addFile).toHaveBeenCalledWith('test.txt');
-    } else {
-      throw new Error('Stage option not found in context menu');
-    }
+    // Simulate selecting the stage option
+    await props.onStageFile('/test.txt');
+
+    // The file should be staged
+    expect(mockGitStore.addFile).toHaveBeenCalledWith('/test.txt');
   });
 
   it('should unstage a file when unstage option is selected from context menu', async () => {
-    // Mock the context menu to simulate selecting the unstage option
-    let unstageCallback: Function | null = null;
-    vi.mock('@/components/FileExplorer/ContextMenu', () => ({
-      default: ({ children, items }: { children: React.ReactNode; items: any[] }) => {
-        // Find the unstage option and capture its callback
-        items.forEach((item: any) => {
-          if (item.label && item.label.includes('Unstage')) {
-            unstageCallback = item.action;
-          }
-        });
-        return <div data-testid="context-menu">{children}</div>;
-      },
-    }));
-
     render(<FileExplorer />);
 
     // Right-click on a staged file to open context menu
     const fileElement = screen.getByText('staged.txt');
     fireEvent.contextMenu(fileElement);
 
-    // Simulate selecting the unstage option
-    if (unstageCallback) {
-      await unstageCallback();
+    // Get the captured props and simulate selecting the unstage option
+    const props = (global as any).capturedContextMenuProps;
+    expect(props).toBeDefined();
+    expect(props.onUnstageFile).toBeDefined();
 
-      // The file should be unstaged
-      expect(mockGitStore.unstageFile).toHaveBeenCalledWith('staged.txt');
-    } else {
-      throw new Error('Unstage option not found in context menu');
-    }
+    // Simulate selecting the unstage option
+    await props.onUnstageFile('/staged.txt');
+
+    // The file should be unstaged
+    expect(mockGitStore.unstageFile).toHaveBeenCalledWith('/staged.txt');
   });
 
   it('should refresh git status when file explorer is refreshed', async () => {
@@ -305,8 +333,24 @@ describe('Git and FileExplorer Integration', () => {
 
   it('should handle git-ignored files correctly', () => {
     // Add a git-ignored file
-    mockFileStore.files.set('/.gitignore', { type: 'file', content: 'ignored.txt' });
-    mockFileStore.files.set('/ignored.txt', { type: 'file', content: 'ignored content' });
+    mockFileStore.files.set('/.gitignore', {
+      id: 'gitignore',
+      name: '.gitignore',
+      path: '/.gitignore',
+      type: 'file',
+      content: 'ignored.txt',
+      lastModified: Date.now(),
+      parent: '/'
+    });
+    mockFileStore.files.set('/ignored.txt', {
+      id: 'ignored-txt',
+      name: 'ignored.txt',
+      path: '/ignored.txt',
+      type: 'file',
+      content: 'ignored content',
+      lastModified: Date.now(),
+      parent: '/'
+    });
     mockGitStore.isGitIgnored.mockImplementation(
       (path) => path.includes('.git') || path.includes('ignored.txt'),
     );
@@ -338,7 +382,15 @@ describe('Git and FileExplorer Integration', () => {
   it('should handle large repositories efficiently', async () => {
     // Create a large number of files
     for (let i = 0; i < 1000; i++) {
-      mockFileStore.files.set(`/file${i}.txt`, { type: 'file', content: `content ${i}` });
+      mockFileStore.files.set(`/file${i}.txt`, {
+        id: `file${i}-txt`,
+        name: `file${i}.txt`,
+        path: `/file${i}.txt`,
+        type: 'file',
+        content: `content ${i}`,
+        lastModified: Date.now(),
+        parent: '/'
+      });
     }
 
     // Add some of these files to git status

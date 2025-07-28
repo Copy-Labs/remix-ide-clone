@@ -102,10 +102,19 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     return matchingFiles;
   }, [files, searchQuery]);
 
+  // Helper function to check if a file should be hidden
+  const shouldHideFile = useCallback((file: FileNode) => {
+    // Hide .git folder and its contents (handle both absolute and relative paths)
+    if (file.name === '.git' || file.path.includes('/.git/') || file.path.includes('.git/')) {
+      return true;
+    }
+    return false;
+  }, []);
+
   // Get root files (files without parent or with parent '/')
   const getRootFiles = useCallback(() => {
     return Array.from(filteredFiles.values())
-      .filter((file) => !file.parent || file.parent === '/')
+      .filter((file) => (!file.parent || file.parent === '/') && !shouldHideFile(file))
       .sort((a, b) => {
         // Folders first, then files, alphabetically
         if (a.type !== b.type) {
@@ -113,13 +122,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
         }
         return a.name.localeCompare(b.name);
       });
-  }, [filteredFiles]);
+  }, [filteredFiles, shouldHideFile]);
 
   // Get children of a folder
   const getChildren = useCallback(
     (parentPath: string) => {
       return Array.from(filteredFiles.values())
-        .filter((file) => file.parent === parentPath)
+        .filter((file) => file.parent === parentPath && !shouldHideFile(file))
         .sort((a, b) => {
           if (a.type !== b.type) {
             return a.type === 'folder' ? -1 : 1;
@@ -127,7 +136,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
           return a.name.localeCompare(b.name);
         });
     },
-    [filteredFiles],
+    [filteredFiles, shouldHideFile],
   );
 
   const handleFileClick = useCallback(
@@ -377,11 +386,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
   // Helper function to get Git status of a file
   const getFileGitStatus = useCallback(
     (filePath: string) => {
-      if (!isInitialized || !status.files) {
+      if (!isInitialized || !status || status.length === 0) {
         return null;
       }
 
-      const fileStatus = status.files.find((f) => f.file === filePath);
+      const fileStatus = status.find((f) => f.file === filePath);
       if (!fileStatus) {
         return null;
       }
@@ -392,7 +401,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
         untracked: fileStatus.stage === 0,
       };
     },
-    [isInitialized, status.files],
+    [isInitialized, status],
   );
 
   return (

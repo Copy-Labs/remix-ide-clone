@@ -119,7 +119,7 @@ const data = {
         </ErrorBoundary>
       ),
     },
-    {
+    /*{
       key: 'git',
       title: 'Git',
       url: '#',
@@ -142,7 +142,7 @@ const data = {
           <GithubPanel />
         </ErrorBoundary>
       ),
-    },
+    },*/
     /*{
       key: 'debugger',
       title: 'Debugger',
@@ -191,7 +191,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         // Insert plugins after the base items (file explorer, compiler, deployment, git)
         // This ensures plugins appear at the end of the sidebar
-        baseItems.push(pluginItem);
+        // baseItems.push(pluginItem);
       }
     });
 

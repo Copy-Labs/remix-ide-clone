@@ -8,24 +8,75 @@ import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 
 /**
+ * Helper function to detect and handle Git index corruption errors
+ */
+async function handleGitIndexCorruption<T>(
+  operation: () => Promise<T>,
+  gitService: BrowserGitService,
+  operationName: string,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+
+    // Check if this is a Git index corruption error
+    if (errorMessage.includes('Invalid checksum in GitIndex buffer')) {
+      warn(`Git index corruption detected during ${operationName}, attempting to recover...`);
+
+      try {
+        // Reset the Git index to recover from corruption
+        await gitService.resetGitIndex();
+        info(`Git index reset successfully, retrying ${operationName}...`);
+
+        // Retry the operation after resetting the index
+        return await operation();
+      } catch (resetError) {
+        error(`Failed to recover from Git index corruption during ${operationName}:`, resetError);
+        throw new GitError(
+          GitErrorType.UNKNOWN_ERROR,
+          `Git index corruption detected and recovery failed during ${operationName}. Please try reinitializing the repository.`,
+          resetError instanceof Error ? resetError : new Error(String(resetError)),
+          true,
+        );
+      }
+    }
+
+    // If it's not a Git index corruption error, rethrow the original error
+    throw err;
+  }
+}
+
+/**
  * GitFileSystemAdapter provides file system operations for Git in browser environments
  * using the application's file store.
  */
-class GitFileSystemAdapter {
+export class GitFileSystemAdapter {
   async readFile(filepath: string, options?: { encoding?: string }): Promise<string | Uint8Array> {
     try {
+      // Handle undefined or null filepath
+      if (!filepath) {
+        throw new Error(`ENOENT: no such file or directory, open '${filepath}'`);
+      }
+
       const fileStore = this.getFileStore();
-      const normalizedPath = filepath.startsWith('/') ? filepath.slice(1) : filepath;
+      const normalizedPath = filepath.startsWith('/') ? filepath : `/${filepath}`;
 
-      debug(`Reading file: ${normalizedPath}`);
+      debug('GitFileSystemAdapter', `Reading file: ${normalizedPath}`);
 
-      const content = fileStore.files[normalizedPath]?.content || '';
+      debug('GitFileSystemAdapter', 'File store:', fileStore);
+      const file = fileStore.files.get(normalizedPath);
+      if (!file) {
+        throw new Error(`ENOENT: no such file or directory, open '${filepath}'`);
+      }
 
-      if (options?.encoding === 'utf8' || !options?.encoding) {
+      const content = await fileStore.getFileContent(normalizedPath) || '';
+
+      if (options?.encoding === 'utf8') {
         return content;
       }
 
-      // Convert string to Uint8Array if binary encoding is requested
+      // Convert string to Uint8Array if no encoding is specified or binary encoding is requested
       const encoder = new TextEncoder();
       return encoder.encode(content);
     } catch (e) {
@@ -41,7 +92,7 @@ class GitFileSystemAdapter {
   ): Promise<void> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath = filepath.startsWith('/') ? filepath.slice(1) : filepath;
+      const normalizedPath = filepath.startsWith('/') ? filepath : `/${filepath}`;
 
       debug(`Writing file: ${normalizedPath}`);
 
@@ -55,7 +106,13 @@ class GitFileSystemAdapter {
         content = decoder.decode(data);
       }
 
-      fileStore.createFile(normalizedPath, content);
+      // Check if file exists, update or create accordingly
+      const existingFile = fileStore.files.get(normalizedPath);
+      if (existingFile) {
+        await fileStore.updateFileContent(normalizedPath, content);
+      } else {
+        await fileStore.createFile(normalizedPath, content);
+      }
     } catch (e) {
       error(`Error writing file ${filepath}:`, e);
       throw e;
@@ -65,24 +122,24 @@ class GitFileSystemAdapter {
   async mkdir(dirpath: string, options?: { recursive?: boolean }): Promise<void> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath = dirpath.startsWith('/') ? dirpath.slice(1) : dirpath;
+      const normalizedPath = dirpath.startsWith('/') ? dirpath : `/${dirpath}`;
 
       debug(`Creating directory: ${normalizedPath}`);
 
       if (options?.recursive) {
         // Create parent directories if they don't exist
-        const parts = normalizedPath.split('/');
+        const parts = normalizedPath.split('/').filter((part) => part !== '');
         let currentPath = '';
 
         for (let i = 0; i < parts.length; i++) {
-          currentPath += (i > 0 ? '/' : '') + parts[i];
+          currentPath += '/' + parts[i];
 
-          if (!fileStore.directories[currentPath]) {
-            fileStore.createDirectory(currentPath);
+          if (!fileStore.files.get(currentPath)) {
+            await fileStore.createFolder(currentPath);
           }
         }
       } else {
-        fileStore.createDirectory(normalizedPath);
+        await fileStore.createFolder(normalizedPath);
       }
     } catch (e) {
       error(`Error creating directory ${dirpath}:`, e);
@@ -93,25 +150,18 @@ class GitFileSystemAdapter {
   async readdir(dirpath: string): Promise<string[]> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath =
-        dirpath === '/' ? '' : dirpath.startsWith('/') ? dirpath.slice(1) : dirpath;
+      const normalizedPath = dirpath === '/' ? '/' : (dirpath.startsWith('/') ? dirpath : `/${dirpath}`);
 
       debug(`Reading directory: ${normalizedPath}`);
 
       const files: string[] = [];
-      const prefix = normalizedPath ? `${normalizedPath}/` : '';
 
-      // Add files in this directory
-      for (const filepath in fileStore.files) {
-        if (filepath.startsWith(prefix) && !filepath.slice(prefix.length).includes('/')) {
-          files.push(filepath.slice(prefix.length));
-        }
-      }
-
-      // Add directories in this directory
-      for (const dirpath in fileStore.directories) {
-        if (dirpath.startsWith(prefix) && !dirpath.slice(prefix.length).includes('/')) {
-          files.push(dirpath.slice(prefix.length));
+      // Iterate through all files in the store
+      for (const [filepath, file] of fileStore.files) {
+        // Check if this file is a direct child of the directory
+        const parentPath = fileStore.getParentPath(filepath);
+        if (parentPath === normalizedPath) {
+          files.push(file.name);
         }
       }
 
@@ -125,47 +175,20 @@ class GitFileSystemAdapter {
   async stat(filepath: string): Promise<any> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath =
-        filepath === '/' ? '' : filepath.startsWith('/') ? filepath.slice(1) : filepath;
+      const normalizedPath = filepath.startsWith('/') ? filepath : `/${filepath}`;
 
       debug(`Stat: ${normalizedPath}`);
 
-      // Check if it's a file
-      if (fileStore.files[normalizedPath]) {
-        const file = fileStore.files[normalizedPath];
+      const file = fileStore.files.get(normalizedPath);
+      if (file) {
+        const content = await fileStore.getFileContent(normalizedPath) || '';
 
         return {
-          isFile: () => true,
-          isDirectory: () => false,
+          isFile: () => file.type === 'file',
+          isDirectory: () => file.type === 'folder',
           isSymbolicLink: () => false,
-          size: file.content.length,
+          size: file.type === 'file' ? content.length : 0,
           mtime: new Date(file.lastModified || Date.now()),
-        };
-      }
-
-      // Check if it's a directory
-      if (fileStore.directories[normalizedPath] || normalizedPath === '') {
-        return {
-          isFile: () => false,
-          isDirectory: () => true,
-          isSymbolicLink: () => false,
-          size: 0,
-          mtime: new Date(),
-        };
-      }
-
-      // Check if it's a file in a subdirectory
-      const potentialFiles = Object.keys(fileStore.files).filter((path) =>
-        path.startsWith(normalizedPath + '/'),
-      );
-
-      if (potentialFiles.length > 0) {
-        return {
-          isFile: () => false,
-          isDirectory: () => true,
-          isSymbolicLink: () => false,
-          size: 0,
-          mtime: new Date(),
         };
       }
 
@@ -179,11 +202,11 @@ class GitFileSystemAdapter {
   async unlink(filepath: string): Promise<void> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath = filepath.startsWith('/') ? filepath.slice(1) : filepath;
+      const normalizedPath = filepath.startsWith('/') ? filepath : `/${filepath}`;
 
       debug(`Unlinking file: ${normalizedPath}`);
 
-      fileStore.deleteFile(normalizedPath);
+      await fileStore.deleteFile(normalizedPath);
     } catch (e) {
       error(`Error unlinking file ${filepath}:`, e);
       throw e;
@@ -193,11 +216,11 @@ class GitFileSystemAdapter {
   async rmdir(dirpath: string): Promise<void> {
     try {
       const fileStore = this.getFileStore();
-      const normalizedPath = dirpath.startsWith('/') ? dirpath.slice(1) : dirpath;
+      const normalizedPath = dirpath.startsWith('/') ? dirpath : `/${dirpath}`;
 
       debug(`Removing directory: ${normalizedPath}`);
 
-      fileStore.deleteDirectory(normalizedPath);
+      await fileStore.deleteFile(normalizedPath);
     } catch (e) {
       error(`Error removing directory ${dirpath}:`, e);
       throw e;
@@ -234,23 +257,37 @@ export class BrowserGitService implements GitServiceInterface {
   private fs: GitFileSystemAdapter;
   private workingDirectory: string;
   private branches: string[] = [];
-  private _currentBranch: string = '';
-  private stagedFiles: Map<string, string> = new Map(); // filepath -> content
+  private _currentBranch = '';
+  private stagedFiles = new Map<string, string>(); // filepath -> content
+  private _isInitialized = false;
 
   constructor(workingDirectory: string) {
     this.workingDirectory = workingDirectory || '/';
     this.fs = new GitFileSystemAdapter();
   }
 
+  private async checkInitializationStatus(): Promise<void> {
+    try {
+      // Check if .git/HEAD exists to determine if repository is initialized
+      await this.fs.readFile('/workspace/.git/HEAD', { encoding: 'utf8' });
+      this._isInitialized = true;
+      info('BrowserGitService', 'Repository is already initialized');
+    } catch (e) {
+      // Repository is not initialized, which is fine
+      this._isInitialized = false;
+    }
+  }
+
   async init(defaultBranch: string): Promise<void> {
     // Use retryGitOperation for operations that might fail due to network or timing issues
     return retryGitOperation(async () => {
       try {
-        info(`Initializing Git repository with default branch: ${defaultBranch}`);
+        info('BrowserGitService', `Initializing Git repository with default branch: ${defaultBranch}`);
 
         // Check if repository already exists
         try {
-          const headExists = await this.fs.readFile('/.git/HEAD', { encoding: 'utf8' });
+          const headExists = await this.fs.readFile('/workspace/.git/HEAD', { encoding: 'utf8' });
+          info('BrowserGitService', 'Repository already exists:', headExists);
           if (headExists) {
             throw new GitError(
               GitErrorType.REPOSITORY_ALREADY_EXISTS,
@@ -279,6 +316,7 @@ export class BrowserGitService implements GitServiceInterface {
         // Initialize branches
         this.branches = [defaultBranch];
         this._currentBranch = defaultBranch;
+        this._isInitialized = true;
 
         // Store in database
         await databaseService.set('git:branches', this.branches);
@@ -370,85 +408,88 @@ export class BrowserGitService implements GitServiceInterface {
 
   async add(filepath: string): Promise<void> {
     return retryGitOperation(async () => {
-      try {
-        info(`Adding file to Git staging: ${filepath}`);
-
-        // Check if repository is initialized
-        if (!this._currentBranch) {
-          throw new GitError(
-            GitErrorType.REPOSITORY_NOT_INITIALIZED,
-            'Git repository is not initialized',
-            undefined,
-            false,
-          );
-        }
-
-        const normalizedPath = filepath.startsWith('/') ? filepath.slice(1) : filepath;
-
-        // Check if file exists
+      return handleGitIndexCorruption(async () => {
         try {
-          await this.fs.stat(normalizedPath);
+          info(`Adding file to Git staging: ${filepath}`);
 
-          // Read file content
-          const content = (await this.fs.readFile(normalizedPath, { encoding: 'utf8' })) as string;
-
-          // Check if file should be stored in LFS
-          let contentToStage = content;
-          if (gitLFSService.shouldUseLFS(normalizedPath, content)) {
-            info(`Using LFS for large file: ${normalizedPath}`);
-            contentToStage = await gitLFSService.processFileForCommit(normalizedPath, content);
-
-            // Write the LFS pointer file to the filesystem
-            await this.fs.writeFile(normalizedPath, contentToStage, { encoding: 'utf8' });
-          }
-
-          // Add file to staging using isomorphic-git
-          await git.add({
-            fs: this.fs,
-            dir: this.workingDirectory,
-            filepath: normalizedPath,
-          });
-
-          // Add to staged files (using the pointer file content if LFS was used)
-          this.stagedFiles.set(normalizedPath, contentToStage);
-
-          // Store in database
-          const staging = (await databaseService.get('git:staging')) || {};
-          staging[normalizedPath] = contentToStage;
-          await databaseService.set('git:staging', staging);
-
-          // If we used LFS, restore the original content in the working directory
-          if (contentToStage !== content) {
-            await this.fs.writeFile(normalizedPath, content, { encoding: 'utf8' });
-          }
-        } catch (e) {
-          // If file doesn't exist, throw a specific error
-          if (e.message.includes('ENOENT') || e.message.includes('not found')) {
+          // Check if repository is initialized
+          await this.checkInitializationStatus();
+          if (!this._isInitialized) {
             throw new GitError(
-              GitErrorType.FILE_NOT_FOUND,
-              `File not found: ${filepath}`,
-              e,
+              GitErrorType.REPOSITORY_NOT_INITIALIZED,
+              'Git repository is not initialized',
+              undefined,
               false,
             );
           }
 
-          // For other errors, rethrow
+          const normalizedPath = filepath.startsWith('/') ? filepath.slice(1) : filepath;
+
+          // Check if file exists
+          try {
+            await this.fs.stat(normalizedPath);
+
+            // Read file content
+            const content = (await this.fs.readFile(normalizedPath, { encoding: 'utf8' })) as string;
+
+            // Check if file should be stored in LFS
+            let contentToStage = content;
+            if (gitLFSService.shouldUseLFS(normalizedPath, content)) {
+              info(`Using LFS for large file: ${normalizedPath}`);
+              contentToStage = await gitLFSService.processFileForCommit(normalizedPath, content);
+
+              // Write the LFS pointer file to the filesystem
+              await this.fs.writeFile(normalizedPath, contentToStage, { encoding: 'utf8' });
+            }
+
+            // Add file to staging using isomorphic-git
+            await git.add({
+              fs: this.fs,
+              dir: this.workingDirectory,
+              filepath: normalizedPath,
+            });
+
+            // Add to staged files (using the pointer file content if LFS was used)
+            this.stagedFiles.set(normalizedPath, contentToStage);
+
+            // Store in database
+            const staging = (await databaseService.get('git:staging')) || {};
+            staging[normalizedPath] = contentToStage;
+            await databaseService.set('git:staging', staging);
+
+            // If we used LFS, restore the original content in the working directory
+            if (contentToStage !== content) {
+              await this.fs.writeFile(normalizedPath, content, { encoding: 'utf8' });
+            }
+          } catch (e) {
+            // If file doesn't exist, throw a specific error
+            if (e.message.includes('ENOENT') || e.message.includes('not found')) {
+              throw new GitError(
+                GitErrorType.FILE_NOT_FOUND,
+                `File not found: ${filepath}`,
+                e,
+                false,
+              );
+            }
+
+            // For other errors, rethrow
+            throw e;
+          }
+        } catch (e) {
+          error(`Failed to add file ${filepath}:`, e);
+
+          // Convert to GitError if it's not already
+          if (!(e instanceof GitError)) {
+            throw GitError.fromError(
+              e instanceof Error ? e : new Error(String(e)),
+              GitErrorType.UNKNOWN_ERROR,
+              `Failed to add file ${filepath}: ${e.message}`,
+            );
+          }
+
           throw e;
         }
-      } catch (e) {
-        error(`Failed to add file ${filepath}:`, e);
-
-        // Convert to GitError if it's not already
-        if (!(e instanceof GitError)) {
-          throw GitError.fromError(
-            e instanceof Error ? e : new Error(String(e)),
-            GitErrorType.UNKNOWN_ERROR,
-            `Failed to add file ${filepath}: ${e.message}`,
-          );
-        }
-
-        throw e;
-      }
+      }, this, `add file ${filepath}`);
     });
   }
 
@@ -473,171 +514,176 @@ export class BrowserGitService implements GitServiceInterface {
 
   async commit(message: string, author?: { name: string; email: string }): Promise<string> {
     return retryGitOperation(async () => {
-      try {
-        info(`Committing changes with message: ${message}`);
-
-        // Check if repository is initialized
-        if (!this._currentBranch) {
-          throw new GitError(
-            GitErrorType.REPOSITORY_NOT_INITIALIZED,
-            'Git repository is not initialized',
-            undefined,
-            false,
-          );
-        }
-
-        // Check if there are staged changes
-        if (this.stagedFiles.size === 0) {
-          throw new GitError(
-            GitErrorType.NOTHING_TO_COMMIT,
-            'Nothing to commit, working tree clean',
-            undefined,
-            false,
-          );
-        }
-
-        // Validate commit message
-        if (!message || message.trim() === '') {
-          throw new GitError(
-            GitErrorType.UNKNOWN_ERROR,
-            'Commit message cannot be empty',
-            undefined,
-            false,
-          );
-        }
-
-        if (!author) {
-          author = {
-            name: 'User',
-            email: 'user@example.com',
-          };
-        }
-
+      return handleGitIndexCorruption(async () => {
         try {
-          // Create commit using isomorphic-git
-          const commitId = await git.commit({
-            fs: this.fs,
-            dir: this.workingDirectory,
-            message,
-            author: {
-              name: author.name,
-              email: author.email,
-            },
-          });
+          info(`Committing changes with message: ${message}`);
 
-          // Get current branch HEAD for parent reference
-          const currentHead = await this.getCurrentHead();
-
-          // Store commit in database for compatibility with existing code
-          const timestamp = Math.floor(Date.now() / 1000);
-          await databaseService.set(`git:commit:${commitId}`, {
-            oid: commitId,
-            message,
-            author: {
-              name: author.name,
-              email: author.email,
-              timestamp,
-            },
-            parent: currentHead,
-          });
-
-          // Store file history
-          for (const [filepath, content] of this.stagedFiles.entries()) {
-            const fileHistory = (await databaseService.get(`git:file:${filepath}`)) || {};
-            fileHistory[commitId] = content;
-            await databaseService.set(`git:file:${filepath}`, fileHistory);
+          // Check if repository is initialized
+          await this.checkInitializationStatus();
+          if (!this._isInitialized) {
+            throw new GitError(
+              GitErrorType.REPOSITORY_NOT_INITIALIZED,
+              'Git repository is not initialized',
+              undefined,
+              false,
+            );
           }
 
-          // Clear staging area
-          await this.resetGitIndex();
+          // Check if there are staged changes
+          if (this.stagedFiles.size === 0) {
+            throw new GitError(
+              GitErrorType.NOTHING_TO_COMMIT,
+              'Nothing to commit, working tree clean',
+              undefined,
+              false,
+            );
+          }
 
-          return commitId;
+          // Validate commit message
+          if (!message || message.trim() === '') {
+            throw new GitError(
+              GitErrorType.UNKNOWN_ERROR,
+              'Commit message cannot be empty',
+              undefined,
+              false,
+            );
+          }
+
+          if (!author) {
+            author = {
+              name: 'User',
+              email: 'user@example.com',
+            };
+          }
+
+          try {
+            // Create commit using isomorphic-git
+            const commitId = await git.commit({
+              fs: this.fs,
+              dir: this.workingDirectory,
+              message,
+              author: {
+                name: author.name,
+                email: author.email,
+              },
+            });
+
+            // Get current branch HEAD for parent reference
+            const currentHead = await this.getCurrentHead();
+
+            // Store commit in database for compatibility with existing code
+            const timestamp = Math.floor(Date.now() / 1000);
+            await databaseService.set(`git:commit:${commitId}`, {
+              oid: commitId,
+              message,
+              author: {
+                name: author.name,
+                email: author.email,
+                timestamp,
+              },
+              parent: currentHead,
+            });
+
+            // Store file history
+            for (const [filepath, content] of this.stagedFiles.entries()) {
+              const fileHistory = (await databaseService.get(`git:file:${filepath}`)) || {};
+              fileHistory[commitId] = content;
+              await databaseService.set(`git:file:${filepath}`, fileHistory);
+            }
+
+            // Clear staging area
+            await this.resetGitIndex();
+
+            return commitId;
+          } catch (e) {
+            error('Error during commit:', e);
+            throw e;
+          }
         } catch (e) {
-          error('Error during commit:', e);
+          error('Failed to commit changes:', e);
+
+          // Convert to GitError if it's not already
+          if (!(e instanceof GitError)) {
+            throw GitError.fromError(
+              e instanceof Error ? e : new Error(String(e)),
+              GitErrorType.UNKNOWN_ERROR,
+              `Failed to commit changes: ${e.message}`,
+            );
+          }
+
           throw e;
         }
-      } catch (e) {
-        error('Failed to commit changes:', e);
-
-        // Convert to GitError if it's not already
-        if (!(e instanceof GitError)) {
-          throw GitError.fromError(
-            e instanceof Error ? e : new Error(String(e)),
-            GitErrorType.UNKNOWN_ERROR,
-            `Failed to commit changes: ${e.message}`,
-          );
-        }
-
-        throw e;
-      }
+      }, this, `commit with message: ${message}`);
     });
   }
 
   async status(options?: { skip?: number; limit?: number; filter?: string }): Promise<{
-    files: Array<{ file: string; status: string }>;
+    files: { file: string; status: string }[];
     hasMore: boolean;
     total: number;
   }> {
-    try {
-      info('Getting repository status');
+    return handleGitIndexCorruption(async () => {
+      try {
+        info('Getting repository status');
 
-      const skip = options?.skip || 0;
-      const limit = options?.limit || 100;
-      const filter = options?.filter || '';
+        const skip = options?.skip || 0;
+        const limit = options?.limit || 100;
+        const filter = options?.filter || '';
 
-      // Get status using isomorphic-git
-      const statusMatrix = await git.statusMatrix({
-        fs: this.fs,
-        dir: this.workingDirectory,
-        filepaths: filter ? [filter] : undefined,
-      });
+        // Get status using isomorphic-git
+        const statusMatrix = await git.statusMatrix({
+          fs: this.fs,
+          dir: this.workingDirectory,
+          filepaths: filter ? [filter] : undefined,
+        });
 
-      // Convert status matrix to our format
-      // statusMatrix returns an array of arrays, each containing:
-      // [filepath, HEAD, WORKDIR, STAGE]
-      // where each number is 0 (absent), 1 (unchanged), or 2 (modified)
-      const statusList: Array<{ file: string; status: string }> = [];
+        // Convert status matrix to our format
+        // statusMatrix returns an array of arrays, each containing:
+        // [filepath, HEAD, WORKDIR, STAGE]
+        // where each number is 0 (absent), 1 (unchanged), or 2 (modified)
+        const statusList: { file: string; status: string }[] = [];
 
-      for (const [filepath, head, workdir, stage] of statusMatrix) {
-        // Skip .git directory files
-        if (filepath.startsWith('.git/')) {
-          continue;
+        for (const [filepath, head, workdir, stage] of statusMatrix) {
+          // Skip .git directory files
+          if (filepath.startsWith('.git/')) {
+            continue;
+          }
+
+          let status: string;
+
+          if (head === 0 && workdir === 2 && stage === 0) {
+            status = 'untracked';
+          } else if (head === 1 && workdir === 2 && stage === 0) {
+            status = 'modified';
+          } else if (stage === 2) {
+            status = 'staged';
+          } else if (head === 1 && workdir === 0) {
+            status = 'deleted';
+          } else {
+            status = 'unchanged';
+          }
+
+          // Only add files with changes
+          if (status !== 'unchanged') {
+            statusList.push({ file: filepath, status });
+          }
         }
 
-        let status: string;
+        // Apply pagination
+        const total = statusList.length;
+        const paginatedList = statusList.slice(skip, skip + limit);
+        const hasMore = skip + limit < total;
 
-        if (head === 0 && workdir === 2 && stage === 0) {
-          status = 'untracked';
-        } else if (head === 1 && workdir === 2 && stage === 0) {
-          status = 'modified';
-        } else if (stage === 2) {
-          status = 'staged';
-        } else if (head === 1 && workdir === 0) {
-          status = 'deleted';
-        } else {
-          status = 'unchanged';
-        }
-
-        // Only add files with changes
-        if (status !== 'unchanged') {
-          statusList.push({ file: filepath, status });
-        }
+        return {
+          files: paginatedList,
+          hasMore,
+          total,
+        };
+      } catch (e) {
+        error('Failed to get status:', e);
+        throw e;
       }
-
-      // Apply pagination
-      const total = statusList.length;
-      const paginatedList = statusList.slice(skip, skip + limit);
-      const hasMore = skip + limit < total;
-
-      return {
-        files: paginatedList,
-        hasMore,
-        total,
-      };
-    } catch (e) {
-      error('Failed to get status:', e);
-      throw e;
-    }
+    }, this, 'get repository status');
   }
 
   async listBranches(): Promise<string[]> {
@@ -674,8 +720,16 @@ export class BrowserGitService implements GitServiceInterface {
         fullname: false,
       });
 
-      // Update internal current branch
-      this._currentBranch = branch || '';
+      // If no branch is returned but repository is initialized,
+      // it means we have an initialized repo with no commits yet
+      // In this case, keep the current branch as set during initialization
+      if (!branch && this._isInitialized && this._currentBranch) {
+        // Keep the existing current branch (set during initialization)
+        info(`Repository initialized but no commits yet, keeping branch: ${this._currentBranch}`);
+      } else {
+        // Update internal current branch
+        this._currentBranch = branch || '';
+      }
 
       // Store in database for compatibility with existing code
       await databaseService.set('git:currentBranch', this._currentBranch);
@@ -808,11 +862,11 @@ export class BrowserGitService implements GitServiceInterface {
   }
 
   async log(options?: { skip?: number; limit?: number; filepath?: string }): Promise<{
-    commits: Array<{
+    commits: {
       oid: string;
       message: string;
       author: { name: string; email: string; timestamp: number };
-    }>;
+    }[];
     hasMore: boolean;
   }> {
     try {
@@ -867,13 +921,13 @@ export class BrowserGitService implements GitServiceInterface {
   }
 
   async getFileBlame(filepath: string): Promise<
-    Array<{
+    {
       oid: string;
       author: string;
       date: string;
       line: number;
       content: string;
-    }>
+    }[]
   > {
     try {
       info(`Getting blame for file: ${filepath}`);
@@ -937,11 +991,11 @@ export class BrowserGitService implements GitServiceInterface {
   }
 
   async getFileHistory(filepath: string): Promise<
-    Array<{
+    {
       oid: string;
       message: string;
       author: { name: string; email: string; timestamp: number };
-    }>
+    }[]
   > {
     try {
       info(`Getting history for file: ${filepath}`);
@@ -1002,14 +1056,14 @@ export class BrowserGitService implements GitServiceInterface {
     oldOid: string,
     newOid: string,
   ): Promise<
-    Array<{
+    {
       type: string;
       oldStart: number;
       oldLines: number;
       newStart: number;
       newLines: number;
       content: string;
-    }>
+    }[]
   > {
     try {
       info(`Getting diff for file: ${filepath} between ${oldOid} and ${newOid}`);
@@ -1090,7 +1144,7 @@ export class BrowserGitService implements GitServiceInterface {
           }));
         });
       } catch (diffError) {
-        warn(`Could not get diff using isomorphic-git, falling back to simple diff:`, diffError);
+        warn('Could not get diff using isomorphic-git, falling back to simple diff:', diffError);
 
         // Simple diff implementation as fallback
         if (oldContent === newContent) {
@@ -1202,11 +1256,11 @@ export class BrowserGitService implements GitServiceInterface {
   }
 
   async listStashes(): Promise<
-    Array<{
+    {
       id: string;
       message: string;
       date: string;
-    }>
+    }[]
   > {
     try {
       info('Listing stashes');
@@ -1238,11 +1292,11 @@ export class BrowserGitService implements GitServiceInterface {
       const stashIds = (await databaseService.get('git:stashes')) || [];
 
       // Get stash details
-      const stashes: Array<{
+      const stashes: {
         id: string;
         message: string;
         date: string;
-      }> = [];
+      }[] = [];
 
       for (const stashId of stashIds) {
         const stash = await databaseService.get(`git:stash:${stashId}`);
@@ -1334,6 +1388,50 @@ export class BrowserGitService implements GitServiceInterface {
     }
   }
 
+  async push(remote: string, branch: string): Promise<boolean> {
+    try {
+      info(`Pushing to remote ${remote}, branch ${branch}`);
+
+      // Use isomorphic-git push
+      await git.push({
+        fs: this.fs,
+        http,
+        dir: this.workingDirectory,
+        remote,
+        ref: branch,
+      });
+
+      return true;
+    } catch (e) {
+      error(`Failed to push to ${remote}/${branch}:`, e);
+      throw e;
+    }
+  }
+
+  async pull(remote: string, branch: string): Promise<boolean> {
+    try {
+      info(`Pulling from remote ${remote}, branch ${branch}`);
+
+      // Use isomorphic-git pull
+      await git.pull({
+        fs: this.fs,
+        http,
+        dir: this.workingDirectory,
+        ref: branch,
+        singleBranch: true,
+        author: {
+          name: 'User',
+          email: 'user@example.com',
+        },
+      });
+
+      return true;
+    } catch (e) {
+      error(`Failed to pull from ${remote}/${branch}:`, e);
+      throw e;
+    }
+  }
+
   syncBranches(branches: string[], currentBranch: string): void {
     this.branches = branches;
     this._currentBranch = currentBranch;
@@ -1342,7 +1440,7 @@ export class BrowserGitService implements GitServiceInterface {
   // Helper methods
   private async getAllFiles(): Promise<string[]> {
     const fileStore = useFileStore.getState();
-    return Object.keys(fileStore.files);
+    return Array.from(fileStore.files.keys());
   }
 
   private async isFileModified(filepath: string): Promise<boolean> {
@@ -1354,7 +1452,7 @@ export class BrowserGitService implements GitServiceInterface {
   private async getCurrentHead(): Promise<string | null> {
     try {
       // Read HEAD file
-      const head = (await this.fs.readFile('/.git/HEAD', { encoding: 'utf8' })) as string;
+      const head = (await this.fs.readFile('.git/HEAD', { encoding: 'utf8' })) as string;
 
       // Parse reference
       const match = head.match(/^ref: refs\/heads\/(.+)$/);
@@ -1364,7 +1462,7 @@ export class BrowserGitService implements GitServiceInterface {
 
         try {
           // Read branch reference
-          const ref = (await this.fs.readFile(`/.git/refs/heads/${branch}`, {
+          const ref = (await this.fs.readFile(`.git/refs/heads/${branch}`, {
             encoding: 'utf8',
           })) as string;
           return ref.trim();

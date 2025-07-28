@@ -1,77 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGitStore } from '@/stores/gitStore';
-import { gitLFSService } from '@/services/gitLFSService';
-import { Button, Table, Tooltip, Progress, Input, Select, message } from 'antd';
-import {
-  DownloadOutlined,
-  DeleteOutlined,
-  SettingOutlined,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
-import styled from 'styled-components';
-
-const { Option } = Select;
-
-const Container = styled.div`
-  padding: 16px;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-`;
-
-const Title = styled.h2`
-  margin: 0;
-`;
-
-const StatsContainer = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-  background-color: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
-`;
-
-const StatItem = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const StatLabel = styled.span`
-  font-size: 12px;
-  color: #666;
-`;
-
-const StatValue = styled.span`
-  font-size: 16px;
-  font-weight: bold;
-`;
-
-const SettingsContainer = styled.div`
-  margin-bottom: 16px;
-  padding: 12px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-`;
-
-const SettingRow = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const SettingLabel = styled.span`
-  width: 150px;
-  margin-right: 8px;
-`;
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
+import { Download, Info, Trash2 } from 'lucide-react';
 
 /**
  * GitLFSPanel component for managing Git LFS files
@@ -145,7 +80,7 @@ const GitLFSPanel: React.FC = () => {
       setLFSExtensions(['.png', '.jpg', '.mp4', '.zip']);
     } catch (err) {
       console.error('Failed to load LFS files:', err);
-      message.error('Failed to load LFS files');
+      toast.error('Failed to load LFS files');
     } finally {
       setLoading(false);
     }
@@ -179,7 +114,7 @@ const GitLFSPanel: React.FC = () => {
 
     // Check if extension already exists
     if (lfsExtensions.includes(ext)) {
-      message.warning(`Extension ${ext} is already in the list`);
+      toast.error(`Extension ${ext} is already in the list`);
       return;
     }
 
@@ -190,7 +125,7 @@ const GitLFSPanel: React.FC = () => {
     // In a real implementation, we would save the settings
     // await gitLFSService.saveSettings({ sizeThreshold, lfsExtensions: [...lfsExtensions, ext] });
 
-    message.success(`Added ${ext} to LFS extensions`);
+    toast.success(`Added ${ext} to LFS extensions`);
   };
 
   // Handle removing an extension
@@ -200,168 +135,186 @@ const GitLFSPanel: React.FC = () => {
     // In a real implementation, we would save the settings
     // await gitLFSService.saveSettings({ sizeThreshold, lfsExtensions: lfsExtensions.filter(e => e !== ext) });
 
-    message.success(`Removed ${ext} from LFS extensions`);
+    toast.success(`Removed ${ext} from LFS extensions`);
   };
 
   // Handle changing size threshold
-  const handleSizeThresholdChange = (value: number) => {
-    setSizeThreshold(value * 1024 * 1024); // Convert MB to bytes
+  const handleSizeThresholdChange = (value: string) => {
+    const numValue = parseInt(value);
+    setSizeThreshold(numValue * 1024 * 1024); // Convert MB to bytes
 
     // In a real implementation, we would save the settings
-    // await gitLFSService.saveSettings({ sizeThreshold: value * 1024 * 1024, lfsExtensions });
+    // await gitLFSService.saveSettings({ sizeThreshold: numValue * 1024 * 1024, lfsExtensions });
 
-    message.success(`Set LFS size threshold to ${value}MB`);
+    toast.success(`Set LFS size threshold to ${numValue}MB`);
   };
 
-  // Table columns
-  const columns = [
-    {
-      title: 'File',
-      dataIndex: 'filepath',
-      key: 'filepath',
-      render: (text: string) => {
-        const filename = text.split('/').pop() || text;
-        return <Tooltip title={text}>{filename}</Tooltip>;
-      },
-    },
-    {
-      title: 'Size',
-      dataIndex: 'size',
-      key: 'size',
-      render: (size: number) => formatBytes(size),
-      sorter: (a: any, b: any) => a.size - b.size,
-    },
-    {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      render: (date: string) => new Date(date).toLocaleString(),
-      sorter: (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (text: string, record: any) => (
-        <div>
-          <Tooltip title="Download">
-            <Button
-              icon={<DownloadOutlined />}
-              size="small"
-              style={{ marginRight: 8 }}
-              onClick={() => {
-                // In a real implementation, we would download the file
-                // await gitLFSService.downloadLFSFile(record.oid);
-                message.success(`Downloaded ${record.filepath}`);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="Delete">
-            <Button
-              icon={<DeleteOutlined />}
-              size="small"
-              danger
-              onClick={() => {
-                // In a real implementation, we would delete the file
-                // await gitLFSService.deleteLFSFile(record.oid);
-                setLFSFiles(lfsFiles.filter((f) => f.oid !== record.oid));
-                message.success(`Deleted ${record.filepath}`);
-              }}
-            />
-          </Tooltip>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <Container>
-      <Header>
-        <Title>Git LFS Manager</Title>
-        <Button type="primary" onClick={loadLFSFiles} loading={loading}>
-          Refresh
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Git LFS Manager</h2>
+        <Button onClick={loadLFSFiles} disabled={loading}>
+          {loading ? 'Loading...' : 'Refresh'}
         </Button>
-      </Header>
+      </div>
 
-      <StatsContainer>
-        <StatItem>
-          <StatLabel>Total LFS Files</StatLabel>
-          <StatValue>{lfsFiles.length}</StatValue>
-        </StatItem>
-        <StatItem>
-          <StatLabel>Total Size</StatLabel>
-          <StatValue>{formatBytes(totalSize)}</StatValue>
-        </StatItem>
-        <StatItem>
-          <StatLabel>Storage Usage</StatLabel>
-          <div>
-            <Progress percent={usedStorage} size="small" />
+      <div className="flex gap-4 mb-4 bg-gray-50 p-3 rounded">
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-600">Total LFS Files</span>
+          <span className="text-base font-bold">{lfsFiles.length}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-600">Total Size</span>
+          <span className="text-base font-bold">{formatBytes(totalSize)}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-600">Storage Usage</span>
+          <div className="w-32">
+            <Progress value={usedStorage} className="h-2" />
           </div>
-        </StatItem>
-      </StatsContainer>
+        </div>
+      </div>
 
-      <SettingsContainer>
-        <Header>
-          <Title style={{ fontSize: '16px' }}>LFS Settings</Title>
-          <Tooltip title="These settings control which files are stored in LFS">
-            <InfoCircleOutlined />
-          </Tooltip>
-        </Header>
+      <div className="mb-4 p-3 border border-gray-200 rounded">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-base font-medium">LFS Settings</h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4" />
+              </TooltipTrigger>
+              <TooltipContent>These settings control which files are stored in LFS</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
-        <SettingRow>
-          <SettingLabel>Size Threshold:</SettingLabel>
+        <div className="flex items-center mb-2">
+          <span className="w-36 mr-2">Size Threshold:</span>
           <Select
-            value={sizeThreshold / (1024 * 1024)}
-            onChange={handleSizeThresholdChange}
-            style={{ width: 120 }}
+            value={String(sizeThreshold / (1024 * 1024))}
+            onValueChange={handleSizeThresholdChange}
           >
-            <Option value={1}>1 MB</Option>
-            <Option value={5}>5 MB</Option>
-            <Option value={10}>10 MB</Option>
-            <Option value={50}>50 MB</Option>
-            <Option value={100}>100 MB</Option>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 MB</SelectItem>
+              <SelectItem value="5">5 MB</SelectItem>
+              <SelectItem value="10">10 MB</SelectItem>
+              <SelectItem value="50">50 MB</SelectItem>
+              <SelectItem value="100">100 MB</SelectItem>
+            </SelectContent>
           </Select>
-          <span style={{ marginLeft: 8 }}>Files larger than this will use LFS</span>
-        </SettingRow>
+          <span className="ml-2">Files larger than this will use LFS</span>
+        </div>
 
-        <SettingRow>
-          <SettingLabel>LFS Extensions:</SettingLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="flex items-center mb-2">
+          <span className="w-36 mr-2">LFS Extensions:</span>
+          <div className="flex flex-wrap gap-2">
             {lfsExtensions.map((ext) => (
-              <Button key={ext} size="small" onClick={() => handleRemoveExtension(ext)}>
-                {ext} <DeleteOutlined />
+              <Button
+                key={ext}
+                variant="outline"
+                size="sm"
+                onClick={() => handleRemoveExtension(ext)}
+              >
+                {ext} <Trash2 className="h-3 w-3 ml-1" />
               </Button>
             ))}
           </div>
-        </SettingRow>
+        </div>
 
-        <SettingRow>
-          <SettingLabel>Add Extension:</SettingLabel>
+        <div className="flex items-center">
+          <span className="w-36 mr-2">Add Extension:</span>
           <Input
             value={newExtension}
             onChange={(e) => setNewExtension(e.target.value)}
             placeholder=".png"
-            style={{ width: 120 }}
-            onPressEnter={handleAddExtension}
+            className="w-32"
+            onKeyPress={(e) => e.key === 'Enter' && handleAddExtension()}
           />
-          <Button
-            type="primary"
-            onClick={handleAddExtension}
-            style={{ marginLeft: 8 }}
-            disabled={!newExtension}
-          >
+          <Button onClick={handleAddExtension} className="ml-2" disabled={!newExtension}>
             Add
           </Button>
-        </SettingRow>
-      </SettingsContainer>
+        </div>
+      </div>
 
-      <Table
-        columns={columns}
-        dataSource={lfsFiles}
-        rowKey="oid"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-      />
-    </Container>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left">File</th>
+              <th className="px-4 py-2 text-left">Size</th>
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lfsFiles.map((file) => (
+              <tr key={file.oid} className="border-t">
+                <td className="px-4 py-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        {file.filepath.split('/').pop() || file.filepath}
+                      </TooltipTrigger>
+                      <TooltipContent>{file.filepath}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </td>
+                <td className="px-4 py-2">{formatBytes(file.size)}</td>
+                <td className="px-4 py-2">{new Date(file.date).toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  <div className="flex space-x-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // In a real implementation, we would download the file
+                              // await gitLFSService.downloadLFSFile(file.oid);
+                              toast.success(`Downloaded ${file.filepath}`);
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // In a real implementation, we would delete the file
+                              // await gitLFSService.deleteLFSFile(file.oid);
+                              setLFSFiles(lfsFiles.filter((f) => f.oid !== file.oid));
+                              toast.success(`Deleted ${file.filepath}`);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {lfsFiles.length === 0 && (
+          <div className="p-8 text-center text-gray-500">No LFS files found</div>
+        )}
+      </div>
+    </div>
   );
 };
 

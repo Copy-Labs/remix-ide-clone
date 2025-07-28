@@ -126,7 +126,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
             {onRefresh && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={onRefresh} size="icon" variant="ghost" className="h-8 w-8">
+                  <Button onClick={onRefresh} size="icon" variant="ghost" className="h-8 w-8" aria-label="Refresh">
                     <LucideRefreshCw size={16} />
                   </Button>
                 </TooltipTrigger>

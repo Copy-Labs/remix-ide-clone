@@ -20,6 +20,7 @@ import GitBlameGutter from './GitBlameGutter';
 import GitDiffViewer from './GitDiffViewer';
 import InlineGitDiffViewer from './InlineGitDiffViewer';
 import EditorToolbar from './EditorToolbar';
+import { LucideLoader2 } from 'lucide-react';
 
 interface MonacoEditorProps {
   filePath: string;
@@ -1126,9 +1127,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   return (
     <div className="relative h-full">
       {(isLoading || isContentLoading) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800">
-          <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        <div className="absolute inset-0 flex items-center justify-center bg-card">
+          <div className="flex items-center space-x-2 text-muted-foreground">
+            {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>*/}
+            <LucideLoader2 size={32} className="animate-spin" />
             <span>{isContentLoading ? 'Loading file...' : 'Loading editor...'}</span>
           </div>
         </div>
@@ -1163,7 +1165,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         options={{
           ...editorOptions,
           // Add padding to the left if blame is shown
-          lineDecorationsWidth: showBlame ? 48 : undefined,
+          lineDecorationsWidth: showBlame ? 128 : undefined,
         }}
       />
 

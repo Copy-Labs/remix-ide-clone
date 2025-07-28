@@ -1,25 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { githubAuthService } from '@/services/githubAuthService';
 import { useGitStore } from '@/stores/gitStore';
-import { Alert, Spin, Typography, Button, Result } from 'antd';
-import styled from 'styled-components';
-
-const { Title, Text } = Typography;
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 20px;
-  text-align: center;
-`;
-
-const SpinnerContainer = styled.div`
-  margin: 40px 0;
-`;
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 
 /**
  * GitHubOAuthCallback component
@@ -31,8 +15,8 @@ const SpinnerContainer = styled.div`
 const GitHubOAuthCallback: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const navigate = useNavigate();
   const { connectGithub } = useGitStore();
+
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -55,11 +39,6 @@ const GitHubOAuthCallback: React.FC = () => {
 
         // Set success status
         setStatus('success');
-
-        // Redirect to the Git panel after a short delay
-        setTimeout(() => {
-          navigate('/git');
-        }, 2000);
       } catch (err) {
         console.error('OAuth callback error:', err);
         setStatus('error');
@@ -68,58 +47,56 @@ const GitHubOAuthCallback: React.FC = () => {
     };
 
     handleCallback();
-  }, [connectGithub, navigate]);
+  }, [connectGithub]);
 
   // Render loading state
   if (status === 'loading') {
     return (
-      <Container>
-        <Title level={2}>Authenticating with GitHub</Title>
-        <Text>Please wait while we complete the authentication process...</Text>
-        <SpinnerContainer>
-          <Spin size="large" />
-        </SpinnerContainer>
-      </Container>
+      <div className="flex flex-col items-center justify-center h-screen p-5 text-center">
+        <h2 className="text-2xl font-semibold mb-4">Authenticating with GitHub</h2>
+        <p className="text-gray-600 mb-10">
+          Please wait while we complete the authentication process...
+        </p>
+        <div className="my-10">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
     );
   }
 
   // Render success state
   if (status === 'success') {
     return (
-      <Container>
-        <Result
-          status="success"
-          title="Successfully authenticated with GitHub!"
-          subTitle="You will be redirected to the Git panel in a moment."
-          extra={[
-            <Button type="primary" key="git" onClick={() => navigate('/git')}>
-              Go to Git Panel
-            </Button>,
-          ]}
-        />
-      </Container>
+      <div className="flex flex-col items-center justify-center h-screen p-5 text-center">
+        <div className="flex flex-col items-center space-y-4">
+          <CheckCircle className="h-16 w-16 text-green-500" />
+          <h2 className="text-2xl font-semibold">Successfully authenticated with GitHub!</h2>
+          <p className="text-gray-600">You can now use Git features in the sidebar panels.</p>
+        </div>
+      </div>
     );
   }
 
   // Render error state
   return (
-    <Container>
-      <Result
-        status="error"
-        title="Authentication Failed"
-        subTitle="There was a problem authenticating with GitHub."
-        extra={[
-          <Button type="primary" key="retry" onClick={() => githubAuthService.startOAuthFlow()}>
-            Try Again
-          </Button>,
-          <Button key="home" onClick={() => navigate('/')}>
-            Go Home
-          </Button>,
-        ]}
-      >
-        <Alert message="Error Details" description={errorMessage} type="error" showIcon />
-      </Result>
-    </Container>
+    <div className="flex flex-col items-center justify-center h-screen p-5 text-center">
+      <div className="flex flex-col items-center space-y-4">
+        <XCircle className="h-16 w-16 text-red-500" />
+        <h2 className="text-2xl font-semibold">Authentication Failed</h2>
+        <p className="text-gray-600">There was a problem authenticating with GitHub.</p>
+
+        <Alert className="mt-4 max-w-md">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Error Details:</strong> {errorMessage}
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex space-x-4 mt-6">
+          <Button onClick={() => githubAuthService.startOAuthFlow()}>Try Again</Button>
+        </div>
+      </div>
+    </div>
   );
 };
 

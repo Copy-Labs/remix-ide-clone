@@ -279,7 +279,7 @@ describe("SimpleStorage Contract", function() {
               <div className={'flex items-center justify-end gap-2'}>
                 <div className="flex items-center space-x-4">
                   {/* Main View Navigation */}
-                  <div className="flex items-center space-x-2">
+                  {/*<div className="flex items-center space-x-2">
                     <Button
                       variant={mainView === 'editor' ? 'default' : 'outline'}
                       size="sm"
@@ -295,7 +295,7 @@ describe("SimpleStorage Contract", function() {
                       <LucidePlug className="h-4 w-4" />
                       Plugins
                     </Button>
-                  </div>
+                  </div>*/}
 
                   {/*<Separator orientation="vertical" className="h-4" />*/}
 
@@ -379,9 +379,17 @@ describe("SimpleStorage Contract", function() {
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Create or edit Solidity files</span>
                                 </li>
+                                {/*<li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Syntax highlighting</span>
+                                </li>*/}
                                 <li className="flex items-center">
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
-                                  <span>Use Monaco Editor with syntax highlighting</span>
+                                  <span>Your files are persisted</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>All basic editor operations supported</span>
                                 </li>
                               </ul>
                             </CardContent>
@@ -407,17 +415,28 @@ describe("SimpleStorage Contract", function() {
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Select Solidity compiler version</span>
                                 </li>
-                                <li className="flex items-center">
+                                <li className="flex items-center text-amber-400">
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
-                                  <span>Configure compilation settings</span>
+                                  <span>Use your favourite wallet</span>
                                 </li>
                                 <li className="flex items-center">
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>View compilation output and errors</span>
                                 </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>
+                                    View contract breakdowns (such as events, functions,
+                                    constructor, errors, etc)
+                                  </span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>Get contract Bytecode, etc</span>
+                                </li>
                               </ul>
                             </CardContent>
-                            <CardFooter>
+                            {/*<CardFooter>
                               <Button
                                 variant="outline"
                                 className="w-full"
@@ -425,7 +444,7 @@ describe("SimpleStorage Contract", function() {
                               >
                                 Open Compiler Plugin
                               </Button>
-                            </CardFooter>
+                            </CardFooter>*/}
                           </Card>
 
                           <Card>
@@ -447,7 +466,13 @@ describe("SimpleStorage Contract", function() {
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Interact with deployed contracts</span>
                                 </li>
-                                <li className="flex items-center">
+                                <li className="flex items-center text-amber-400">
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
+                                  <span>
+                                    Auto-verify contracts or Manually Verify contract with retries
+                                  </span>
+                                </li>
+                                <li className="flex items-center text-amber-400">
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>
                                     Interact with multiple instances of deployed contracts.
@@ -455,15 +480,102 @@ describe("SimpleStorage Contract", function() {
                                 </li>
                               </ul>
                             </CardContent>
-                            <CardFooter>
-                              <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => setMainView('plugins')}
-                              >
-                                Open Deployment Plugin
-                              </Button>
-                            </CardFooter>
+                          </Card>
+
+                          <Card className="opacity-50 cursor-not-allowed">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                Tests
+                                <span className="text-xs bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full">
+                                  In Progress
+                                </span>
+                              </CardTitle>
+                              <CardDescription>Testing and verification tools</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Unit testing framework integration</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Gas usage analysis</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Coverage reports</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Test automation tools</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="opacity-50 cursor-not-allowed">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                Git Integration
+                                <span className="text-xs bg-yellow-500/10 text-blue-500 px-2 py-1 rounded-full">
+                                  Planned Feature
+                                </span>
+                              </CardTitle>
+                              <CardDescription>Version control and collaboration</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Git repository management</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Branch and commit handling</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Pull request integration</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Collaborative coding features</span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="opacity-50 cursor-not-allowed">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                                Debugger
+                                <span className="text-xs bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full">
+                                  Coming Soon
+                                </span>
+                              </CardTitle>
+                              <CardDescription>Smart contract debugging tools</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2 text-sm">
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Step-by-step execution</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Variable inspection</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Stack trace analysis</span>
+                                </li>
+                                <li className="flex items-center">
+                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <span>Breakpoint management</span>
+                                </li>
+                              </ul>
+                            </CardContent>
                           </Card>
                         </div>
 

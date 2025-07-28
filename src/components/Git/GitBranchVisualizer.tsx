@@ -6,16 +6,15 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  FileText,
   GitBranch,
   GitCommit,
   GitMerge,
   Plus,
   RefreshCw,
+  Scissors,
   Trash2,
   X,
-  Scissors,
-  MessageSquare,
-  FileText,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -28,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';

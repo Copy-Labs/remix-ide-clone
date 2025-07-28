@@ -3,10 +3,14 @@ import { debug, error, info, warn } from '@/services/loggerService';
 import { databaseService } from '@/services/databaseService';
 
 // Constants for OAuth configuration
-const GITHUB_CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID'; // Replace with your actual GitHub OAuth App client ID
+// For development/demo purposes, we'll use environment variables or fallback to a demo mode
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || 'demo_mode';
 const GITHUB_OAUTH_REDIRECT_URI = `${window.location.origin}/oauth/callback`;
 const GITHUB_OAUTH_SCOPES = ['repo', 'user'];
 const TOKEN_STORAGE_KEY = 'github_oauth_tokens';
+
+// Check if we're in demo mode (no proper OAuth setup)
+const IS_DEMO_MODE = GITHUB_CLIENT_ID === 'demo_mode' || GITHUB_CLIENT_ID === 'YOUR_GITHUB_CLIENT_ID';
 
 // Types for authentication tokens
 interface OAuthTokens {
@@ -72,6 +76,13 @@ export class GitHubAuthService {
    */
   async startOAuthFlow(): Promise<void> {
     try {
+      // Check if we're in demo mode
+      if (IS_DEMO_MODE) {
+        throw new Error(
+          'GitHub OAuth is not configured. Please set VITE_GITHUB_CLIENT_ID environment variable or use personal access token authentication instead.'
+        );
+      }
+
       // Generate a code verifier and challenge for PKCE
       this.codeVerifier = this.generateCodeVerifier();
       const codeChallenge = await this.generateCodeChallenge(this.codeVerifier);
@@ -87,6 +98,8 @@ export class GitHubAuthService {
       authUrl.searchParams.append('state', this.generateRandomState());
       authUrl.searchParams.append('code_challenge', codeChallenge);
       authUrl.searchParams.append('code_challenge_method', 'S256');
+
+      info('GitHubAuthService', 'Starting OAuth flow, redirecting to GitHub...');
 
       // Redirect to GitHub's authorization page
       window.location.href = authUrl.toString();
@@ -204,20 +217,22 @@ export class GitHubAuthService {
    * @param codeVerifier Code verifier for PKCE
    */
   private async exchangeCodeForToken(code: string, codeVerifier: string): Promise<OAuthTokens> {
+    // Check if we're in demo mode
+    if (IS_DEMO_MODE) {
+      throw new Error(
+        'GitHub OAuth token exchange is not available in demo mode. Please configure a proper OAuth app or use personal access token authentication.'
+      );
+    }
+
     // In a real implementation, this would be handled by a server-side endpoint
-    // to keep the client secret secure. For this example, we'll simulate the exchange.
+    // to keep the client secret secure. For now, we'll throw an error indicating
+    // that proper server-side implementation is needed.
 
-    // Note: This is a placeholder. In a real application, you would have a server endpoint
-    // that handles the token exchange to keep your client secret secure.
-
-    // Simulate a successful token response
-    return {
-      accessToken: 'simulated_access_token',
-      refreshToken: 'simulated_refresh_token',
-      expiresAt: Date.now() + 3600 * 1000, // 1 hour from now
-      tokenType: 'bearer',
-      provider: 'github',
-    };
+    throw new Error(
+      'OAuth token exchange requires a server-side endpoint to securely handle the client secret. ' +
+      'Please implement a server endpoint for token exchange or use personal access token authentication instead. ' +
+      'See GitHub documentation: https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps'
+    );
   }
 
   /**

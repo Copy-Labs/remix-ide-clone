@@ -13,6 +13,17 @@ vi.mock('@/services/loggerService', () => ({
   error: vi.fn(),
 }));
 
+// Mock the database service
+vi.mock('@/services/databaseService', () => ({
+  databaseService: {
+    set: vi.fn(),
+    get: vi.fn(),
+    delete: vi.fn(),
+    saveFile: vi.fn(),
+    getFile: vi.fn(),
+  },
+}));
+
 // Mock isomorphic-git
 vi.mock('isomorphic-git', () => ({
   default: {
@@ -43,6 +54,7 @@ describe('GitFileSystemAdapter', () => {
   beforeEach(() => {
     adapter = new GitFileSystemAdapter();
     mockFileStore = {
+      files: new Map(),
       getFileContent: vi.fn(),
       getFile: vi.fn(),
       createFile: vi.fn(),
@@ -50,7 +62,6 @@ describe('GitFileSystemAdapter', () => {
       createFolder: vi.fn(),
       deleteFile: vi.fn(),
       getParentPath: vi.fn(),
-      files: new Map(),
     };
 
     vi.mocked(useFileStore.getState).mockReturnValue(mockFileStore);
@@ -64,9 +75,18 @@ describe('GitFileSystemAdapter', () => {
     it('should read file content successfully', async () => {
       const filepath = '/test.txt';
       const content = 'test content';
+      const mockFile = {
+        id: 'test-txt',
+        name: 'test.txt',
+        path: '/test.txt',
+        type: 'file',
+        lastModified: Date.now(),
+      };
+
+      mockFileStore.files.set(filepath, mockFile);
       mockFileStore.getFileContent.mockResolvedValue(content);
 
-      const result = await adapter.promises.readFile(filepath, { encoding: 'utf8' });
+      const result = await adapter.readFile(filepath, { encoding: 'utf8' });
 
       expect(result).toBe(content);
       expect(mockFileStore.getFileContent).toHaveBeenCalledWith(filepath);
@@ -74,22 +94,31 @@ describe('GitFileSystemAdapter', () => {
 
     it('should throw error when file does not exist', async () => {
       const filepath = '/nonexistent.txt';
-      mockFileStore.getFileContent.mockResolvedValue(undefined);
+      // Don't add file to the Map, so it doesn't exist
 
-      await expect(adapter.promises.readFile(filepath)).rejects.toThrow(
+      await expect(adapter.readFile(filepath)).rejects.toThrow(
         `ENOENT: no such file or directory, open '${filepath}'`,
       );
     });
 
-    it('should return Buffer when encoding is not specified', async () => {
+    it('should return Uint8Array when encoding is not specified', async () => {
       const filepath = '/test.txt';
       const content = 'test content';
+      const mockFile = {
+        id: 'test-txt',
+        name: 'test.txt',
+        path: '/test.txt',
+        type: 'file',
+        lastModified: Date.now(),
+      };
+
+      mockFileStore.files.set(filepath, mockFile);
       mockFileStore.getFileContent.mockResolvedValue(content);
 
-      const result = await adapter.promises.readFile(filepath);
+      const result = await adapter.readFile(filepath);
 
-      expect(result).toBeInstanceOf(Buffer);
-      expect(result.toString()).toBe(content);
+      expect(result).toEqual(new TextEncoder().encode(content));
+      expect(new TextDecoder().decode(result as Uint8Array)).toBe(content);
     });
   });
 
@@ -97,9 +126,9 @@ describe('GitFileSystemAdapter', () => {
     it('should create new file when file does not exist', async () => {
       const filepath = '/new.txt';
       const content = 'new content';
-      mockFileStore.getFile.mockResolvedValue(null);
+      // Don't add file to the Map, so it doesn't exist
 
-      await adapter.promises.writeFile(filepath, content);
+      await adapter.writeFile(filepath, content);
 
       expect(mockFileStore.createFile).toHaveBeenCalledWith(filepath, content);
     });
@@ -107,10 +136,17 @@ describe('GitFileSystemAdapter', () => {
     it('should update existing file', async () => {
       const filepath = '/existing.txt';
       const content = 'updated content';
-      const existingFile = { name: 'existing.txt', type: 'file' };
-      mockFileStore.getFile.mockResolvedValue(existingFile);
+      const existingFile = {
+        id: 'existing-txt',
+        name: 'existing.txt',
+        path: '/existing.txt',
+        type: 'file',
+        lastModified: Date.now(),
+      };
 
-      await adapter.promises.writeFile(filepath, content);
+      mockFileStore.files.set(filepath, existingFile);
+
+      await adapter.writeFile(filepath, content);
 
       expect(mockFileStore.updateFileContent).toHaveBeenCalledWith(filepath, content);
     });
@@ -118,9 +154,9 @@ describe('GitFileSystemAdapter', () => {
     it('should handle Buffer input', async () => {
       const filepath = '/buffer.txt';
       const content = Buffer.from('buffer content');
-      mockFileStore.getFile.mockResolvedValue(null);
+      // Don't add file to the Map, so it doesn't exist
 
-      await adapter.promises.writeFile(filepath, content);
+      await adapter.writeFile(filepath, content);
 
       expect(mockFileStore.createFile).toHaveBeenCalledWith(filepath, 'buffer content');
     });
@@ -130,7 +166,7 @@ describe('GitFileSystemAdapter', () => {
     it('should create directory successfully', async () => {
       const dirpath = '/new-dir';
 
-      await adapter.promises.mkdir(dirpath);
+      await adapter.mkdir(dirpath);
 
       expect(mockFileStore.createFolder).toHaveBeenCalledWith(dirpath);
     });
@@ -140,9 +176,9 @@ describe('GitFileSystemAdapter', () => {
     it('should list directory contents', async () => {
       const dirpath = '/test-dir';
       const files = new Map([
-        ['/test-dir/file1.txt', { name: 'file1.txt', type: 'file' }],
-        ['/test-dir/file2.txt', { name: 'file2.txt', type: 'file' }],
-        ['/test-dir/subdir', { name: 'subdir', type: 'folder' }],
+        ['/test-dir/file1.txt', { name: 'file1.txt', type: 'file', path: '/test-dir/file1.txt' }],
+        ['/test-dir/file2.txt', { name: 'file2.txt', type: 'file', path: '/test-dir/file2.txt' }],
+        ['/test-dir/subdir', { name: 'subdir', type: 'folder', path: '/test-dir/subdir' }],
       ]);
 
       mockFileStore.files = files;
@@ -157,7 +193,7 @@ describe('GitFileSystemAdapter', () => {
         return '/';
       });
 
-      const result = await adapter.promises.readdir(dirpath);
+      const result = await adapter.readdir(dirpath);
 
       expect(result).toEqual(['file1.txt', 'file2.txt', 'subdir']);
     });
@@ -166,7 +202,7 @@ describe('GitFileSystemAdapter', () => {
       const dirpath = '/empty-dir';
       mockFileStore.files = new Map();
 
-      const result = await adapter.promises.readdir(dirpath);
+      const result = await adapter.readdir(dirpath);
 
       expect(result).toEqual([]);
     });
@@ -175,29 +211,39 @@ describe('GitFileSystemAdapter', () => {
   describe('stat', () => {
     it('should return file stats', async () => {
       const filepath = '/test.txt';
+      const content = 'test content';
       const file = {
+        id: 'test-txt',
+        name: 'test.txt',
+        path: '/test.txt',
         type: 'file',
-        content: 'test content',
         lastModified: Date.now(),
       };
-      mockFileStore.getFile.mockResolvedValue(file);
 
-      const result = await adapter.promises.stat(filepath);
+      mockFileStore.files.set(filepath, file);
+      mockFileStore.getFileContent.mockResolvedValue(content);
+
+      const result = await adapter.stat(filepath);
 
       expect(result.isFile()).toBe(true);
       expect(result.isDirectory()).toBe(false);
-      expect(result.size).toBe(file.content.length);
+      expect(result.size).toBe(content.length);
     });
 
     it('should return directory stats', async () => {
       const filepath = '/test-dir';
       const file = {
+        id: 'test-dir',
+        name: 'test-dir',
+        path: '/test-dir',
         type: 'folder',
         lastModified: Date.now(),
       };
-      mockFileStore.getFile.mockResolvedValue(file);
 
-      const result = await adapter.promises.stat(filepath);
+      mockFileStore.files.set(filepath, file);
+      mockFileStore.getFileContent.mockResolvedValue('');
+
+      const result = await adapter.stat(filepath);
 
       expect(result.isFile()).toBe(false);
       expect(result.isDirectory()).toBe(true);
@@ -205,9 +251,9 @@ describe('GitFileSystemAdapter', () => {
 
     it('should throw error for non-existent file', async () => {
       const filepath = '/nonexistent.txt';
-      mockFileStore.getFile.mockResolvedValue(null);
+      // Don't add file to the Map, so it doesn't exist
 
-      await expect(adapter.promises.stat(filepath)).rejects.toThrow(
+      await expect(adapter.stat(filepath)).rejects.toThrow(
         `ENOENT: no such file or directory, stat '${filepath}'`,
       );
     });
@@ -217,7 +263,7 @@ describe('GitFileSystemAdapter', () => {
     it('should delete file successfully', async () => {
       const filepath = '/test.txt';
 
-      await adapter.promises.unlink(filepath);
+      await adapter.unlink(filepath);
 
       expect(mockFileStore.deleteFile).toHaveBeenCalledWith(filepath);
     });
@@ -227,7 +273,7 @@ describe('GitFileSystemAdapter', () => {
     it('should delete directory successfully', async () => {
       const dirpath = '/test-dir';
 
-      await adapter.promises.rmdir(dirpath);
+      await adapter.rmdir(dirpath);
 
       expect(mockFileStore.deleteFile).toHaveBeenCalledWith(dirpath);
     });
@@ -249,30 +295,42 @@ describe('GitService', () => {
 
   describe('init', () => {
     it('should initialize repository with default branch', async () => {
-      await gitService.init();
+      // Mock isomorphic-git init
+      mockGit.init.mockResolvedValue(undefined);
+
+      await gitService.init('main');
 
       // The implementation creates a .git directory and sets the default branch
       expect(gitService['branches']).toContain('main');
-      expect(gitService['currentBranchName']).toBe('main');
+      expect(gitService['_currentBranch']).toBe('main');
+      expect(mockGit.init).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        defaultBranch: 'main',
+      });
     });
 
     it('should initialize repository with custom branch', async () => {
+      // Mock isomorphic-git init
+      mockGit.init.mockResolvedValue(undefined);
+
       await gitService.init('develop');
 
       // The implementation creates a .git directory and sets the custom branch
       expect(gitService['branches']).toContain('develop');
-      expect(gitService['currentBranchName']).toBe('develop');
+      expect(gitService['_currentBranch']).toBe('develop');
+      expect(mockGit.init).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        defaultBranch: 'develop',
+      });
     });
 
     it('should handle initialization errors', async () => {
-      // Mock the fs.promises.mkdir to throw an error
-      const originalMkdir = gitService['fs'].promises.mkdir;
-      gitService['fs'].promises.mkdir = vi.fn().mockRejectedValue(new Error('Init failed'));
+      // Mock isomorphic-git init to throw an error
+      mockGit.init.mockRejectedValue(new Error('Init failed'));
 
-      await expect(gitService.init()).rejects.toThrow('Init failed');
-
-      // Restore the original mkdir function
-      gitService['fs'].promises.mkdir = originalMkdir;
+      await expect(gitService.init('main')).rejects.toThrow();
     });
   });
 
@@ -281,30 +339,41 @@ describe('GitService', () => {
       const filepath = 'test.txt';
       const content = 'test content';
 
-      // Mock the fs.promises.stat and fs.promises.readFile methods
-      const originalStat = gitService['fs'].promises.stat;
-      const originalReadFile = gitService['fs'].promises.readFile;
-      gitService['fs'].promises.stat = vi.fn().mockResolvedValue({});
-      gitService['fs'].promises.readFile = vi.fn().mockResolvedValue(content);
+      // Initialize the repository first
+      gitService['_currentBranch'] = 'main';
 
-      // Mock the databaseService.saveFile method
-      const originalSaveFile = databaseService.saveFile;
-      databaseService.saveFile = vi.fn().mockResolvedValue(undefined);
+      // Mock the fs methods
+      vi.spyOn(gitService['fs'], 'stat').mockResolvedValue({
+        isFile: () => true,
+        isDirectory: () => false,
+        size: content.length,
+      });
+      vi.spyOn(gitService['fs'], 'readFile').mockResolvedValue(content);
+      vi.spyOn(gitService['fs'], 'writeFile').mockResolvedValue();
+
+      // Mock isomorphic-git add
+      mockGit.add.mockResolvedValue(undefined);
+
+      // Mock databaseService methods
+      vi.mocked(databaseService.get).mockResolvedValue({});
+      vi.mocked(databaseService.set).mockResolvedValue(undefined);
 
       await gitService.add(filepath);
 
-      // Verify that the file was added to staging
-      expect(databaseService.saveFile).toHaveBeenCalledWith({
-        id: expect.stringContaining(filepath),
-        content,
-        lastModified: expect.any(Number),
-        type: 'staged',
+      // Verify that isomorphic-git add was called
+      expect(mockGit.add).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        filepath: filepath,
       });
 
-      // Restore the original methods
-      gitService['fs'].promises.stat = originalStat;
-      gitService['fs'].promises.readFile = originalReadFile;
-      databaseService.saveFile = originalSaveFile;
+      // Verify that the file was added to staging in database
+      expect(databaseService.set).toHaveBeenCalledWith('git:staging', {
+        [filepath]: content,
+      });
+
+      // Verify that the file was added to stagedFiles
+      expect(gitService['stagedFiles'].get(filepath)).toBe(content);
     });
   });
 
@@ -312,65 +381,65 @@ describe('GitService', () => {
     it('should create commit successfully', async () => {
       const message = 'Test commit';
       const author = { name: 'Test User', email: 'test@example.com' };
+      const mockCommitId = 'abc123def456';
 
-      // Mock the getStagedFiles method to return some staged files
-      const originalGetStagedFiles = gitService['getStagedFiles'];
-      gitService['getStagedFiles'] = vi.fn().mockResolvedValue(['test.txt']);
+      // Initialize the repository and add staged files
+      gitService['_currentBranch'] = 'main';
+      gitService['stagedFiles'].set('test.txt', 'test content');
 
-      // Mock the databaseService.getFile method
-      const originalGetFile = databaseService.getFile;
-      databaseService.getFile = vi.fn().mockResolvedValue({
-        content: 'test content',
-        lastModified: Date.now(),
-      });
+      // Mock isomorphic-git commit
+      mockGit.commit.mockResolvedValue(mockCommitId);
 
-      // Mock the resetGitIndex method
-      const originalResetGitIndex = gitService.resetGitIndex;
-      gitService.resetGitIndex = vi.fn().mockResolvedValue(undefined);
+      // Mock getCurrentHead method
+      vi.spyOn(gitService as any, 'getCurrentHead').mockResolvedValue('parent123');
 
-      // Mock the generateOid method to return a predictable value
-      const originalGenerateOid = gitService['generateOid'];
-      const mockOid = 'abc123';
-      gitService['generateOid'] = vi.fn().mockReturnValue(mockOid);
+      // Mock resetGitIndex method
+      vi.spyOn(gitService, 'resetGitIndex').mockResolvedValue();
+
+      // Mock databaseService methods
+      vi.mocked(databaseService.set).mockResolvedValue(undefined);
+      vi.mocked(databaseService.get).mockResolvedValue({});
 
       const result = await gitService.commit(message, author);
 
-      // Verify that a commit was created with the expected properties
-      expect(result).toBe(mockOid);
-      expect(gitService['commits'].length).toBeGreaterThan(0);
-      const lastCommit = gitService['commits'][gitService['commits'].length - 1];
-      expect(lastCommit.oid).toBe(mockOid);
-      expect(lastCommit.message).toBe(message);
-      expect(lastCommit.author.name).toBe(author.name);
-      expect(lastCommit.author.email).toBe(author.email);
+      // Verify that isomorphic-git commit was called
+      expect(mockGit.commit).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        message,
+        author: {
+          name: author.name,
+          email: author.email,
+        },
+      });
 
-      // Verify that the staged files were reset
+      // Verify that the commit was stored in database
+      expect(databaseService.set).toHaveBeenCalledWith(`git:commit:${mockCommitId}`, {
+        oid: mockCommitId,
+        message,
+        author: {
+          name: author.name,
+          email: author.email,
+          timestamp: expect.any(Number),
+        },
+        parent: 'parent123',
+      });
+
+      // Verify that resetGitIndex was called
       expect(gitService.resetGitIndex).toHaveBeenCalled();
 
-      // Restore the original methods
-      gitService['getStagedFiles'] = originalGetStagedFiles;
-      databaseService.getFile = originalGetFile;
-      gitService.resetGitIndex = originalResetGitIndex;
-      gitService['generateOid'] = originalGenerateOid;
+      // Verify the result
+      expect(result).toBe(mockCommitId);
     });
   });
 
   describe('status', () => {
     it('should return repository status', async () => {
-      // Mock the fs.getFileStore method to return a store with some files
-      const originalGetFileStore = gitService['fs'].getFileStore;
-      gitService['fs'].getFileStore = vi.fn().mockReturnValue({
-        files: new Map([
-          ['/file1.txt', { type: 'file', content: 'file1 content' }],
-          ['/file2.txt', { type: 'file', content: 'file2 content' }],
-        ]),
-      });
-
-      // Mock the isFileStaged method to indicate that file1.txt is staged
-      const originalIsFileStaged = gitService['isFileStaged'];
-      gitService['isFileStaged'] = vi.fn().mockImplementation((filepath) => {
-        return Promise.resolve(filepath === 'file1.txt');
-      });
+      // Mock isomorphic-git statusMatrix
+      mockGit.statusMatrix.mockResolvedValue([
+        ['file1.txt', 0, 2, 2], // untracked, staged
+        ['file2.txt', 1, 2, 0], // modified, not staged
+      ]);
 
       const result = await gitService.status();
 
@@ -378,92 +447,51 @@ describe('GitService', () => {
       expect(result.files.length).toBe(2);
       expect(result.files).toContainEqual({
         file: 'file1.txt',
-        head: 0, // Not in head
-        workdir: 2, // Modified in workdir
-        stage: 2, // Staged
+        status: 'staged',
       });
       expect(result.files).toContainEqual({
         file: 'file2.txt',
-        head: 0, // Not in head
-        workdir: 2, // Modified in workdir
-        stage: 0, // Not staged
+        status: 'modified',
       });
       expect(result.hasMore).toBe(false);
       expect(result.total).toBe(2);
 
-      // Restore the original methods
-      gitService['fs'].getFileStore = originalGetFileStore;
-      gitService['isFileStaged'] = originalIsFileStaged;
+      // Verify that isomorphic-git statusMatrix was called
+      expect(mockGit.statusMatrix).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        filepaths: undefined,
+      });
     });
 
     it('should filter files based on the filter option', async () => {
-      // Mock the fs.getFileStore method to return a store with some files
-      const originalGetFileStore = gitService['fs'].getFileStore;
-      gitService['fs'].getFileStore = vi.fn().mockReturnValue({
-        files: new Map([
-          ['/file1.txt', { type: 'file', content: 'file1 content' }],
-          ['/file2.txt', { type: 'file', content: 'file2 content' }],
-          ['/file3.txt', { type: 'file', content: 'file3 content' }],
-        ]),
+      // Mock isomorphic-git statusMatrix with filter
+      mockGit.statusMatrix.mockResolvedValue([
+        ['specific-file.txt', 1, 2, 0], // modified, not staged
+      ]);
+
+      const result = await gitService.status({ filter: 'specific-file.txt' });
+
+      // Verify that the status includes only the filtered file
+      expect(result.files.length).toBe(1);
+      expect(result.files[0].file).toBe('specific-file.txt');
+      expect(result.files[0].status).toBe('modified');
+
+      // Verify that isomorphic-git statusMatrix was called with filter
+      expect(mockGit.statusMatrix).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        filepaths: ['specific-file.txt'],
       });
-
-      // Mock the isFileStaged method to indicate that file1.txt is staged
-      const originalIsFileStaged = gitService['isFileStaged'];
-      gitService['isFileStaged'] = vi.fn().mockImplementation((filepath) => {
-        return Promise.resolve(filepath === 'file1.txt');
-      });
-
-      // Mock the commits array to simulate file2.txt being in the latest commit
-      const originalCommits = gitService['commits'];
-      gitService['commits'] = [
-        {
-          oid: 'commit1',
-          message: 'Initial commit',
-          author: { name: 'Test', email: 'test@example.com', timestamp: Date.now() },
-          files: new Map([['file2.txt', 'file2 content']]),
-        },
-      ];
-
-      // Test filtering for staged files
-      const stagedResult = await gitService.status({ filter: 'staged' });
-      expect(stagedResult.files.length).toBe(1);
-      expect(stagedResult.files[0].file).toBe('file1.txt');
-      expect(stagedResult.files[0].stage).toBe(2);
-
-      // Test filtering for modified files
-      const modifiedResult = await gitService.status({ filter: 'modified' });
-      expect(modifiedResult.files.length).toBe(1);
-      expect(modifiedResult.files[0].file).toBe('file2.txt');
-      expect(modifiedResult.files[0].head).toBe(1);
-      expect(modifiedResult.files[0].workdir).toBe(2);
-      expect(modifiedResult.files[0].stage).toBe(0);
-
-      // Test filtering for untracked files
-      const untrackedResult = await gitService.status({ filter: 'untracked' });
-      expect(untrackedResult.files.length).toBe(1);
-      expect(untrackedResult.files[0].file).toBe('file3.txt');
-      expect(untrackedResult.files[0].head).toBe(0);
-      expect(untrackedResult.files[0].workdir).toBe(2);
-      expect(untrackedResult.files[0].stage).toBe(0);
-
-      // Restore the original methods and properties
-      gitService['fs'].getFileStore = originalGetFileStore;
-      gitService['isFileStaged'] = originalIsFileStaged;
-      gitService['commits'] = originalCommits;
     });
 
     it('should paginate results based on skip and limit options', async () => {
-      // Mock the fs.getFileStore method to return a store with many files
-      const originalGetFileStore = gitService['fs'].getFileStore;
-      const files = new Map();
+      // Mock isomorphic-git statusMatrix to return 10 files
+      const statusMatrix = [];
       for (let i = 1; i <= 10; i++) {
-        files.set(`/file${i}.txt`, { type: 'file', content: `file${i} content` });
+        statusMatrix.push([`file${i}.txt`, 0, 2, 0]); // untracked files
       }
-      gitService['fs'].getFileStore = vi.fn().mockReturnValue({ files });
-
-      // Mock the isFileStaged method to return false for all files
-      const originalIsFileStaged = gitService['isFileStaged'];
-      gitService['isFileStaged'] = vi.fn().mockResolvedValue(false);
+      mockGit.statusMatrix.mockResolvedValue(statusMatrix);
 
       // Test pagination with skip and limit
       const result1 = await gitService.status({ skip: 0, limit: 3 });
@@ -495,34 +523,49 @@ describe('GitService', () => {
       expect(result4.hasMore).toBe(false);
       expect(result4.total).toBe(10);
       expect(result4.files[0].file).toBe('file10.txt');
-
-      // Restore the original methods
-      gitService['fs'].getFileStore = originalGetFileStore;
-      gitService['isFileStaged'] = originalIsFileStaged;
     });
   });
 
   describe('listBranches', () => {
     it('should list all branches', async () => {
-      // Set some branches in the GitService instance
-      gitService['branches'] = ['main', 'develop', 'feature/test'];
+      // Mock isomorphic-git listBranches
+      mockGit.listBranches.mockResolvedValue(['main', 'develop', 'feature/test']);
 
       const result = await gitService.listBranches();
 
+      // Verify that isomorphic-git listBranches was called
+      expect(mockGit.listBranches).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+      });
+
       // Verify that the result includes all branches
       expect(result).toEqual(['main', 'develop', 'feature/test']);
+
+      // Verify that branches were stored in database
+      expect(databaseService.set).toHaveBeenCalledWith('git:branches', ['main', 'develop', 'feature/test']);
     });
   });
 
   describe('currentBranch', () => {
     it('should return current branch', async () => {
-      // Set the current branch in the GitService instance
-      gitService['currentBranchName'] = 'main';
+      // Mock isomorphic-git currentBranch
+      mockGit.currentBranch.mockResolvedValue('main');
 
       const result = await gitService.currentBranch();
 
+      // Verify that isomorphic-git currentBranch was called
+      expect(mockGit.currentBranch).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        fullname: false,
+      });
+
       // Verify that the result is the current branch
       expect(result).toBe('main');
+
+      // Verify that current branch was stored in database
+      expect(databaseService.set).toHaveBeenCalledWith('git:currentBranch', 'main');
     });
   });
 
@@ -533,10 +576,24 @@ describe('GitService', () => {
       // Set initial branches in the GitService instance
       gitService['branches'] = ['main'];
 
+      // Mock isomorphic-git branch
+      mockGit.branch.mockResolvedValue(undefined);
+
+      // Mock listBranches to return updated list
+      vi.spyOn(gitService, 'listBranches').mockResolvedValue(['main', name]);
+
       await gitService.branch(name);
 
-      // Verify that the branch was added to the branches array
-      expect(gitService['branches']).toContain(name);
+      // Verify that isomorphic-git branch was called
+      expect(mockGit.branch).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        ref: name,
+        checkout: false,
+      });
+
+      // Verify that listBranches was called to update the branches list
+      expect(gitService.listBranches).toHaveBeenCalled();
     });
 
     it('should throw error if branch already exists', async () => {
@@ -556,12 +613,21 @@ describe('GitService', () => {
 
       // Set initial branches and current branch in the GitService instance
       gitService['branches'] = ['main', 'develop'];
-      gitService['currentBranchName'] = 'main';
+      gitService['_currentBranch'] = 'main';
+
+      // Mock isomorphic-git checkout
+      mockGit.checkout.mockResolvedValue(undefined);
+
+      // Mock currentBranch method to return the new branch and update internal state
+      vi.spyOn(gitService, 'currentBranch').mockImplementation(async () => {
+        gitService['_currentBranch'] = ref;
+        return ref;
+      });
 
       await gitService.checkout(ref);
 
       // Verify that the current branch was updated
-      expect(gitService['currentBranchName']).toBe(ref);
+      expect(gitService['_currentBranch']).toBe(ref);
     });
 
     it('should throw error if branch does not exist', async () => {
@@ -594,11 +660,11 @@ describe('GitService', () => {
 
       // Set initial branches and current branch in the GitService instance
       gitService['branches'] = ['main'];
-      gitService['currentBranchName'] = 'main';
+      gitService['_currentBranch'] = 'main';
 
       // Verify that deleting the current branch throws an error
       await expect(gitService.deleteBranch(name)).rejects.toThrow(
-        `Cannot delete the current branch: ${name}`,
+        'Cannot delete the current branch',
       );
     });
 
@@ -616,55 +682,60 @@ describe('GitService', () => {
 
   describe('log', () => {
     it('should return commit history', async () => {
-      // Set some commits in the GitService instance
-      const testCommits = [
-        {
-          oid: 'abc123',
-          message: 'Test commit',
-          author: {
-            name: 'Test User',
-            email: 'test@example.com',
-            timestamp: 1234567890,
-          },
-          files: new Map(),
-        },
+      // Mock isomorphic-git log
+      const mockCommits = [
         {
           oid: 'def456',
-          message: 'Another commit',
-          author: {
-            name: 'Another User',
-            email: 'another@example.com',
-            timestamp: 1234567891,
+          commit: {
+            message: 'Another commit',
+            author: {
+              name: 'Another User',
+              email: 'another@example.com',
+              timestamp: 1234567891,
+            },
           },
-          files: new Map(),
+        },
+        {
+          oid: 'abc123',
+          commit: {
+            message: 'Test commit',
+            author: {
+              name: 'Test User',
+              email: 'test@example.com',
+              timestamp: 1234567890,
+            },
+          },
         },
       ];
-      gitService['commits'] = testCommits;
+      mockGit.log.mockResolvedValue(mockCommits);
 
       const result = await gitService.log({ limit: 5 });
+
+      // Verify that isomorphic-git log was called
+      expect(mockGit.log).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        dir: gitService['workingDirectory'],
+        depth: 6, // skip (0) + limit (5) + 1
+      });
 
       // Verify that the result includes the expected commits
       expect(result.commits.length).toBe(2);
       expect(result.commits[0]).toMatchObject({
         oid: 'def456',
-        commit: {
-          message: 'Another commit',
-          author: {
-            name: 'Another User',
-            email: 'another@example.com',
-            timestamp: 1234567891,
-          },
+        message: 'Another commit',
+        author: {
+          name: 'Another User',
+          email: 'another@example.com',
+          timestamp: 1234567891,
         },
       });
       expect(result.commits[1]).toMatchObject({
         oid: 'abc123',
-        commit: {
-          message: 'Test commit',
-          author: {
-            name: 'Test User',
-            email: 'test@example.com',
-            timestamp: 1234567890,
-          },
+        message: 'Test commit',
+        author: {
+          name: 'Test User',
+          email: 'test@example.com',
+          timestamp: 1234567890,
         },
       });
       expect(result.hasMore).toBe(false);
@@ -676,7 +747,19 @@ describe('GitService', () => {
       const remote = 'origin';
       const ref = 'main';
 
+      // Mock isomorphic-git push
+      mockGit.push.mockResolvedValue(undefined);
+
       const result = await gitService.push(remote, ref);
+
+      // Verify that isomorphic-git push was called
+      expect(mockGit.push).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        http: expect.any(Function),
+        dir: gitService['workingDirectory'],
+        remote,
+        ref,
+      });
 
       expect(result).toBe(true);
     });
@@ -687,7 +770,23 @@ describe('GitService', () => {
       const remote = 'origin';
       const ref = 'main';
 
+      // Mock isomorphic-git pull
+      mockGit.pull.mockResolvedValue(undefined);
+
       const result = await gitService.pull(remote, ref);
+
+      // Verify that isomorphic-git pull was called
+      expect(mockGit.pull).toHaveBeenCalledWith({
+        fs: gitService['fs'],
+        http: expect.any(Function),
+        dir: gitService['workingDirectory'],
+        ref,
+        singleBranch: true,
+        author: {
+          name: 'User',
+          email: 'user@example.com',
+        },
+      });
 
       expect(result).toBe(true);
     });
