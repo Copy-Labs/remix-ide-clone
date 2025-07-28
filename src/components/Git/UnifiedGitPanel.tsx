@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useGitStore } from '@/stores/gitStore';
+import { useFileStore } from '@/stores/fileStore';
+import { usePluginStore } from '@/stores/pluginStore';
+import { GitPluginImplementation } from '@/plugins/gitPlugin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,8 +24,10 @@ import {
 import {
   AlertCircle,
   Check,
+  Download,
   GitBranch,
   GitCommit,
+  Github,
   GitMerge,
   HelpCircle,
   Loader2,
@@ -31,13 +36,19 @@ import {
   RefreshCw,
   Settings,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import GitBranchVisualizer from './GitBranchVisualizer';
 import { GitErrorBanner } from './GitErrorBanner';
 
-const GitPanel: React.FC = () => {
+interface UnifiedGitPanelProps {
+  pluginId?: string; // Optional plugin ID for plugin mode
+}
+
+const UnifiedGitPanel: React.FC<UnifiedGitPanelProps> = ({ pluginId }) => {
+  // Get store functions
   const {
     // State
     isInitialized,
@@ -48,8 +59,6 @@ const GitPanel: React.FC = () => {
     config,
     isLoading,
     error,
-    githubRepos,
-    isGithubConnected,
 
     // Actions
     initRepository,
@@ -67,35 +76,46 @@ const GitPanel: React.FC = () => {
     setConfig,
     setError,
     resetGitIndex,
-    connectGithub,
-    disconnectGithub,
-    getGithubRepos,
-    createGithubRepo,
-    cloneRepository,
-    addRemote,
-    removeRemote,
-    push,
-    pull,
-    fetch,
   } = useGitStore();
+
+  const { files } = useFileStore();
+  const { getPlugin, updatePluginConfig } = usePluginStore();
+
+  // Plugin implementation (for plugin mode)
+  const [implementation, setImplementation] = useState<GitPluginImplementation | null>(null);
 
   // Local state for forms
   const [commitMessage, setCommitMessage] = useState('');
   const [newBranchName, setNewBranchName] = useState('');
   const [userName, setUserName] = useState(config.user.name);
   const [userEmail, setUserEmail] = useState(config.user.email);
-  const [githubToken, setGithubToken] = useState('');
-  const [cloneUrl, setCloneUrl] = useState('');
-  const [newRepoName, setNewRepoName] = useState('');
-  const [newRepoDescription, setNewRepoDescription] = useState('');
+  const [remoteUrl, setRemoteUrl] = useState('');
+  const [remoteName, setRemoteName] = useState('origin');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
   // Dialog states
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [showCloneDialog, setShowCloneDialog] = useState(false);
-  const [showGithubDialog, setShowGithubDialog] = useState(false);
-  const [showCreateRepoDialog, setShowCreateRepoDialog] = useState(false);
   const [showRemoteDialog, setShowRemoteDialog] = useState(false);
+
+  // Determine if we're in plugin mode
+  const isPluginMode = !!pluginId;
+
+  // Initialize plugin implementation if in plugin mode
+  useEffect(() => {
+    if (isPluginMode && pluginId) {
+      const plugin = getPlugin(pluginId);
+      if (plugin) {
+        const impl = new GitPluginImplementation(plugin.config);
+        setImplementation(impl);
+
+        // Load initial values from config
+        setRemoteUrl(plugin.config.remoteUrl || '');
+        setUserName(plugin.config.username || config.user.name);
+        setUserEmail(plugin.config.email || config.user.email);
+      }
+    }
+  }, [pluginId, getPlugin, isPluginMode, config.user.name, config.user.email]);
 
   // Effect to load data when initialized changes
   useEffect(() => {
@@ -107,7 +127,6 @@ const GitPanel: React.FC = () => {
   }, [isInitialized]);
 
   // Effect to ensure branches are loaded on component mount
-  // This is needed to handle page refreshes when isInitialized is already true
   useEffect(() => {
     if (isInitialized) {
       getBranches();
@@ -116,25 +135,14 @@ const GitPanel: React.FC = () => {
 
   const handleInitRepository = async () => {
     try {
-      await initRepository();
+      if (isPluginMode && implementation) {
+        await implementation.initRepository();
+      } else {
+        await initRepository();
+      }
       toast.success('Repository initialized successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize repository';
-      console.error('Repository initialization error:', err);
-
-      // Show more detailed error message
-      if (errorMessage.includes('already exists')) {
-        toast.error('Git repository already exists in this directory.');
-      } else if (errorMessage.includes('permission')) {
-        toast.error('Permission denied. Please check file system permissions.');
-      } else if (errorMessage.includes('storage') || errorMessage.includes('quota')) {
-        toast.error('Storage quota exceeded. Please free up some space and try again.');
-      } else {
-        toast.error(`Repository initialization failed: ${errorMessage}`);
-      }
-
-      // Set error in store for display
-      setError(errorMessage);
+      toast.error('Failed to initialize repository');
     }
   };
 
@@ -145,51 +153,30 @@ const GitPanel: React.FC = () => {
     }
 
     try {
-      await createBranch(newBranchName);
+      if (isPluginMode && implementation) {
+        await implementation.createBranch(newBranchName);
+        await implementation.switchBranch(newBranchName);
+      } else {
+        await createBranch(newBranchName);
+      }
       setShowBranchDialog(false);
       setNewBranchName('');
       toast.success(`Branch '${newBranchName}' created successfully`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create branch';
-      console.error('Branch creation error:', err);
-
-      // Show more detailed error message
-      if (errorMessage.includes('already exists')) {
-        toast.error(`Branch '${newBranchName}' already exists. Please choose a different name.`);
-      } else if (errorMessage.includes('invalid name') || errorMessage.includes('invalid ref')) {
-        toast.error('Invalid branch name. Branch names cannot contain spaces or special characters.');
-      } else if (errorMessage.includes('not initialized')) {
-        toast.error('Git repository is not initialized. Please initialize the repository first.');
-      } else {
-        toast.error(`Branch creation failed: ${errorMessage}`);
-      }
-
-      // Set error in store for display
-      setError(errorMessage);
+      toast.error('Failed to create branch');
     }
   };
 
   const handleSwitchBranch = async (branchName: string) => {
     try {
-      await switchBranch(branchName);
+      if (isPluginMode && implementation) {
+        await implementation.switchBranch(branchName);
+      } else {
+        await switchBranch(branchName);
+      }
       toast.success(`Switched to branch '${branchName}'`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to switch branch';
-      console.error('Branch switch error:', err);
-
-      // Show more detailed error message
-      if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
-        toast.error(`Branch '${branchName}' does not exist.`);
-      } else if (errorMessage.includes('uncommitted changes')) {
-        toast.error('You have uncommitted changes. Please commit or stash them before switching branches.');
-      } else if (errorMessage.includes('not initialized')) {
-        toast.error('Git repository is not initialized. Please initialize the repository first.');
-      } else {
-        toast.error(`Branch switch failed: ${errorMessage}`);
-      }
-
-      // Set error in store for display
-      setError(errorMessage);
+      toast.error('Failed to switch branch');
     }
   };
 
@@ -200,105 +187,43 @@ const GitPanel: React.FC = () => {
     }
 
     try {
-      await commit(commitMessage);
+      if (isPluginMode && implementation) {
+        await implementation.commit(commitMessage);
+      } else {
+        await commit(commitMessage);
+      }
       setCommitMessage('');
       toast.success('Changes committed successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to commit changes';
-      console.error('Commit error:', err);
-
-      // Show more detailed error message
-      if (errorMessage.includes('nothing to commit')) {
-        toast.error('No changes to commit. Please stage some files first.');
-      } else if (errorMessage.includes('user.name') || errorMessage.includes('user.email')) {
-        toast.error('Git user name and email must be configured. Please check your Git configuration.');
-      } else if (errorMessage.includes('not initialized')) {
-        toast.error('Git repository is not initialized. Please initialize the repository first.');
-      } else if (errorMessage.includes('index corruption') || errorMessage.includes('Invalid checksum')) {
-        toast.error('Git index corruption detected. Attempting to reset the index...');
-        // Trigger index reset
-        handleResetGitIndex();
-      } else {
-        toast.error(`Commit failed: ${errorMessage}`);
-      }
-
-      // Set error in store for display
-      setError(errorMessage);
+      toast.error('Failed to commit changes');
     }
   };
 
-  const handleCloneRepository = async () => {
-    if (!cloneUrl.trim()) {
-      toast.error('Please enter a repository URL');
+  const handlePush = async () => {
+    if (!isPluginMode || !implementation) {
+      toast.error('Push functionality is only available in plugin mode');
       return;
     }
 
     try {
-      await cloneRepository(cloneUrl);
-      setShowCloneDialog(false);
-      setCloneUrl('');
-      toast.success('Repository cloned successfully');
+      await implementation.push(remoteName, currentBranch);
+      toast.success('Changes pushed successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
-      console.error('Repository clone error:', err);
-      toast.error(`Clone failed: ${errorMessage}`);
-      setError(errorMessage);
+      toast.error('Failed to push changes');
     }
   };
 
-  const handleConnectGithub = async () => {
-    if (!githubToken.trim()) {
-      toast.error('Please enter a GitHub token');
+  const handlePull = async () => {
+    if (!isPluginMode || !implementation) {
+      toast.error('Pull functionality is only available in plugin mode');
       return;
     }
 
     try {
-      await connectGithub(githubToken);
-      setShowGithubDialog(false);
-      setGithubToken('');
-      toast.success('Connected to GitHub successfully');
+      await implementation.pull(remoteName, currentBranch);
+      toast.success('Changes pulled successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitHub';
-      console.error('GitHub connection error:', err);
-      toast.error(`GitHub connection failed: ${errorMessage}`);
-      setError(errorMessage);
-    }
-  };
-
-  const handleDisconnectGithub = () => {
-    disconnectGithub();
-    toast.success('Disconnected from GitHub');
-  };
-
-  const handleCreateGithubRepo = async () => {
-    if (!newRepoName.trim()) {
-      toast.error('Please enter a repository name');
-      return;
-    }
-
-    try {
-      await createGithubRepo(newRepoName, newRepoDescription);
-      setShowCreateRepoDialog(false);
-      setNewRepoName('');
-      setNewRepoDescription('');
-      toast.success(`Repository '${newRepoName}' created successfully`);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
-      console.error('Repository creation error:', err);
-      toast.error(`Repository creation failed: ${errorMessage}`);
-      setError(errorMessage);
-    }
-  };
-
-  const handleRefreshGithubRepos = async () => {
-    try {
-      await getGithubRepos();
-      toast.success('Repositories refreshed');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh repositories';
-      console.error('Repository refresh error:', err);
-      toast.error(`Failed to refresh repositories: ${errorMessage}`);
-      setError(errorMessage);
+      toast.error('Failed to pull changes');
     }
   };
 
@@ -309,8 +234,44 @@ const GitPanel: React.FC = () => {
         email: userEmail,
       },
     });
+
+    // If in plugin mode, also update plugin config
+    if (isPluginMode && pluginId) {
+      const plugin = getPlugin(pluginId);
+      if (plugin) {
+        updatePluginConfig(pluginId, {
+          ...plugin.config,
+          username: userName,
+          email: userEmail,
+        });
+      }
+    }
+
     setShowConfigDialog(false);
     toast.success('Configuration saved');
+  };
+
+  const handleSaveRemote = () => {
+    if (isPluginMode && implementation && pluginId) {
+      implementation.configureRemote(remoteUrl, remoteName);
+
+      // Update plugin config
+      const plugin = getPlugin(pluginId);
+      if (plugin) {
+        updatePluginConfig(pluginId, {
+          ...plugin.config,
+          remoteUrl,
+          remoteName,
+        });
+      }
+
+      toast.success('Remote configuration saved');
+    } else {
+      // For non-plugin mode, we would need to implement this in gitStore
+      toast.error('Remote configuration is only available in plugin mode');
+    }
+
+    setShowRemoteDialog(false);
   };
 
   const handleResetGitIndex = async () => {
@@ -318,22 +279,27 @@ const GitPanel: React.FC = () => {
       await resetGitIndex();
       toast.success('Git index has been reset successfully');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to reset Git index';
-      console.error('Git index reset error:', err);
+      toast.error('Failed to reset Git index');
+    }
+  };
 
-      // Show more detailed error message
-      if (errorMessage.includes('not initialized')) {
-        toast.error('Git repository is not initialized. Please initialize the repository first.');
-      } else if (errorMessage.includes('permission')) {
-        toast.error('Permission denied. Please check file system permissions.');
-      } else if (errorMessage.includes('storage') || errorMessage.includes('quota')) {
-        toast.error('Storage quota exceeded. Please free up some space and try again.');
-      } else {
-        toast.error(`Git index reset failed: ${errorMessage}`);
-      }
+  // Toggle file selection for plugin mode
+  const toggleFileSelection = (filePath: string) => {
+    setSelectedFiles((prev) =>
+      prev.includes(filePath) ? prev.filter((path) => path !== filePath) : [...prev, filePath],
+    );
+  };
 
-      // Set error in store for display
-      setError(errorMessage);
+  // Handle adding selected files in plugin mode
+  const handleAddSelectedFiles = async () => {
+    if (!isPluginMode || !implementation || selectedFiles.length === 0) return;
+
+    try {
+      await implementation.addFiles(selectedFiles);
+      setSelectedFiles([]);
+      toast.success('Files added successfully');
+    } catch (err) {
+      toast.error('Failed to add files');
     }
   };
 
@@ -372,7 +338,7 @@ const GitPanel: React.FC = () => {
               Git Integration
             </CardTitle>
             <CardDescription className="text-xs">
-              Initialize a git repository or clone an existing one to get started.
+              Initialize a git repository to get started.
             </CardDescription>
           </CardHeader>
           <CardContent className="py-1 px-2 space-y-2">
@@ -384,56 +350,6 @@ const GitPanel: React.FC = () => {
               {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Initialize Repository
             </Button>
-            <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isLoading}
-                  className="w-full h-7 text-xs"
-                >
-                  Clone Repository
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-xs">
-                <DialogHeader>
-                  <DialogTitle className="text-sm">Clone Repository</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    Enter the URL of the repository you want to clone.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="clone-url" className="text-xs">
-                      Repository URL
-                    </Label>
-                    <Input
-                      id="clone-url"
-                      value={cloneUrl}
-                      onChange={(e) => setCloneUrl(e.target.value)}
-                      placeholder="https://github.com/user/repo.git"
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCloneDialog(false)}
-                    className="h-7 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCloneRepository}
-                    disabled={isLoading}
-                    className="h-7 text-xs"
-                  >
-                    {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Clone
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </CardContent>
         </Card>
 
@@ -470,6 +386,16 @@ const GitPanel: React.FC = () => {
           >
             <Settings className="h-3.5 w-3.5" />
           </Button>
+          {isPluginMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowRemoteDialog(true)}
+              className="h-7 w-7"
+            >
+              <Github className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -516,26 +442,29 @@ const GitPanel: React.FC = () => {
           <TabsTrigger value="history" className="text-xs py-1">
             History
           </TabsTrigger>
-          <TabsTrigger value="github" className="text-xs py-1">
-            GitHub
-          </TabsTrigger>
+          {isPluginMode && (
+            <TabsTrigger value="remote" className="text-xs py-1">
+              Remote
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="changes" className="space-y-2 mt-2">
-          {/* Staging Area */}
+          {/* Unstaged Changes */}
           <Card className="shadow-none border-0 p-0 gap-0">
             <CardHeader className="py-2 px-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-medium">Staging Area</CardTitle>
+                <CardTitle className="text-xs font-medium">Unstaged Changes</CardTitle>
                 <div className="flex gap-1">
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon"
                     onClick={addAllFiles}
                     disabled={isLoading}
-                    className="h-6 text-xs"
+                    title="Stage All Changes"
+                    className="h-6 w-6"
                   >
-                    Stage All
+                    <Plus className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -649,9 +578,6 @@ const GitPanel: React.FC = () => {
 
           {/* Commit Section */}
           <Card className="shadow-none border-0 p-0 gap-0 mt-4">
-            {/*<CardHeader className="px-3">
-              <CardTitle className="text-xs font-medium">Commit Panel</CardTitle>
-            </CardHeader>*/}
             <CardContent className="space-y-2 px-2">
               <div className="space-y-2">
                 <Label htmlFor="commit-message" className="text-xs">
@@ -693,107 +619,52 @@ const GitPanel: React.FC = () => {
             <CardHeader className="px-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-medium">Branches</CardTitle>
-                <div className="flex gap-1">
-                  <Dialog open={showBranchDialog} onOpenChange={setShowBranchDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-6 text-xs">
-                        New Branch
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xs">
-                      <DialogHeader>
-                        <DialogTitle className="text-sm">Create New Branch</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          Enter a name for the new branch.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        <div>
-                          <Label htmlFor="branch-name" className="text-xs">
-                            Branch Name
-                          </Label>
-                          <Input
-                            id="branch-name"
-                            value={newBranchName}
-                            onChange={(e) => setNewBranchName(e.target.value)}
-                            placeholder="feature/new-feature"
-                            className="h-7 text-xs"
-                          />
-                        </div>
+                <Dialog open={showBranchDialog} onOpenChange={setShowBranchDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xs">
+                    <DialogHeader>
+                      <DialogTitle className="text-sm">Create New Branch</DialogTitle>
+                      <DialogDescription className="text-xs">
+                        Enter a name for the new branch.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor="branch-name" className="text-xs">
+                          Branch Name
+                        </Label>
+                        <Input
+                          id="branch-name"
+                          value={newBranchName}
+                          onChange={(e) => setNewBranchName(e.target.value)}
+                          placeholder="feature/new-feature"
+                          className="h-7 text-xs"
+                        />
                       </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowBranchDialog(false)}
-                          className="h-7 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleCreateBranch}
-                          disabled={isLoading}
-                          className="h-7 text-xs"
-                        >
-                          {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                          Create Branch
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  <Dialog open={showRemoteDialog} onOpenChange={setShowRemoteDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-6 text-xs">
-                        Add Remote
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowBranchDialog(false)}
+                        className="h-7 text-xs"
+                      >
+                        Cancel
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xs">
-                      <DialogHeader>
-                        <DialogTitle className="text-sm">Add Remote</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          Add a remote repository.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        <div>
-                          <Label htmlFor="remote-name" className="text-xs">
-                            Remote Name
-                          </Label>
-                          <Input
-                            id="remote-name"
-                            placeholder="origin"
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="remote-url" className="text-xs">
-                            Remote URL
-                          </Label>
-                          <Input
-                            id="remote-url"
-                            placeholder="https://github.com/user/repo.git"
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRemoteDialog(false)}
-                          className="h-7 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={() => setShowRemoteDialog(false)}
-                          disabled={isLoading}
-                          className="h-7 text-xs"
-                        >
-                          Add Remote
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                      <Button
+                        onClick={handleCreateBranch}
+                        disabled={isLoading}
+                        className="h-7 text-xs"
+                      >
+                        {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                        Create
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent className="py-1 px-2">
@@ -894,7 +765,6 @@ const GitPanel: React.FC = () => {
 
                   {/* Branch Visualization */}
                   <div className="mt-2">
-                    {/*<h4 className="text-xs font-medium mb-1">Branch Visualization</h4>*/}
                     <div className="rounded-sm h-48">
                       <GitBranchVisualizer />
                     </div>
@@ -942,196 +812,112 @@ const GitPanel: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="github" className="space-y-2 mt-2">
-          <Card className="shadow-none border">
-            <CardHeader className="py-1.5 px-3">
-              <CardTitle className="flex items-center gap-1.5 text-xs font-medium">
-                GitHub Integration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="py-1 px-2 space-y-2">
-              {!isGithubConnected ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Status:</span>
-                    <Badge variant="outline" className="text-xs">
-                      Not Connected
-                    </Badge>
+        {isPluginMode && (
+          <TabsContent value="remote" className="space-y-2 mt-2">
+            <Card className="shadow-none border">
+              <CardHeader className="py-1.5 px-3">
+                <CardTitle className="text-xs font-medium">Remote Operations</CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 px-3 space-y-4">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs">Remote Repository</Label>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium">URL:</span>
+                    <span className="truncate flex-1">{remoteUrl || 'Not configured'}</span>
                   </div>
-                  <Dialog open={showGithubDialog} onOpenChange={setShowGithubDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="w-full h-7 text-xs">
-                        Connect to GitHub
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xs">
-                      <DialogHeader>
-                        <DialogTitle className="text-sm">Connect to GitHub</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          Enter your GitHub personal access token to connect.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        <div>
-                          <Label htmlFor="github-token" className="text-xs">
-                            Personal Access Token
-                          </Label>
-                          <Input
-                            id="github-token"
-                            type="password"
-                            value={githubToken}
-                            onChange={(e) => setGithubToken(e.target.value)}
-                            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowGithubDialog(false)}
-                          className="h-7 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleConnectGithub}
-                          disabled={isLoading}
-                          className="h-7 text-xs"
-                        >
-                          Connect
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowRemoteDialog(true)}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Configure Remote
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Status:</span>
-                    <Badge variant="default" className="text-xs">
-                      Connected
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">User:</span>
-                    <span className="text-xs font-medium">{config.github.username}</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      onClick={handleDisconnectGithub}
-                      className="flex-1 h-7 text-xs"
-                    >
-                      Disconnect
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleRefreshGithubRepos}
-                      disabled={isLoading}
-                      className="flex-1 h-7 text-xs"
-                    >
-                      Refresh
-                    </Button>
-                  </div>
-                  <Dialog open={showCreateRepoDialog} onOpenChange={setShowCreateRepoDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="w-full h-7 text-xs">
-                        Create Repo
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-xs">
-                      <DialogHeader>
-                        <DialogTitle className="text-sm">Create GitHub Repository</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          Create a new repository on GitHub.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-2">
-                        <div>
-                          <Label htmlFor="repo-name" className="text-xs">
-                            Repository Name
-                          </Label>
-                          <Input
-                            id="repo-name"
-                            value={newRepoName}
-                            onChange={(e) => setNewRepoName(e.target.value)}
-                            placeholder="my-awesome-project"
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="repo-description" className="text-xs">
-                            Description
-                          </Label>
-                          <Input
-                            id="repo-description"
-                            value={newRepoDescription}
-                            onChange={(e) => setNewRepoDescription(e.target.value)}
-                            placeholder="A brief description of your project"
-                            className="h-7 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowCreateRepoDialog(false)}
-                          className="h-7 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleCreateGithubRepo}
-                          disabled={isLoading}
-                          className="h-7 text-xs"
-                        >
-                          Create Repository
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
 
-                  <Separator />
+                <Separator />
 
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-medium">Your Repositories</h4>
-                    <ScrollArea className="h-48">
-                      {githubRepos.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-2">
-                          No repositories found
-                        </p>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs">Push & Pull</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handlePush}
+                      disabled={isLoading || !remoteUrl}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
                       ) : (
-                        <div className="space-y-1">
-                          {githubRepos.map((repo: any) => (
-                            <div
-                              key={repo.id}
-                              className="p-2 rounded-sm border text-xs space-y-1"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium truncate">{repo.name}</span>
-                                {repo.language && (
-                                  <Badge variant="outline" className="text-[10px] py-0 h-4">
-                                    {repo.language}
-                                  </Badge>
-                                )}
-                              </div>
-                              {repo.description && (
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  {repo.description}
-                                </p>
-                              )}
+                        <Upload className="h-3 w-3 mr-1" />
+                      )}
+                      Push
+                    </Button>
+                    <Button
+                      onClick={handlePull}
+                      disabled={isLoading || !remoteUrl}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <Download className="h-3 w-3 mr-1" />
+                      )}
+                      Pull
+                    </Button>
+                  </div>
+                </div>
+
+                {/* File Selection for Plugin Mode */}
+                {isPluginMode && (
+                  <>
+                    <Separator />
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-xs">File Selection</Label>
+                      <ScrollArea className="h-40 border rounded-sm p-2">
+                        {Array.from(files.entries())
+                          .filter(([_, file]) => file.type === 'file')
+                          .map(([path, file]) => (
+                            <div key={path} className="flex items-center py-1 text-xs">
+                              <input
+                                type="checkbox"
+                                id={`file-${path}`}
+                                checked={selectedFiles.includes(path)}
+                                onChange={() => toggleFileSelection(path)}
+                                className="mr-2 h-3 w-3"
+                              />
+                              <label htmlFor={`file-${path}`} className="truncate">
+                                {path}
+                              </label>
                             </div>
                           ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      </ScrollArea>
+                      <Button
+                        onClick={handleAddSelectedFiles}
+                        disabled={isLoading || selectedFiles.length === 0}
+                        size="sm"
+                        className="h-7 text-xs"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Plus className="h-3 w-3 mr-1" />
+                        )}
+                        Add Selected Files
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Configuration Dialog */}
@@ -1179,7 +965,57 @@ const GitPanel: React.FC = () => {
               Cancel
             </Button>
             <Button onClick={handleSaveConfig} className="h-7 text-xs">
-              Save Configuration
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remote Configuration Dialog */}
+      <Dialog open={showRemoteDialog} onOpenChange={setShowRemoteDialog}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Remote Repository</DialogTitle>
+            <DialogDescription className="text-xs">
+              Configure your remote repository.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className={'space-y-2'}>
+              <Label htmlFor="remote-name" className="text-xs">
+                Remote Name
+              </Label>
+              <Input
+                id="remote-name"
+                value={remoteName}
+                onChange={(e) => setRemoteName(e.target.value)}
+                placeholder="origin"
+                className="text-xs"
+              />
+            </div>
+            <div className={'space-y-2'}>
+              <Label htmlFor="remote-url" className="text-xs">
+                Remote URL
+              </Label>
+              <Input
+                id="remote-url"
+                value={remoteUrl}
+                onChange={(e) => setRemoteUrl(e.target.value)}
+                placeholder="https://github.com/username/repo.git"
+                className="text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRemoteDialog(false)}
+              className="h-7 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRemote} className="h-7 text-xs">
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1188,4 +1024,4 @@ const GitPanel: React.FC = () => {
   );
 };
 
-export default GitPanel;
+export default UnifiedGitPanel;

@@ -6,9 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -21,20 +19,15 @@ import {
 } from '@/components/ui/dialog';
 import {
   AlertCircle,
-  Check,
   Copy,
   ExternalLink,
-  Github,
-  GitBranch,
   GitFork,
-  Key,
+  Github,
   Loader2,
   Lock,
   LogOut,
   Plus,
   RefreshCw,
-  Settings,
-  Trash2,
   Unlock,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -81,7 +74,22 @@ const GithubPanel: React.FC = () => {
       toast.success('Connected to GitHub successfully');
       setGithubToken('');
     } catch (err) {
-      toast.error('Failed to connect to GitHub');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to GitHub';
+      console.error('GitHub connection error:', err);
+
+      // Show more detailed error message
+      if (errorMessage.includes('Bad credentials')) {
+        toast.error('Invalid GitHub token. Please check your token and try again.');
+      } else if (errorMessage.includes('rate limit')) {
+        toast.error('GitHub API rate limit exceeded. Please try again later.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast.error('Network error. Please check your internet connection and try again.');
+      } else {
+        toast.error(`GitHub connection failed: ${errorMessage}`);
+      }
+
+      // Set error in store for display
+      setError(errorMessage);
     }
   };
 
@@ -107,7 +115,24 @@ const GithubPanel: React.FC = () => {
       setNewRepoPrivate(false);
       toast.success(`Repository '${newRepoName}' created successfully`);
     } catch (err) {
-      toast.error('Failed to create repository');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
+      console.error('Repository creation error:', err);
+
+      // Show more detailed error message
+      if (errorMessage.includes('name already exists')) {
+        toast.error(`Repository '${newRepoName}' already exists. Please choose a different name.`);
+      } else if (errorMessage.includes('validation failed')) {
+        toast.error('Invalid repository name or settings. Please check your input and try again.');
+      } else if (errorMessage.includes('rate limit')) {
+        toast.error('GitHub API rate limit exceeded. Please try again later.');
+      } else if (errorMessage.includes('Bad credentials')) {
+        toast.error('GitHub authentication expired. Please reconnect to GitHub.');
+      } else {
+        toast.error(`Repository creation failed: ${errorMessage}`);
+      }
+
+      // Set error in store for display
+      setError(errorMessage);
     }
   };
 
@@ -116,7 +141,22 @@ const GithubPanel: React.FC = () => {
       await getGithubRepos({ resetPagination: true });
       toast.success('Repositories refreshed');
     } catch (err) {
-      toast.error('Failed to refresh repositories');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh repositories';
+      console.error('Repository refresh error:', err);
+
+      // Show more detailed error message
+      if (errorMessage.includes('Bad credentials')) {
+        toast.error('GitHub authentication expired. Please reconnect to GitHub.');
+      } else if (errorMessage.includes('rate limit')) {
+        toast.error('GitHub API rate limit exceeded. Please try again later.');
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast.error('Network error. Please check your internet connection and try again.');
+      } else {
+        toast.error(`Failed to refresh repositories: ${errorMessage}`);
+      }
+
+      // Set error in store for display
+      setError(errorMessage);
     }
   };
 
@@ -124,7 +164,20 @@ const GithubPanel: React.FC = () => {
     try {
       await loadMoreGithubRepos();
     } catch (err) {
-      toast.error('Failed to load more repositories');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load more repositories';
+      console.error('Load more repositories error:', err);
+
+      // Show more detailed error message
+      if (errorMessage.includes('Bad credentials')) {
+        toast.error('GitHub authentication expired. Please reconnect to GitHub.');
+      } else if (errorMessage.includes('rate limit')) {
+        toast.error('GitHub API rate limit exceeded. Please try again later.');
+      } else {
+        toast.error(`Failed to load more repositories: ${errorMessage}`);
+      }
+
+      // Set error in store for display
+      setError(errorMessage);
     }
   };
 

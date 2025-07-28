@@ -395,7 +395,7 @@ export const useGitStore = create<GitStore>()(
               state.isLoading = false;
             });
 
-            info('Git repository initialized');
+            info('Init Repository', 'Git repository initialized');
 
             // Get initial repository state
             await get().getBranches();

@@ -5,7 +5,7 @@ import { debug, info, warn, error } from '@/services/loggerService';
  * Database schema version
  * Increment this when changing the schema
  */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * Interface for file content stored in IndexedDB
@@ -43,6 +43,15 @@ export interface StateMigration {
 }
 
 /**
+ * Interface for key-value storage entries in IndexedDB
+ */
+export interface KeyValueEntry {
+  key: string; // Primary key
+  value: any; // Stored value
+  timestamp: number; // When the entry was created/updated
+}
+
+/**
  * Database class for managing IndexedDB operations
  * Uses Dexie.js for easier IndexedDB management
  */
@@ -51,6 +60,7 @@ class RemixIDEDatabase extends Dexie {
   fileContents!: Dexie.Table<FileContent, string>;
   editorHistory!: Dexie.Table<EditorHistoryEntry, number>;
   stateMigrations!: Dexie.Table<StateMigration, string>;
+  keyValueStorage!: Dexie.Table<KeyValueEntry, string>;
 
   constructor() {
     super('RemixIDEClone');
@@ -59,6 +69,7 @@ class RemixIDEDatabase extends Dexie {
       fileContents: 'id, lastModified',
       editorHistory: '++id, fileId, timestamp',
       stateMigrations: 'id, version, timestamp',
+      keyValueStorage: 'key, timestamp',
     });
 
     debug('DatabaseService', `Database initialized with schema version ${SCHEMA_VERSION}`);
@@ -299,6 +310,72 @@ class DatabaseService {
   }
 
   /**
+   * Get value from key-value storage
+   * @param key Storage key
+   * @returns Stored value or undefined if not found
+   */
+  public async get(key: string): Promise<any> {
+    try {
+      await this.ensureInitialized();
+      const entry = await this.db.keyValueStorage.get(key);
+      return entry?.value;
+    } catch (err) {
+      error('DatabaseService', `Failed to get value for key ${key}`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Set value in key-value storage
+   * @param key Storage key
+   * @param value Value to store
+   */
+  public async set(key: string, value: any): Promise<void> {
+    try {
+      await this.ensureInitialized();
+      await this.db.keyValueStorage.put({
+        key,
+        value,
+        timestamp: Date.now(),
+      });
+      debug('DatabaseService', `Set value for key ${key}`);
+    } catch (err) {
+      error('DatabaseService', `Failed to set value for key ${key}`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Delete value from key-value storage
+   * @param key Storage key
+   */
+  public async delete(key: string): Promise<void> {
+    try {
+      await this.ensureInitialized();
+      await this.db.keyValueStorage.delete(key);
+      debug('DatabaseService', `Deleted value for key ${key}`);
+    } catch (err) {
+      error('DatabaseService', `Failed to delete value for key ${key}`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Get all keys from key-value storage
+   * @returns Array of all keys
+   */
+  public async keys(): Promise<string[]> {
+    try {
+      await this.ensureInitialized();
+      const entries = await this.db.keyValueStorage.toArray();
+      return entries.map(entry => entry.key);
+    } catch (err) {
+      error('DatabaseService', 'Failed to get keys from key-value storage', err);
+      throw err;
+    }
+  }
+
+  /**
    * Ensure the database is initialized
    * @throws Error if initialization fails
    */
@@ -318,6 +395,7 @@ class DatabaseService {
       await this.db.fileContents.clear();
       await this.db.editorHistory.clear();
       await this.db.stateMigrations.clear();
+      await this.db.keyValueStorage.clear();
       info('DatabaseService', 'All database data cleared');
     } catch (err) {
       error('DatabaseService', 'Failed to clear all database data', err);
