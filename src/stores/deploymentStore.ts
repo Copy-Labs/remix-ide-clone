@@ -672,7 +672,14 @@ if (typeof window !== 'undefined') {
   });
 
   web3Service.on('disconnected', () => {
-    useDeploymentStore.getState().disconnectWallet();
+    // Update store state without calling disconnectWallet to avoid infinite loop
+    useDeploymentStore.setState((state) => ({
+      ...state,
+      account: null,
+      balance: null,
+      gasPrice: null
+    }));
+    toast.info('Wallet disconnected');
   });
 
   web3Service.on('accountChanged', async () => {
