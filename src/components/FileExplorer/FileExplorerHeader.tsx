@@ -6,11 +6,16 @@ import {
   LucideChevronDown,
   LucideSearch,
   LucideX,
-  GitBranch
+  GitBranch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 import { Input } from '@/components/ui/input.tsx';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip.tsx';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip.tsx';
 import { useGitStore } from '@/stores/gitStore';
 
 interface FileExplorerHeaderProps {
@@ -64,9 +69,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
     <div className="flex flex-col border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between p-3">
         <div className="flex flex-col">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-            File Explorer
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">File Explorer</h2>
           {isInitialized && currentBranch && (
             <div className="flex items-center mt-1 text-xs text-muted-foreground">
               <GitBranch size={12} className="mr-1" />
@@ -84,12 +87,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
           <div className="flex items-center space-x-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  onClick={onCreateFile}
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                >
+                <Button onClick={onCreateFile} size="icon" variant="ghost" className="h-8 w-8">
                   <LucideFilePlus size={16} />
                 </Button>
               </TooltipTrigger>
@@ -100,12 +98,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  onClick={onCreateFolder}
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                >
+                <Button onClick={onCreateFolder} size="icon" variant="ghost" className="h-8 w-8">
                   <LucideFolderPlus size={16} />
                 </Button>
               </TooltipTrigger>
@@ -133,12 +126,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
             {onRefresh && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    onClick={onRefresh}
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                  >
+                  <Button onClick={onRefresh} size="icon" variant="ghost" className="h-8 w-8">
                     <LucideRefreshCw size={16} />
                   </Button>
                 </TooltipTrigger>
@@ -151,12 +139,7 @@ const FileExplorerHeader: React.FC<FileExplorerHeaderProps> = ({
             {onCollapseAll && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    onClick={onCollapseAll}
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                  >
+                  <Button onClick={onCollapseAll} size="icon" variant="ghost" className="h-8 w-8">
                     <LucideChevronDown size={16} />
                   </Button>
                 </TooltipTrigger>

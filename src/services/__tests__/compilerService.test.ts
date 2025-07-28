@@ -35,7 +35,7 @@ describe('CompilerService', () => {
 
     it('should handle sources with empty content without throwing JSONError', async () => {
       const sourcesWithEmptyContent = {
-        'contract.sol': ''
+        'contract.sol': '',
       };
 
       const result = await compilerService.compile(sourcesWithEmptyContent);
@@ -47,16 +47,19 @@ describe('CompilerService', () => {
       expect(Array.isArray(result.errors)).toBe(true);
 
       // Check if the error is the "Invalid contract content" error
-      const hasInvalidContentError = result.errors.some(error =>
-        error.message.includes('Invalid contract content for file')
+      const hasInvalidContentError = result.errors.some((error) =>
+        error.message.includes('Invalid contract content for file'),
       );
-      console.log('Empty content test - errors:', result.errors.map(e => e.message));
+      console.log(
+        'Empty content test - errors:',
+        result.errors.map((e) => e.message),
+      );
       console.log('Has invalid content error:', hasInvalidContentError);
     });
 
     it('should handle sources with invalid content without throwing JSONError', async () => {
       const sourcesWithInvalidContent = {
-        'contract.sol': 'invalid solidity code that cannot be compiled'
+        'contract.sol': 'invalid solidity code that cannot be compiled',
       };
 
       const result = await compilerService.compile(sourcesWithInvalidContent);
@@ -85,7 +88,7 @@ describe('CompilerService', () => {
                   value = _value;
               }
           }
-        `
+        `,
       };
 
       const result = await compilerService.compile(validSources);
@@ -114,14 +117,14 @@ contract Counter {
 }`;
 
       const sources = {
-        '/contracts/Counter.sol': counterContract
+        '/contracts/Counter.sol': counterContract,
       };
 
       const result = await compilerService.compile(sources);
 
       // Should not have "Invalid contract content" error
-      const hasInvalidContentError = result.errors.some(error =>
-        error.message.includes('Invalid contract content for file')
+      const hasInvalidContentError = result.errors.some((error) =>
+        error.message.includes('Invalid contract content for file'),
       );
 
       expect(hasInvalidContentError).toBe(false);
@@ -130,9 +133,10 @@ contract Counter {
       // The result might fail due to Worker environment in Node.js, but it shouldn't be due to invalid content
       if (!result.success) {
         // If it fails, it should be due to Worker/environment issues, not content issues
-        const hasWorkerError = result.errors.some(error =>
-          error.message.includes('Worker is not defined') ||
-          error.message.includes('Solidity compiler error')
+        const hasWorkerError = result.errors.some(
+          (error) =>
+            error.message.includes('Worker is not defined') ||
+            error.message.includes('Solidity compiler error'),
         );
         expect(hasWorkerError).toBe(true);
       }

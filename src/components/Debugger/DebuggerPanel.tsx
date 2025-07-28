@@ -7,7 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -264,15 +269,13 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bug className="h-4 w-4" />
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Solidity Debugger</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Solidity Debugger
+            </h2>
             {isDebugging && <Badge variant="secondary">Active</Badge>}
           </div>
           <div className="flex gap-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowConfig(!showConfig)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowConfig(!showConfig)}>
               <Settings className="h-4 w-4" />
             </Button>
             <Button
@@ -312,7 +315,9 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
                     checked={showLocalVariables}
                     onCheckedChange={setShowLocalVariables}
                   />
-                  <Label htmlFor="local-vars" className="text-xs">Local Variables</Label>
+                  <Label htmlFor="local-vars" className="text-xs">
+                    Local Variables
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -320,7 +325,9 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
                     checked={showStateVariables}
                     onCheckedChange={setShowStateVariables}
                   />
-                  <Label htmlFor="state-vars" className="text-xs">State Variables</Label>
+                  <Label htmlFor="state-vars" className="text-xs">
+                    State Variables
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -328,23 +335,21 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
                     checked={showCallStack}
                     onCheckedChange={setShowCallStack}
                   />
-                  <Label htmlFor="call-stack" className="text-xs">Call Stack</Label>
+                  <Label htmlFor="call-stack" className="text-xs">
+                    Call Stack
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    id="memory"
-                    checked={showMemory}
-                    onCheckedChange={setShowMemory}
-                  />
-                  <Label htmlFor="memory" className="text-xs">Memory</Label>
+                  <Switch id="memory" checked={showMemory} onCheckedChange={setShowMemory} />
+                  <Label htmlFor="memory" className="text-xs">
+                    Memory
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    id="storage"
-                    checked={showStorage}
-                    onCheckedChange={setShowStorage}
-                  />
-                  <Label htmlFor="storage" className="text-xs">Storage</Label>
+                  <Switch id="storage" checked={showStorage} onCheckedChange={setShowStorage} />
+                  <Label htmlFor="storage" className="text-xs">
+                    Storage
+                  </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -352,7 +357,9 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
                     checked={autoBreakOnError}
                     onCheckedChange={setAutoBreakOnError}
                   />
-                  <Label htmlFor="auto-break" className="text-xs">Auto Break on Error</Label>
+                  <Label htmlFor="auto-break" className="text-xs">
+                    Auto Break on Error
+                  </Label>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -375,7 +382,9 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
           </CardHeader>
           <CardContent className="space-y-4 px-2">
             <div className="space-y-2">
-              <Label htmlFor="tx-hash" className="text-xs">Transaction Hash</Label>
+              <Label htmlFor="tx-hash" className="text-xs">
+                Transaction Hash
+              </Label>
               <div className="flex gap-2">
                 <Input
                   id="tx-hash"
@@ -413,38 +422,19 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
               <div className="space-y-2">
                 <Label className="text-xs">Step Controls</Label>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleStepInto}
-                    disabled={isLoading}
-                    size="sm"
-                    variant="outline"
-                  >
+                  <Button onClick={handleStepInto} disabled={isLoading} size="sm" variant="outline">
                     <LucideArrowDownToDot className="h-4 w-4 mr-1" />
                     Into
                   </Button>
-                  <Button
-                    onClick={handleStepOver}
-                    disabled={isLoading}
-                    size="sm"
-                    variant="outline"
-                  >
+                  <Button onClick={handleStepOver} disabled={isLoading} size="sm" variant="outline">
                     <LucideBetweenHorizontalStart className="h-4 w-4 mr-1" />
                     Over
                   </Button>
-                  <Button
-                    onClick={handleStepOut}
-                    disabled={isLoading}
-                    size="sm"
-                    variant="outline"
-                  >
+                  <Button onClick={handleStepOut} disabled={isLoading} size="sm" variant="outline">
                     <LucideArrowUpFromDot className="h-4 w-4 mr-1" />
                     Out
                   </Button>
-                  <Button
-                    onClick={handleContinue}
-                    disabled={isLoading}
-                    size="sm"
-                  >
+                  <Button onClick={handleContinue} disabled={isLoading} size="sm">
                     <SkipForward className="h-4 w-4 mr-1" />
                     Continue
                   </Button>
@@ -482,8 +472,11 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
             {breakpoints.length > 0 ? (
               <ScrollArea className="h-32">
                 <div className="space-y-2">
-                  {breakpoints.map(line => (
-                    <div key={line} className="flex items-center justify-between p-2 bg-muted rounded">
+                  {breakpoints.map((line) => (
+                    <div
+                      key={line}
+                      className="flex items-center justify-between p-2 bg-muted rounded"
+                    >
                       <span className="text-xs">Line {line}</span>
                       <Button
                         onClick={() => handleRemoveBreakpoint(line)}
@@ -517,7 +510,9 @@ const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ pluginId = 'solidity-debu
                     </div>
                     <div>
                       <Label>Contract Address</Label>
-                      <p className="font-mono text-xs break-all">{debugState.contractAddress || 'N/A'}</p>
+                      <p className="font-mono text-xs break-all">
+                        {debugState.contractAddress || 'N/A'}
+                      </p>
                     </div>
                   </div>
 

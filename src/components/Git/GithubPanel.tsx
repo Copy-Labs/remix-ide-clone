@@ -144,7 +144,9 @@ const GithubPanel: React.FC = () => {
           <CardContent className="py-1 px-2 space-y-2">
             <div className="space-y-2">
               <div className="space-y-1">
-                <Label htmlFor="github-token" className="text-xs">Personal Access Token</Label>
+                <Label htmlFor="github-token" className="text-xs">
+                  Personal Access Token
+                </Label>
                 <div className="flex">
                   <Input
                     id="github-token"
@@ -160,7 +162,11 @@ const GithubPanel: React.FC = () => {
                     onClick={() => setShowToken(!showToken)}
                     className="h-7 w-7 ml-1"
                   >
-                    {showToken ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                    {showToken ? (
+                      <Lock className="h-3.5 w-3.5" />
+                    ) : (
+                      <Unlock className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
@@ -175,8 +181,16 @@ const GithubPanel: React.FC = () => {
                   </a>
                 </p>
               </div>
-              <Button onClick={handleConnect} disabled={isLoading || !githubToken.trim()} className="w-full h-7 text-xs">
-                {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Github className="h-3 w-3 mr-1" />}
+              <Button
+                onClick={handleConnect}
+                disabled={isLoading || !githubToken.trim()}
+                className="w-full h-7 text-xs"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Github className="h-3 w-3 mr-1" />
+                )}
                 Connect to GitHub
               </Button>
             </div>
@@ -202,7 +216,9 @@ const GithubPanel: React.FC = () => {
           <Github className="h-4 w-4" />
           <span className="font-medium text-sm">GitHub</span>
           {config.github.username && (
-            <Badge variant="secondary" className="text-xs py-0 h-5">{config.github.username}</Badge>
+            <Badge variant="secondary" className="text-xs py-0 h-5">
+              {config.github.username}
+            </Badge>
           )}
         </div>
         <div className="flex gap-1">
@@ -249,11 +265,15 @@ const GithubPanel: React.FC = () => {
               <DialogContent className="max-w-xs">
                 <DialogHeader>
                   <DialogTitle className="text-sm">Create New Repository</DialogTitle>
-                  <DialogDescription className="text-xs">Create a new GitHub repository.</DialogDescription>
+                  <DialogDescription className="text-xs">
+                    Create a new GitHub repository.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="repo-name" className="text-xs">Repository Name</Label>
+                    <Label htmlFor="repo-name" className="text-xs">
+                      Repository Name
+                    </Label>
                     <Input
                       id="repo-name"
                       value={newRepoName}
@@ -263,7 +283,9 @@ const GithubPanel: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="repo-description" className="text-xs">Description (optional)</Label>
+                    <Label htmlFor="repo-description" className="text-xs">
+                      Description (optional)
+                    </Label>
                     <Textarea
                       id="repo-description"
                       value={newRepoDescription}
@@ -278,14 +300,24 @@ const GithubPanel: React.FC = () => {
                       checked={newRepoPrivate}
                       onCheckedChange={setNewRepoPrivate}
                     />
-                    <Label htmlFor="repo-private" className="text-xs">Private Repository</Label>
+                    <Label htmlFor="repo-private" className="text-xs">
+                      Private Repository
+                    </Label>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowCreateRepoDialog(false)} className="h-7 text-xs">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateRepoDialog(false)}
+                    className="h-7 text-xs"
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateRepo} disabled={isLoading || !newRepoName.trim()} className="h-7 text-xs">
+                  <Button
+                    onClick={handleCreateRepo}
+                    disabled={isLoading || !newRepoName.trim()}
+                    className="h-7 text-xs"
+                  >
                     {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                     Create
                   </Button>
@@ -318,11 +350,17 @@ const GithubPanel: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                           <h3 className="font-medium text-xs">{repo.name}</h3>
                           {repo.private ? (
-                            <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                            >
                               Private
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] py-0 h-4 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                            >
                               Public
                             </Badge>
                           )}
@@ -389,7 +427,8 @@ const GithubPanel: React.FC = () => {
                 {/* Pagination info */}
                 {githubRepos.length > 0 && (
                   <div className="text-center text-[10px] text-muted-foreground mt-1">
-                    Showing {githubRepos.length} of {githubRepoPagination?.totalCount || githubRepos.length} repositories
+                    Showing {githubRepos.length} of{' '}
+                    {githubRepoPagination?.totalCount || githubRepos.length} repositories
                   </div>
                 )}
               </div>

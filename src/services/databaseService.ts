@@ -58,7 +58,7 @@ class RemixIDEDatabase extends Dexie {
     this.version(SCHEMA_VERSION).stores({
       fileContents: 'id, lastModified',
       editorHistory: '++id, fileId, timestamp',
-      stateMigrations: 'id, version, timestamp'
+      stateMigrations: 'id, version, timestamp',
     });
 
     debug('DatabaseService', `Database initialized with schema version ${SCHEMA_VERSION}`);
@@ -120,13 +120,17 @@ class DatabaseService {
    * @param content File content
    * @param lastModified Last modified timestamp
    */
-  public async saveFileContent(fileId: string, content: string, lastModified: number): Promise<void> {
+  public async saveFileContent(
+    fileId: string,
+    content: string,
+    lastModified: number,
+  ): Promise<void> {
     try {
       await this.ensureInitialized();
       await this.db.fileContents.put({
         id: fileId,
         content,
-        lastModified
+        lastModified,
       });
       debug('DatabaseService', `Saved file content for ${fileId}`);
     } catch (err) {
@@ -152,7 +156,7 @@ class DatabaseService {
       const fileToSave = {
         ...file,
         id: fileId,
-        lastModified: file.lastModified || Date.now()
+        lastModified: file.lastModified || Date.now(),
       };
 
       await this.db.fileContents.put(fileToSave);
@@ -235,10 +239,7 @@ class DatabaseService {
   public async getEditorHistory(fileId: string): Promise<EditorHistoryEntry[]> {
     try {
       await this.ensureInitialized();
-      return await this.db.editorHistory
-        .where('fileId')
-        .equals(fileId)
-        .sortBy('timestamp');
+      return await this.db.editorHistory.where('fileId').equals(fileId).sortBy('timestamp');
     } catch (err) {
       error('DatabaseService', `Failed to get editor history for ${fileId}`, err);
       throw err;
@@ -252,10 +253,7 @@ class DatabaseService {
   public async clearEditorHistory(fileId: string): Promise<void> {
     try {
       await this.ensureInitialized();
-      await this.db.editorHistory
-        .where('fileId')
-        .equals(fileId)
-        .delete();
+      await this.db.editorHistory.where('fileId').equals(fileId).delete();
       debug('DatabaseService', `Cleared editor history for ${fileId}`);
     } catch (err) {
       error('DatabaseService', `Failed to clear editor history for ${fileId}`, err);
@@ -276,7 +274,7 @@ class DatabaseService {
         id: storeId,
         version,
         timestamp: Date.now(),
-        data
+        data,
       });
       debug('DatabaseService', `Saved state migration for ${storeId} version ${version}`);
     } catch (err) {

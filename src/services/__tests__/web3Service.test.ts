@@ -9,38 +9,38 @@ const mockWeb3 = {
     getGasPrice: vi.fn(),
     estimateGas: vi.fn(),
     Contract: vi.fn(),
-    getChainId: vi.fn()
+    getChainId: vi.fn(),
   },
   utils: {
     fromWei: vi.fn(),
-    toWei: vi.fn()
-  }
+    toWei: vi.fn(),
+  },
 };
 
 const mockContract = {
   deploy: vi.fn(),
   methods: {},
-  options: { address: '0x1234567890123456789012345678901234567890' }
+  options: { address: '0x1234567890123456789012345678901234567890' },
 };
 
 const mockEthereum = {
   request: vi.fn(),
   on: vi.fn(),
   removeListener: vi.fn(),
-  isMetaMask: true
+  isMetaMask: true,
 };
 
 // Mock global objects
 Object.defineProperty(global, 'window', {
   value: {
     ethereum: mockEthereum,
-    Web3: vi.fn(() => mockWeb3)
+    Web3: vi.fn(() => mockWeb3),
   },
-  writable: true
+  writable: true,
 });
 
 vi.mock('web3', () => ({
-  default: vi.fn(() => mockWeb3)
+  default: vi.fn(() => mockWeb3),
 }));
 
 describe('Web3Service', () => {
@@ -83,7 +83,7 @@ describe('Web3Service', () => {
 
     mockWeb3.eth.Contract.mockImplementation(() => mockContract);
     mockContract.deploy.mockReturnValue({
-      send: vi.fn().mockResolvedValue(mockContract)
+      send: vi.fn().mockResolvedValue(mockContract),
     });
   });
 
@@ -105,7 +105,7 @@ describe('Web3Service', () => {
 
       expect(result).toBe(true);
       expect(mockEthereum.request).toHaveBeenCalledWith({
-        method: 'eth_requestAccounts'
+        method: 'eth_requestAccounts',
       });
       expect(web3Service.isWalletConnected()).toBe(true);
       expect(web3Service.getAccount()).toBe('0x1234567890123456789012345678901234567890');
@@ -157,7 +157,7 @@ describe('Web3Service', () => {
       expect(result).toBe(true);
       expect(mockEthereum.request).toHaveBeenCalledWith({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x5' }]
+        params: [{ chainId: '0x5' }],
       });
     });
 
@@ -176,7 +176,7 @@ describe('Web3Service', () => {
         chainId: 137,
         rpcUrl: 'https://polygon-rpc.com',
         symbol: 'MATIC',
-        isTestnet: false
+        isTestnet: false,
       };
 
       const result = await web3Service.addNetwork(network);
@@ -184,16 +184,18 @@ describe('Web3Service', () => {
       expect(result).toBe(true);
       expect(mockEthereum.request).toHaveBeenCalledWith({
         method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: '0x89',
-          chainName: network.name,
-          rpcUrls: [network.rpcUrl],
-          nativeCurrency: {
-            name: network.symbol,
-            symbol: network.symbol,
-            decimals: 18
-          }
-        }]
+        params: [
+          {
+            chainId: '0x89',
+            chainName: network.name,
+            rpcUrls: [network.rpcUrl],
+            nativeCurrency: {
+              name: network.symbol,
+              symbol: network.symbol,
+              decimals: 18,
+            },
+          },
+        ],
       });
     });
 
@@ -205,7 +207,7 @@ describe('Web3Service', () => {
       expect(result).toBe(false);
       expect(mockEthereum.request).not.toHaveBeenCalledWith({
         method: 'wallet_switchEthereumChain',
-        params: expect.any(Array)
+        params: expect.any(Array),
       });
     });
   });
@@ -218,7 +220,9 @@ describe('Web3Service', () => {
     it('should get balance successfully', async () => {
       const balance = await web3Service.getBalance();
 
-      expect(mockWeb3.eth.getBalance).toHaveBeenCalledWith('0x1234567890123456789012345678901234567890');
+      expect(mockWeb3.eth.getBalance).toHaveBeenCalledWith(
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(mockWeb3.utils.fromWei).toHaveBeenCalledWith('1500000000000000000', 'ether');
       expect(balance).toBe('1.5');
     });
@@ -256,14 +260,14 @@ describe('Web3Service', () => {
     it('should estimate gas successfully', async () => {
       const tx = {
         to: '0x1234567890123456789012345678901234567890',
-        data: '0x'
+        data: '0x',
       };
 
       const gasEstimate = await web3Service.estimateGas(tx);
 
       expect(mockWeb3.eth.estimateGas).toHaveBeenCalledWith({
         ...tx,
-        from: '0x1234567890123456789012345678901234567890'
+        from: '0x1234567890123456789012345678901234567890',
       });
       expect(gasEstimate).toBe(21000);
     });
@@ -273,7 +277,7 @@ describe('Web3Service', () => {
 
       const tx = {
         to: '0x1234567890123456789012345678901234567890',
-        data: '0x'
+        data: '0x',
       };
 
       const gasEstimate = await web3Service.estimateGas(tx);
@@ -286,8 +290,8 @@ describe('Web3Service', () => {
     const mockAbi = [
       {
         type: 'constructor',
-        inputs: [{ name: 'initialValue', type: 'uint256' }]
-      }
+        inputs: [{ name: 'initialValue', type: 'uint256' }],
+      },
     ];
     const mockBytecode = '0x608060405234801561001057600080fd5b50...';
 
@@ -304,14 +308,14 @@ describe('Web3Service', () => {
       expect(mockWeb3.eth.Contract).toHaveBeenCalledWith(mockAbi);
       expect(mockContract.deploy).toHaveBeenCalledWith({
         data: mockBytecode,
-        arguments: args
+        arguments: args,
       });
       expect(result).toBe(mockContract);
     });
 
     it('should handle deployment failure', async () => {
       mockContract.deploy.mockReturnValue({
-        send: vi.fn().mockRejectedValue(new Error('Deployment failed'))
+        send: vi.fn().mockRejectedValue(new Error('Deployment failed')),
       });
 
       const result = await web3Service.deployContract(mockAbi, mockBytecode, [], {});
@@ -336,15 +340,15 @@ describe('Web3Service', () => {
         name: 'getValue',
         inputs: [],
         outputs: [{ type: 'uint256' }],
-        stateMutability: 'view'
+        stateMutability: 'view',
       },
       {
         type: 'function',
         name: 'setValue',
         inputs: [{ name: 'newValue', type: 'uint256' }],
         outputs: [],
-        stateMutability: 'nonpayable'
-      }
+        stateMutability: 'nonpayable',
+      },
     ];
 
     beforeEach(async () => {
@@ -353,10 +357,10 @@ describe('Web3Service', () => {
 
     it('should call read method successfully', async () => {
       const mockMethod = {
-        call: vi.fn().mockResolvedValue('42')
+        call: vi.fn().mockResolvedValue('42'),
       };
       mockContract.methods = {
-        getValue: vi.fn().mockReturnValue(mockMethod)
+        getValue: vi.fn().mockReturnValue(mockMethod),
       };
 
       const result = await web3Service.callContractMethod(
@@ -364,10 +368,13 @@ describe('Web3Service', () => {
         mockAbi,
         'getValue',
         [],
-        {}
+        {},
       );
 
-      expect(mockWeb3.eth.Contract).toHaveBeenCalledWith(mockAbi, '0x1234567890123456789012345678901234567890');
+      expect(mockWeb3.eth.Contract).toHaveBeenCalledWith(
+        mockAbi,
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(mockContract.methods.getValue).toHaveBeenCalledWith();
       expect(mockMethod.call).toHaveBeenCalled();
       expect(result).toBe('42');
@@ -375,10 +382,10 @@ describe('Web3Service', () => {
 
     it('should call write method successfully', async () => {
       const mockMethod = {
-        send: vi.fn().mockResolvedValue({ transactionHash: '0xabc123' })
+        send: vi.fn().mockResolvedValue({ transactionHash: '0xabc123' }),
       };
       mockContract.methods = {
-        setValue: vi.fn().mockReturnValue(mockMethod)
+        setValue: vi.fn().mockReturnValue(mockMethod),
       };
 
       const result = await web3Service.callContractMethod(
@@ -386,23 +393,23 @@ describe('Web3Service', () => {
         mockAbi,
         'setValue',
         [100],
-        { gas: 100000 }
+        { gas: 100000 },
       );
 
       expect(mockContract.methods.setValue).toHaveBeenCalledWith(100);
       expect(mockMethod.send).toHaveBeenCalledWith({
         from: '0x1234567890123456789012345678901234567890',
-        gas: 100000
+        gas: 100000,
       });
       expect(result).toEqual({ transactionHash: '0xabc123' });
     });
 
     it('should handle method call failure', async () => {
       const mockMethod = {
-        call: vi.fn().mockRejectedValue(new Error('Call failed'))
+        call: vi.fn().mockRejectedValue(new Error('Call failed')),
       };
       mockContract.methods = {
-        getValue: vi.fn().mockReturnValue(mockMethod)
+        getValue: vi.fn().mockReturnValue(mockMethod),
       };
 
       const result = await web3Service.callContractMethod(
@@ -410,7 +417,7 @@ describe('Web3Service', () => {
         mockAbi,
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -424,7 +431,7 @@ describe('Web3Service', () => {
         mockAbi,
         'nonExistentMethod',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -438,7 +445,7 @@ describe('Web3Service', () => {
         mockAbi,
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -482,7 +489,7 @@ describe('Web3Service', () => {
 
       // Simulate account change
       const accountChangeHandler = mockEthereum.on.mock.calls.find(
-        call => call[0] === 'accountsChanged'
+        (call) => call[0] === 'accountsChanged',
       )?.[1];
 
       if (accountChangeHandler) {
@@ -498,7 +505,7 @@ describe('Web3Service', () => {
 
       // Simulate network change
       const networkChangeHandler = mockEthereum.on.mock.calls.find(
-        call => call[0] === 'chainChanged'
+        (call) => call[0] === 'chainChanged',
       )?.[1];
 
       if (networkChangeHandler) {

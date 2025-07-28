@@ -99,7 +99,6 @@ const GitPanel: React.FC = () => {
     }
   }, []);
 
-
   const handleInitRepository = async () => {
     try {
       await initRepository();
@@ -108,7 +107,6 @@ const GitPanel: React.FC = () => {
       toast.error('Failed to initialize repository');
     }
   };
-
 
   const handleCreateBranch = async () => {
     if (!newBranchName.trim()) {
@@ -150,7 +148,6 @@ const GitPanel: React.FC = () => {
     }
   };
 
-
   // GitHub connection is now handled by GitAuthManager
 
   const handleSaveConfig = () => {
@@ -164,7 +161,6 @@ const GitPanel: React.FC = () => {
     toast.success('Configuration saved');
   };
 
-
   const handleResetGitIndex = async () => {
     try {
       await resetGitIndex();
@@ -177,9 +173,12 @@ const GitPanel: React.FC = () => {
   const getStatusIcon = (file: any) => {
     const { head, workdir, stage } = file;
 
-    if (head === 1 && workdir === 2 && stage === 0) return <AlertCircle className="h-4 w-4 text-orange-500" />; // Modified
-    if (head === 0 && workdir === 2 && stage === 0) return <Plus className="h-4 w-4 text-green-500" />; // New
-    if (head === 1 && workdir === 0 && stage === 0) return <Trash2 className="h-4 w-4 text-red-500" />; // Deleted
+    if (head === 1 && workdir === 2 && stage === 0)
+      return <AlertCircle className="h-4 w-4 text-orange-500" />; // Modified
+    if (head === 0 && workdir === 2 && stage === 0)
+      return <Plus className="h-4 w-4 text-green-500" />; // New
+    if (head === 1 && workdir === 0 && stage === 0)
+      return <Trash2 className="h-4 w-4 text-red-500" />; // Deleted
     if (stage === 2) return <Check className="h-4 w-4 text-blue-500" />; // Staged
 
     return <HelpCircle className="h-4 w-4 text-gray-500" />; // Unknown
@@ -210,7 +209,11 @@ const GitPanel: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="py-1 px-2 space-y-2">
-            <Button onClick={handleInitRepository} disabled={isLoading} className="w-full h-7 text-xs">
+            <Button
+              onClick={handleInitRepository}
+              disabled={isLoading}
+              className="w-full h-7 text-xs"
+            >
               {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
               Initialize Repository
             </Button>
@@ -235,10 +238,19 @@ const GitPanel: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <GitBranch className="h-4 w-4" />
           <span className="font-medium text-sm">Git</span>
-          {currentBranch && <Badge variant="secondary" className="text-xs py-0 h-5">{currentBranch}</Badge>}
+          {currentBranch && (
+            <Badge variant="secondary" className="text-xs py-0 h-5">
+              {currentBranch}
+            </Badge>
+          )}
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setShowConfigDialog(true)} className="h-7 w-7">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowConfigDialog(true)}
+            className="h-7 w-7"
+          >
             <Settings className="h-3.5 w-3.5" />
           </Button>
           <Button
@@ -278,9 +290,15 @@ const GitPanel: React.FC = () => {
 
       <Tabs defaultValue="changes" className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-8">
-          <TabsTrigger value="changes" className="text-xs py-1">Changes</TabsTrigger>
-          <TabsTrigger value="branches" className="text-xs py-1">Branches</TabsTrigger>
-          <TabsTrigger value="history" className="text-xs py-1">History</TabsTrigger>
+          <TabsTrigger value="changes" className="text-xs py-1">
+            Changes
+          </TabsTrigger>
+          <TabsTrigger value="branches" className="text-xs py-1">
+            Branches
+          </TabsTrigger>
+          <TabsTrigger value="history" className="text-xs py-1">
+            History
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="changes" className="space-y-2 mt-2">
@@ -322,32 +340,34 @@ const GitPanel: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {status.filter(file => file.stage !== 2).map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-1 px-2 rounded-sm hover:bg-muted text-xs"
-                      >
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                          <div title={getStatusText(file)}>{getStatusIcon(file)}</div>
-                          <span className="font-mono truncate">{file.file}</span>
-                          <Badge variant="outline" className="text-[10px] py-0 h-4">
-                            {getStatusText(file)}
-                          </Badge>
+                    {status
+                      .filter((file) => file.stage !== 2)
+                      .map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between py-1 px-2 rounded-sm hover:bg-muted text-xs"
+                        >
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            <div title={getStatusText(file)}>{getStatusIcon(file)}</div>
+                            <span className="font-mono truncate">{file.file}</span>
+                            <Badge variant="outline" className="text-[10px] py-0 h-4">
+                              {getStatusText(file)}
+                            </Badge>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => addFile(file.file)}
+                              disabled={isLoading}
+                              title="Stage File"
+                              className="h-5 w-5 p-0"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => addFile(file.file)}
-                            disabled={isLoading}
-                            title="Stage File"
-                            className="h-5 w-5 p-0"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </ScrollArea>
@@ -363,38 +383,43 @@ const GitPanel: React.FC = () => {
             </CardHeader>
             <CardContent className="px-2">
               <ScrollArea className="h-64">
-                {status.filter(file => file.stage === 2).length === 0 ? (
+                {status.filter((file) => file.stage === 2).length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-2 text-center">
                     <p className="text-xs text-muted-foreground">No staged changes</p>
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {status.filter(file => file.stage === 2).map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-1 px-2 rounded-sm hover:bg-muted text-xs"
-                      >
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                          <div title="Staged">{getStatusIcon(file)}</div>
-                          <span className="font-mono truncate">{file.file}</span>
-                          <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                            Staged
-                          </Badge>
+                    {status
+                      .filter((file) => file.stage === 2)
+                      .map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between py-1 px-2 rounded-sm hover:bg-muted text-xs"
+                        >
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            <div title="Staged">{getStatusIcon(file)}</div>
+                            <span className="font-mono truncate">{file.file}</span>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                            >
+                              Staged
+                            </Badge>
+                          </div>
+                          <div className="flex">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => unstageFile(file.file)}
+                              disabled={isLoading}
+                              title="Unstage File"
+                              className="h-5 w-5 p-0"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => unstageFile(file.file)}
-                            disabled={isLoading}
-                            title="Unstage File"
-                            className="h-5 w-5 p-0"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </ScrollArea>
@@ -410,7 +435,9 @@ const GitPanel: React.FC = () => {
             </CardHeader>*/}
             <CardContent className="space-y-2 px-2">
               <div className="space-y-2">
-                <Label htmlFor="commit-message" className="text-xs">Commit Message</Label>
+                <Label htmlFor="commit-message" className="text-xs">
+                  Commit Message
+                </Label>
                 <Textarea
                   id="commit-message"
                   value={commitMessage}
@@ -422,14 +449,18 @@ const GitPanel: React.FC = () => {
               </div>
               <Button
                 onClick={handleCommit}
-                disabled={isLoading || !commitMessage.trim() || status.filter(file => file.stage === 2).length === 0}
+                disabled={
+                  isLoading ||
+                  !commitMessage.trim() ||
+                  status.filter((file) => file.stage === 2).length === 0
+                }
                 className="w-full h-7 text-xs"
               >
                 {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                 <GitCommit className="h-3 w-3 mr-1" />
                 Commit Changes
               </Button>
-              {status.filter(file => file.stage === 2).length === 0 && (
+              {status.filter((file) => file.stage === 2).length === 0 && (
                 <p className="text-[10px] text-center text-muted-foreground">
                   Stage changes before committing
                 </p>
@@ -452,11 +483,15 @@ const GitPanel: React.FC = () => {
                   <DialogContent className="max-w-xs">
                     <DialogHeader>
                       <DialogTitle className="text-sm">Create New Branch</DialogTitle>
-                      <DialogDescription className="text-xs">Enter a name for the new branch.</DialogDescription>
+                      <DialogDescription className="text-xs">
+                        Enter a name for the new branch.
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
                       <div>
-                        <Label htmlFor="branch-name" className="text-xs">Branch Name</Label>
+                        <Label htmlFor="branch-name" className="text-xs">
+                          Branch Name
+                        </Label>
                         <Input
                           id="branch-name"
                           value={newBranchName}
@@ -467,10 +502,18 @@ const GitPanel: React.FC = () => {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowBranchDialog(false)} className="h-7 text-xs">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowBranchDialog(false)}
+                        className="h-7 text-xs"
+                      >
                         Cancel
                       </Button>
-                      <Button onClick={handleCreateBranch} disabled={isLoading} className="h-7 text-xs">
+                      <Button
+                        onClick={handleCreateBranch}
+                        disabled={isLoading}
+                        className="h-7 text-xs"
+                      >
                         {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
                         Create
                       </Button>
@@ -522,10 +565,16 @@ const GitPanel: React.FC = () => {
                           >
                             <div className="flex items-center gap-1.5">
                               <GitBranch className="h-3 w-3" />
-                              <span className={`font-mono truncate ${branch.current ? 'font-bold' : ''}`}>
+                              <span
+                                className={`font-mono truncate ${branch.current ? 'font-bold' : ''}`}
+                              >
                                 {branch.name}
                               </span>
-                              {branch.current && <Badge variant="default" className="text-[10px] py-0 h-4">Current</Badge>}
+                              {branch.current && (
+                                <Badge variant="default" className="text-[10px] py-0 h-4">
+                                  Current
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex gap-0.5">
                               {!branch.current && (
@@ -545,7 +594,11 @@ const GitPanel: React.FC = () => {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete the branch "${branch.name}"?`)) {
+                                    if (
+                                      window.confirm(
+                                        `Are you sure you want to delete the branch "${branch.name}"?`,
+                                      )
+                                    ) {
                                       deleteBranch(branch.name);
                                     }
                                   }}
@@ -576,7 +629,6 @@ const GitPanel: React.FC = () => {
               )}
             </CardContent>
           </Card>
-
         </TabsContent>
 
         <TabsContent value="history" className="space-y-2 mt-2">
@@ -615,7 +667,6 @@ const GitPanel: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
 
       {/* Configuration Dialog */}
@@ -623,11 +674,15 @@ const GitPanel: React.FC = () => {
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle className="text-sm">Git Configuration</DialogTitle>
-            <DialogDescription className="text-xs">Configure your git user information.</DialogDescription>
+            <DialogDescription className="text-xs">
+              Configure your git user information.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className={'space-y-2'}>
-              <Label htmlFor="user-name" className="text-xs">Name</Label>
+              <Label htmlFor="user-name" className="text-xs">
+                Name
+              </Label>
               <Input
                 id="user-name"
                 value={userName}
@@ -637,7 +692,9 @@ const GitPanel: React.FC = () => {
               />
             </div>
             <div className={'space-y-2'}>
-              <Label htmlFor="user-email" className="text-xs">Email</Label>
+              <Label htmlFor="user-email" className="text-xs">
+                Email
+              </Label>
               <Input
                 id="user-email"
                 type="email"
@@ -649,14 +706,19 @@ const GitPanel: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfigDialog(false)} className="h-7 text-xs">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfigDialog(false)}
+              className="h-7 text-xs"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveConfig} className="h-7 text-xs">Save</Button>
+            <Button onClick={handleSaveConfig} className="h-7 text-xs">
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };

@@ -29,6 +29,6 @@ self.MonacoEnvironment = {
 
 // Configure the loader to use the specified Monaco instance
 loader.config({ monaco });
-loader.init().then(monaco => {})
+loader.init().then((monaco) => {});
 
 export { monaco };

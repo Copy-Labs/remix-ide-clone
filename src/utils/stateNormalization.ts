@@ -28,13 +28,11 @@ export interface NormalizedState {
  * @param entities Array of entities to normalize
  * @returns Normalized entities
  */
-export function normalizeEntities<T extends Entity>(
-  entities: T[]
-): NormalizedEntities<T> {
+export function normalizeEntities<T extends Entity>(entities: T[]): NormalizedEntities<T> {
   const byId: Record<string | number, T> = {};
   const allIds: Array<string | number> = [];
 
-  entities.forEach(entity => {
+  entities.forEach((entity) => {
     byId[entity.id] = { ...entity };
     allIds.push(entity.id);
   });
@@ -48,9 +46,9 @@ export function normalizeEntities<T extends Entity>(
  * @returns Array of entities
  */
 export function denormalizeEntities<T extends Entity>(
-  normalizedEntities: NormalizedEntities<T>
+  normalizedEntities: NormalizedEntities<T>,
 ): T[] {
-  return normalizedEntities.allIds.map(id => normalizedEntities.byId[id]);
+  return normalizedEntities.allIds.map((id) => normalizedEntities.byId[id]);
 }
 
 /**
@@ -61,7 +59,7 @@ export function denormalizeEntities<T extends Entity>(
  */
 export function addEntity<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  entity: T
+  entity: T,
 ): NormalizedEntities<T> {
   // Check if entity already exists
   const exists = normalizedEntities.allIds.includes(entity.id);
@@ -69,11 +67,9 @@ export function addEntity<T extends Entity>(
   return {
     byId: {
       ...normalizedEntities.byId,
-      [entity.id]: { ...entity }
+      [entity.id]: { ...entity },
     },
-    allIds: exists
-      ? normalizedEntities.allIds
-      : [...normalizedEntities.allIds, entity.id]
+    allIds: exists ? normalizedEntities.allIds : [...normalizedEntities.allIds, entity.id],
   };
 }
 
@@ -85,7 +81,7 @@ export function addEntity<T extends Entity>(
  */
 export function updateEntity<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  entity: Partial<T> & { id: string | number }
+  entity: Partial<T> & { id: string | number },
 ): NormalizedEntities<T> {
   // Check if entity exists
   if (!normalizedEntities.byId[entity.id]) {
@@ -99,9 +95,9 @@ export function updateEntity<T extends Entity>(
       ...normalizedEntities.byId,
       [entity.id]: {
         ...normalizedEntities.byId[entity.id],
-        ...entity
-      }
-    }
+        ...entity,
+      },
+    },
   };
 }
 
@@ -113,7 +109,7 @@ export function updateEntity<T extends Entity>(
  */
 export function removeEntity<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  id: string | number
+  id: string | number,
 ): NormalizedEntities<T> {
   // Check if entity exists
   if (!normalizedEntities.byId[id]) {
@@ -125,7 +121,7 @@ export function removeEntity<T extends Entity>(
 
   return {
     byId: restById,
-    allIds: normalizedEntities.allIds.filter(entityId => entityId !== id)
+    allIds: normalizedEntities.allIds.filter((entityId) => entityId !== id),
   };
 }
 
@@ -136,7 +132,7 @@ export function removeEntity<T extends Entity>(
 export function createEmptyNormalizedEntities<T extends Entity>(): NormalizedEntities<T> {
   return {
     byId: {},
-    allIds: []
+    allIds: [],
   };
 }
 
@@ -148,7 +144,7 @@ export function createEmptyNormalizedEntities<T extends Entity>(): NormalizedEnt
  */
 export function selectEntityById<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  id: string | number
+  id: string | number,
 ): T | undefined {
   return normalizedEntities.byId[id];
 }
@@ -161,11 +157,11 @@ export function selectEntityById<T extends Entity>(
  */
 export function selectEntitiesByIds<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  ids: Array<string | number>
+  ids: Array<string | number>,
 ): T[] {
   return ids
-    .map(id => normalizedEntities.byId[id])
-    .filter(entity => entity !== undefined) as T[];
+    .map((id) => normalizedEntities.byId[id])
+    .filter((entity) => entity !== undefined) as T[];
 }
 
 /**
@@ -174,7 +170,7 @@ export function selectEntitiesByIds<T extends Entity>(
  * @returns Array of all entities
  */
 export function selectAllEntities<T extends Entity>(
-  normalizedEntities: NormalizedEntities<T>
+  normalizedEntities: NormalizedEntities<T>,
 ): T[] {
   return denormalizeEntities(normalizedEntities);
 }
@@ -187,7 +183,7 @@ export function selectAllEntities<T extends Entity>(
  */
 export function filterEntities<T extends Entity>(
   normalizedEntities: NormalizedEntities<T>,
-  predicate: (entity: T) => boolean
+  predicate: (entity: T) => boolean,
 ): T[] {
   return selectAllEntities(normalizedEntities).filter(predicate);
 }

@@ -197,7 +197,7 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
 
             // Create a map of saved plugin states for quick lookup
             const savedPluginStates = new Map(
-              savedPlugins.map((plugin: any) => [plugin.id, plugin])
+              savedPlugins.map((plugin: any) => [plugin.id, plugin]),
             );
 
             // Update existing plugins with saved states
@@ -212,7 +212,10 @@ export const usePluginStore = create<PluginState & PluginStoreActions>()(
               });
             });
 
-            info('PluginStore', `Loaded states for ${savedPlugins.length} plugins from localStorage`);
+            info(
+              'PluginStore',
+              `Loaded states for ${savedPlugins.length} plugins from localStorage`,
+            );
           }
 
           if (savedActivePluginsStr) {

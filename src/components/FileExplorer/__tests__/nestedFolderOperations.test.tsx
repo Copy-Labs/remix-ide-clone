@@ -66,7 +66,7 @@ const mockStore = {
   }),
 
   closeFile: vi.fn((path: string) => {
-    mockStore.openTabs = mockStore.openTabs.filter(tab => tab !== path);
+    mockStore.openTabs = mockStore.openTabs.filter((tab) => tab !== path);
     if (mockStore.activeFile === path) {
       mockStore.activeFile = mockStore.openTabs[0] || null;
     }
@@ -153,7 +153,10 @@ describe('FileExplorer Nested Folder Operations', () => {
       // Create files in nested folders
       await mockStore.createFile('/src/index.js', 'console.log("main");');
       await mockStore.createFile('/src/components/App.jsx', 'export const App = () => {};');
-      await mockStore.createFile('/src/components/ui/Button.tsx', 'export const Button = () => {};');
+      await mockStore.createFile(
+        '/src/components/ui/Button.tsx',
+        'export const Button = () => {};',
+      );
 
       // Verify files were created with correct properties
       expect(mockStore.files.has('/src/index.js')).toBe(true);
@@ -183,7 +186,7 @@ describe('FileExplorer Nested Folder Operations', () => {
         '/project/src/components',
         '/project/src/components/forms',
         '/project/src/components/forms/inputs',
-        '/project/src/components/forms/inputs/validation'
+        '/project/src/components/forms/inputs/validation',
       ];
 
       for (const path of paths) {
@@ -191,7 +194,7 @@ describe('FileExplorer Nested Folder Operations', () => {
       }
 
       // Verify all folders exist
-      paths.forEach(path => {
+      paths.forEach((path) => {
         expect(mockStore.files.has(path)).toBe(true);
         const folder = mockStore.files.get(path);
         expect(folder?.type).toBe('folder');
@@ -201,9 +204,15 @@ describe('FileExplorer Nested Folder Operations', () => {
       expect(mockStore.files.get('/project')?.parent).toBe('/');
       expect(mockStore.files.get('/project/src')?.parent).toBe('/project');
       expect(mockStore.files.get('/project/src/components')?.parent).toBe('/project/src');
-      expect(mockStore.files.get('/project/src/components/forms')?.parent).toBe('/project/src/components');
-      expect(mockStore.files.get('/project/src/components/forms/inputs')?.parent).toBe('/project/src/components/forms');
-      expect(mockStore.files.get('/project/src/components/forms/inputs/validation')?.parent).toBe('/project/src/components/forms/inputs');
+      expect(mockStore.files.get('/project/src/components/forms')?.parent).toBe(
+        '/project/src/components',
+      );
+      expect(mockStore.files.get('/project/src/components/forms/inputs')?.parent).toBe(
+        '/project/src/components/forms',
+      );
+      expect(mockStore.files.get('/project/src/components/forms/inputs/validation')?.parent).toBe(
+        '/project/src/components/forms/inputs',
+      );
     });
 
     it('should create Solidity files in nested contract folders', async () => {
@@ -214,14 +223,20 @@ describe('FileExplorer Nested Folder Operations', () => {
       await mockStore.createFolder('/contracts/utils');
 
       // Create Solidity files
-      await mockStore.createFile('/contracts/tokens/ERC20Token.sol',
-        'pragma solidity ^0.8.0;\n\ncontract ERC20Token {\n    // Token implementation\n}');
+      await mockStore.createFile(
+        '/contracts/tokens/ERC20Token.sol',
+        'pragma solidity ^0.8.0;\n\ncontract ERC20Token {\n    // Token implementation\n}',
+      );
 
-      await mockStore.createFile('/contracts/governance/Governor.sol',
-        'pragma solidity ^0.8.0;\n\ncontract Governor {\n    // Governance implementation\n}');
+      await mockStore.createFile(
+        '/contracts/governance/Governor.sol',
+        'pragma solidity ^0.8.0;\n\ncontract Governor {\n    // Governance implementation\n}',
+      );
 
-      await mockStore.createFile('/contracts/utils/SafeMath.sol',
-        'pragma solidity ^0.8.0;\n\nlibrary SafeMath {\n    // Math utilities\n}');
+      await mockStore.createFile(
+        '/contracts/utils/SafeMath.sol',
+        'pragma solidity ^0.8.0;\n\nlibrary SafeMath {\n    // Math utilities\n}',
+      );
 
       // Verify all files exist
       expect(mockStore.files.has('/contracts/tokens/ERC20Token.sol')).toBe(true);
@@ -350,7 +365,10 @@ describe('FileExplorer Nested Folder Operations', () => {
       // Create files in these folders
       await mockStore.createFile('/my-project/config-file.json', '{}');
       await mockStore.createFile('/my-project/src_files/index_main.js', 'export {};');
-      await mockStore.createFile('/my-project/src_files/components.v2/Button-v2.tsx', 'export const Button = () => {};');
+      await mockStore.createFile(
+        '/my-project/src_files/components.v2/Button-v2.tsx',
+        'export const Button = () => {};',
+      );
 
       // Verify all items exist
       expect(mockStore.files.has('/my-project')).toBe(true);
@@ -367,18 +385,18 @@ describe('FileExplorer Nested Folder Operations', () => {
       expect(initialCount).toBe(0);
 
       // Create nested structure
-      await mockStore.createFolder('/src');                    // +1
-      await mockStore.createFolder('/src/components');         // +1
-      await mockStore.createFile('/src/index.js', 'content');  // +1
+      await mockStore.createFolder('/src'); // +1
+      await mockStore.createFolder('/src/components'); // +1
+      await mockStore.createFile('/src/index.js', 'content'); // +1
       await mockStore.createFile('/src/components/App.jsx', 'content'); // +1
 
       // Verify count
       expect(mockStore.files.size).toBe(4);
 
       // Create more nested items
-      await mockStore.createFolder('/src/utils');              // +1
+      await mockStore.createFolder('/src/utils'); // +1
       await mockStore.createFile('/src/utils/helper.js', 'content'); // +1
-      await mockStore.createFolder('/tests');                  // +1
+      await mockStore.createFolder('/tests'); // +1
       await mockStore.createFile('/tests/app.test.js', 'content'); // +1
 
       // Verify final count

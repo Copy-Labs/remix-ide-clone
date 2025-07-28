@@ -359,7 +359,10 @@ export type FileSystemAction =
   | { type: 'TOGGLE_FOLDER'; payload: { path: string } };
 
 export type EditorAction =
-  | { type: 'REGISTER_EDITOR'; payload: { fileId: string; editor: monaco.editor.IStandaloneCodeEditor } }
+  | {
+      type: 'REGISTER_EDITOR';
+      payload: { fileId: string; editor: monaco.editor.IStandaloneCodeEditor };
+    }
   | { type: 'UPDATE_EDITOR_SETTINGS'; payload: Partial<EditorSettings> }
   | { type: 'SET_THEME'; payload: { theme: 'light' | 'dark' | 'auto' } };
 

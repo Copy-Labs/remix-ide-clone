@@ -19,7 +19,7 @@ export const testingPlugin: Omit<Plugin, 'api'> = {
     showCoverage: true,
     testTimeout: 5000,
     testFramework: 'mocha', // mocha, truffle, hardhat
-  }
+  },
 };
 
 /**
@@ -185,17 +185,17 @@ contract("${contractName}", accounts => {
         passed: Math.random() > 0.3, // 70% chance of passing
         duration: Math.floor(Math.random() * 200),
         gasUsed: Math.floor(Math.random() * 200000),
-      }
+      },
     ];
 
     // Add error message to failed tests
-    tests.forEach(test => {
+    tests.forEach((test) => {
       if (!test.passed) {
         test.error = 'Assertion failed: expected value did not match actual value';
       }
     });
 
-    const passed = tests.filter(t => t.passed).length;
+    const passed = tests.filter((t) => t.passed).length;
     const failed = tests.length - passed;
     const duration = Date.now() - startTime;
 
@@ -263,10 +263,18 @@ contract("${contractName}", accounts => {
     };
 
     // Calculate percentages
-    coverageData.lines.percentage = Math.round((coverageData.lines.covered / coverageData.lines.total) * 100);
-    coverageData.functions.percentage = Math.round((coverageData.functions.covered / coverageData.functions.total) * 100);
-    coverageData.branches.percentage = Math.round((coverageData.branches.covered / coverageData.branches.total) * 100);
-    coverageData.statements.percentage = Math.round((coverageData.statements.covered / coverageData.statements.total) * 100);
+    coverageData.lines.percentage = Math.round(
+      (coverageData.lines.covered / coverageData.lines.total) * 100,
+    );
+    coverageData.functions.percentage = Math.round(
+      (coverageData.functions.covered / coverageData.functions.total) * 100,
+    );
+    coverageData.branches.percentage = Math.round(
+      (coverageData.branches.covered / coverageData.branches.total) * 100,
+    );
+    coverageData.statements.percentage = Math.round(
+      (coverageData.statements.covered / coverageData.statements.total) * 100,
+    );
 
     this.coverageData.set(contractName, coverageData);
   }

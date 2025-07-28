@@ -71,7 +71,7 @@ export const deploymentPlugin: Omit<Plugin, 'api'> = {
       polygonscan: '',
     },
     deploymentScripts: [],
-  }
+  },
 };
 
 /**
@@ -133,7 +133,7 @@ export class DeploymentPluginImplementation {
    * Get available networks
    */
   getNetworks(): Network[] {
-    return this.config.networks.filter(n => n.enabled);
+    return this.config.networks.filter((n) => n.enabled);
   }
 
   /**
@@ -141,7 +141,7 @@ export class DeploymentPluginImplementation {
    * @param networkId Network ID
    */
   getNetwork(networkId: string): Network | undefined {
-    return this.config.networks.find(n => n.id === networkId);
+    return this.config.networks.find((n) => n.id === networkId);
   }
 
   /**
@@ -149,7 +149,7 @@ export class DeploymentPluginImplementation {
    * @param network Network configuration
    */
   addNetwork(network: Network): boolean {
-    if (this.config.networks.some(n => n.id === network.id)) {
+    if (this.config.networks.some((n) => n.id === network.id)) {
       console.error(`Network with ID ${network.id} already exists`);
       return false;
     }
@@ -165,7 +165,7 @@ export class DeploymentPluginImplementation {
    * @param updates Network updates
    */
   updateNetwork(networkId: string, updates: Partial<Network>): boolean {
-    const index = this.config.networks.findIndex(n => n.id === networkId);
+    const index = this.config.networks.findIndex((n) => n.id === networkId);
     if (index === -1) {
       console.error(`Network with ID ${networkId} not found`);
       return false;
@@ -181,7 +181,7 @@ export class DeploymentPluginImplementation {
    * @param networkId Network ID
    */
   removeNetwork(networkId: string): boolean {
-    const index = this.config.networks.findIndex(n => n.id === networkId);
+    const index = this.config.networks.findIndex((n) => n.id === networkId);
     if (index === -1) {
       console.error(`Network with ID ${networkId} not found`);
       return false;
@@ -204,7 +204,7 @@ export class DeploymentPluginImplementation {
    * @param networkId Network ID
    */
   setDefaultNetwork(networkId: string): boolean {
-    if (!this.config.networks.some(n => n.id === networkId)) {
+    if (!this.config.networks.some((n) => n.id === networkId)) {
       console.error(`Network with ID ${networkId} not found`);
       return false;
     }
@@ -226,7 +226,7 @@ export class DeploymentPluginImplementation {
    * @param script Deployment script
    */
   addDeploymentScript(script: DeploymentScript): boolean {
-    if (this.config.deploymentScripts.some(s => s.id === script.id)) {
+    if (this.config.deploymentScripts.some((s) => s.id === script.id)) {
       console.error(`Deployment script with ID ${script.id} already exists`);
       return false;
     }
@@ -242,14 +242,16 @@ export class DeploymentPluginImplementation {
    * @param updates Script updates
    */
   updateDeploymentScript(scriptId: string, updates: Partial<DeploymentScript>): boolean {
-    const index = this.config.deploymentScripts.findIndex(s => s.id === scriptId);
+    const index = this.config.deploymentScripts.findIndex((s) => s.id === scriptId);
     if (index === -1) {
       console.error(`Deployment script with ID ${scriptId} not found`);
       return false;
     }
 
     this.config.deploymentScripts[index] = { ...this.config.deploymentScripts[index], ...updates };
-    console.log(`Updated deployment script: ${this.config.deploymentScripts[index].name} (${scriptId})`);
+    console.log(
+      `Updated deployment script: ${this.config.deploymentScripts[index].name} (${scriptId})`,
+    );
     return true;
   }
 
@@ -258,7 +260,7 @@ export class DeploymentPluginImplementation {
    * @param scriptId Script ID
    */
   removeDeploymentScript(scriptId: string): boolean {
-    const index = this.config.deploymentScripts.findIndex(s => s.id === scriptId);
+    const index = this.config.deploymentScripts.findIndex((s) => s.id === scriptId);
     if (index === -1) {
       console.error(`Deployment script with ID ${scriptId} not found`);
       return false;
@@ -284,7 +286,7 @@ export class DeploymentPluginImplementation {
     bytecode: string,
     abi: any[],
     constructorArgs: any[] = [],
-    networkId?: string
+    networkId?: string,
   ): Promise<DeploymentResult> {
     const targetNetworkId = networkId || this.config.defaultNetwork;
     const network = this.getNetwork(targetNetworkId);
@@ -307,7 +309,7 @@ export class DeploymentPluginImplementation {
       // This is a mock implementation that simulates deployment
 
       // Simulate deployment delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Generate a random address and transaction hash
       const address = `0x${Math.random().toString(16).substring(2, 42).padStart(40, '0')}`;
@@ -356,7 +358,7 @@ export class DeploymentPluginImplementation {
    * @param scriptId Script ID
    */
   async runDeploymentScript(scriptId: string): Promise<DeploymentResult[]> {
-    const script = this.config.deploymentScripts.find(s => s.id === scriptId);
+    const script = this.config.deploymentScripts.find((s) => s.id === scriptId);
     if (!script) {
       console.error(`Deployment script with ID ${scriptId} not found`);
       return [];
@@ -370,15 +372,31 @@ export class DeploymentPluginImplementation {
     for (const networkId of script.networks) {
       // In a real implementation, this would compile the contract and get the bytecode and ABI
       // This is a mock implementation that simulates deployment
-      const mockBytecode = '0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b60405161005091906100d9565b60405180910390f35b610073600480360381019061006e919061009d565b61007e565b005b60008054905090565b8060008190555050565b60008135905061009781610103565b92915050565b6000602082840312156100b3576100b26100fe565b5b60006100c184828501610088565b91505092915050565b6100d3816100f4565b82525050565b60006020820190506100ee60008301846100ca565b92915050565b6000819050919050565b600080fd5b61010c816100f4565b811461011757600080fd5b5056fea2646970667358221220223b76b2a4b83584962b3155b370beb66a7a7d6869dd947e2a7c8a6b0ffa58d364736f6c63430008070033';
-      const mockAbi = [{"inputs":[],"name":"retrieve","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"num","type":"uint256"}],"name":"store","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+      const mockBytecode =
+        '0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b60405161005091906100d9565b60405180910390f35b610073600480360381019061006e919061009d565b61007e565b005b60008054905090565b8060008190555050565b60008135905061009781610103565b92915050565b6000602082840312156100b3576100b26100fe565b5b60006100c184828501610088565b91505092915050565b6100d3816100f4565b82525050565b60006020820190506100ee60008301846100ca565b92915050565b6000819050919050565b600080fd5b61010c816100f4565b811461011757600080fd5b5056fea2646970667358221220223b76b2a4b83584962b3155b370beb66a7a7d6869dd947e2a7c8a6b0ffa58d364736f6c63430008070033';
+      const mockAbi = [
+        {
+          inputs: [],
+          name: 'retrieve',
+          outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [{ internalType: 'uint256', name: 'num', type: 'uint256' }],
+          name: 'store',
+          outputs: [],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+      ];
 
       const result = await this.deployContract(
         script.contractName,
         mockBytecode,
         mockAbi,
         script.constructorArgs,
-        networkId
+        networkId,
       );
 
       results.push(result);
@@ -410,7 +428,7 @@ export class DeploymentPluginImplementation {
     // This is a mock implementation that simulates verification
 
     // Simulate verification delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // 90% chance of successful verification
     const success = Math.random() > 0.1;

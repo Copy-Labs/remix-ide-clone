@@ -140,8 +140,8 @@ describe('GitHubService', () => {
         data: repos,
         headers: {
           link: '<https://api.github.com/user/repos?page=2>; rel="next"',
-          'x-total-count': '10'
-        }
+          'x-total-count': '10',
+        },
       });
 
       const result = await service.listRepositories();
@@ -155,7 +155,7 @@ describe('GitHubService', () => {
       expect(result).toEqual({
         repositories: repos,
         hasNextPage: true,
-        totalCount: 10
+        totalCount: 10,
       });
     });
 
@@ -173,9 +173,9 @@ describe('GitHubService', () => {
       mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
         data: repos,
         headers: {
-          link: '',  // No next page
-          'x-total-count': '4'
-        }
+          link: '', // No next page
+          'x-total-count': '4',
+        },
       });
 
       const result = await service.listRepositories(2, 2);
@@ -189,7 +189,7 @@ describe('GitHubService', () => {
       expect(result).toEqual({
         repositories: repos,
         hasNextPage: false,
-        totalCount: 4
+        totalCount: 4,
       });
     });
 
@@ -209,7 +209,9 @@ describe('GitHubService', () => {
 
   describe('createRepository', () => {
     it('should throw error when not authenticated', async () => {
-      await expect(service.createRepository('new-repo')).rejects.toThrow('Not authenticated with GitHub');
+      await expect(service.createRepository('new-repo')).rejects.toThrow(
+        'Not authenticated with GitHub',
+      );
     });
 
     it('should create public repository when authenticated', async () => {
@@ -277,20 +279,20 @@ describe('GitHubService', () => {
 
   describe('browser environment limitations', () => {
     it('should throw error when trying to clone repository', async () => {
-      await expect(service.cloneRepository('https://github.com/user/repo.git', '/path')).rejects.toThrow(
-        'Cloning repositories is not supported in browser environments'
-      );
+      await expect(
+        service.cloneRepository('https://github.com/user/repo.git', '/path'),
+      ).rejects.toThrow('Cloning repositories is not supported in browser environments');
     });
 
     it('should throw error when trying to push to repository', async () => {
       await expect(service.pushToRepository('origin', 'main')).rejects.toThrow(
-        'Pushing to repositories is not supported in browser environments'
+        'Pushing to repositories is not supported in browser environments',
       );
     });
 
     it('should throw error when trying to pull from repository', async () => {
       await expect(service.pullFromRepository('origin', 'main')).rejects.toThrow(
-        'Pulling from repositories is not supported in browser environments'
+        'Pulling from repositories is not supported in browser environments',
       );
     });
   });

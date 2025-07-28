@@ -1,11 +1,10 @@
 // import { Compiler } from '@remix-project/remix-solidity';
 import * as RemixSolidity from '@remix-project/remix-solidity';
-import type {CompilationResult, CompiledContract, CompilerError, CompilerWarning} from '@/types';
-
+import type { CompilationResult, CompiledContract, CompilerError, CompilerWarning } from '@/types';
 
 /*
-* DO NOT USE THIS CODE
-* */
+ * DO NOT USE THIS CODE
+ * */
 export class CompilerService {
   private static instance: CompilerService;
   private currentVersion: string = '0.8.30';
@@ -38,14 +37,14 @@ export class CompilerService {
         settings: {
           outputSelection: {
             '*': {
-              '*': ['*']
-            }
+              '*': ['*'],
+            },
           },
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
+            runs: 200,
+          },
+        },
       };
 
       // Compile using remix-solidity compiler
@@ -57,21 +56,23 @@ export class CompilerService {
       console.error('Compilation error:', error);
       return {
         success: false,
-        errors: [{
-          severity: 'error',
-          message: error instanceof Error ? error.message : 'Unknown compilation error',
-          sourceLocation: {
-            file: '',
-            start: 0,
-            end: 0
+        errors: [
+          {
+            severity: 'error',
+            message: error instanceof Error ? error.message : 'Unknown compilation error',
+            sourceLocation: {
+              file: '',
+              start: 0,
+              end: 0,
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0000',
           },
-          type: 'CompilerError',
-          component: 'general',
-          errorCode: '0000'
-        }],
+        ],
         warnings: [],
         contracts: {},
-        sources: {}
+        sources: {},
       };
     }
   }
@@ -83,7 +84,7 @@ export class CompilerService {
     try {
       // Get compiler versions from remix-solidity
       const versions = await this.compiler.getCompilersFromUrl();
-      return versions.map(v => v.version);
+      return versions.map((v) => v.version);
     } catch (error) {
       console.error('Failed to get compiler versions:', error);
       // Fallback to hardcoded versions if API fails
@@ -98,7 +99,7 @@ export class CompilerService {
         '0.8.23',
         '0.8.22',
         '0.8.21',
-        '0.8.20'
+        '0.8.20',
       ];
     }
   }
@@ -138,7 +139,7 @@ export class CompilerService {
     // Basic validation
     if (!source.trim()) {
       errors.push('Source code is empty');
-      return {isValid: false, errors};
+      return { isValid: false, errors };
     }
 
     // Check for pragma directive
@@ -157,7 +158,7 @@ export class CompilerService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -203,7 +204,7 @@ export class CompilerService {
     for (const [path, content] of Object.entries(sources)) {
       // Remove leading slash if present
       const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
-      prepared[normalizedPath] = {content};
+      prepared[normalizedPath] = { content };
     }
 
     return prepared;
@@ -212,7 +213,10 @@ export class CompilerService {
   /**
    * Process compilation output from compiler
    */
-  private processCompilationOutput(output: any, originalSources: Record<string, string>): CompilationResult {
+  private processCompilationOutput(
+    output: any,
+    originalSources: Record<string, string>,
+  ): CompilationResult {
     const errors: CompilerError[] = [];
     const warnings: CompilerWarning[] = [];
     const contracts: Record<string, CompiledContract> = {};
@@ -231,7 +235,9 @@ export class CompilerService {
     // Process contracts
     if (output.contracts) {
       for (const [fileName, fileContracts] of Object.entries(output.contracts)) {
-        for (const [contractName, contractData] of Object.entries(fileContracts as Record<string, any>)) {
+        for (const [contractName, contractData] of Object.entries(
+          fileContracts as Record<string, any>,
+        )) {
           contracts[contractName] = this.parseContract(contractName, contractData, fileName);
         }
       }
@@ -242,7 +248,7 @@ export class CompilerService {
       errors,
       warnings,
       contracts,
-      sources: originalSources
+      sources: originalSources,
     };
   }
 
@@ -256,7 +262,7 @@ export class CompilerService {
       sourceLocation: this.parseSourceLocation(error.sourceLocation),
       type: error.type || 'CompilerError',
       component: error.component || 'general',
-      errorCode: error.errorCode || '0000'
+      errorCode: error.errorCode || '0000',
     };
   }
 
@@ -269,7 +275,7 @@ export class CompilerService {
       message: warning.message || 'Unknown warning',
       sourceLocation: this.parseSourceLocation(warning.sourceLocation),
       type: warning.type || 'CompilerWarning',
-      component: warning.component || 'general'
+      component: warning.component || 'general',
     };
   }
 
@@ -281,14 +287,14 @@ export class CompilerService {
       return {
         file: '',
         start: 0,
-        end: 0
+        end: 0,
       };
     }
 
     return {
       file: sourceLocation.file || '',
       start: sourceLocation.start || 0,
-      end: sourceLocation.end || 0
+      end: sourceLocation.end || 0,
     };
   }
 
@@ -310,7 +316,7 @@ export class CompilerService {
       gasEstimates: contractData.evm?.gasEstimates || {},
       metadata: contractData.metadata || '',
       devdoc: contractData.devdoc || {},
-      userdoc: contractData.userdoc || {}
+      userdoc: contractData.userdoc || {},
     };
   }
 }

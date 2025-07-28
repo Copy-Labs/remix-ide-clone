@@ -18,17 +18,53 @@ const GitStatusIndicator: React.FC<{ filePath: string }> = ({ filePath }) => {
 
   if (!isInitialized || !status || status.length === 0) return null;
 
-  const fileStatus = status.find(item => item.file === filePath);
+  const fileStatus = status.find((item) => item.file === filePath);
   if (!fileStatus) return null;
 
   const getStatusInfo = (head: number, workdir: number, stage: number) => {
     // VSCode-like status indicators with improved logic
-    if (stage === 2 && head === 0) return { label: 'A', color: 'text-green-500 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', tooltip: 'Added (Staged)' };
-    if (stage === 2 && head === 1 && workdir === 1) return { label: 'M', color: 'text-green-500 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', tooltip: 'Modified (Staged)' };
-    if (workdir === 2 && head === 1) return { label: 'M', color: 'text-orange-500 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/30', tooltip: 'Modified' };
-    if (workdir === 0 && head === 1) return { label: 'D', color: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', tooltip: 'Deleted' };
-    if (workdir === 2 && head === 0) return { label: 'U', color: 'text-blue-500 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', tooltip: 'Untracked' };
-    if (stage === 0 && head === 1) return { label: 'D', color: 'text-red-500 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', tooltip: 'Deleted (Staged)' };
+    if (stage === 2 && head === 0)
+      return {
+        label: 'A',
+        color: 'text-green-500 dark:text-green-400',
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        tooltip: 'Added (Staged)',
+      };
+    if (stage === 2 && head === 1 && workdir === 1)
+      return {
+        label: 'M',
+        color: 'text-green-500 dark:text-green-400',
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        tooltip: 'Modified (Staged)',
+      };
+    if (workdir === 2 && head === 1)
+      return {
+        label: 'M',
+        color: 'text-orange-500 dark:text-orange-400',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+        tooltip: 'Modified',
+      };
+    if (workdir === 0 && head === 1)
+      return {
+        label: 'D',
+        color: 'text-red-500 dark:text-red-400',
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        tooltip: 'Deleted',
+      };
+    if (workdir === 2 && head === 0)
+      return {
+        label: 'U',
+        color: 'text-blue-500 dark:text-blue-400',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        tooltip: 'Untracked',
+      };
+    if (stage === 0 && head === 1)
+      return {
+        label: 'D',
+        color: 'text-red-500 dark:text-red-400',
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        tooltip: 'Deleted (Staged)',
+      };
     return null;
   };
 
@@ -39,7 +75,9 @@ const GitStatusIndicator: React.FC<{ filePath: string }> = ({ filePath }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold rounded-sm ${statusInfo.color} ${statusInfo.bgColor} border border-current/20`}>
+          <span
+            className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold rounded-sm ${statusInfo.color} ${statusInfo.bgColor} border border-current/20`}
+          >
             {statusInfo.label}
           </span>
         </TooltipTrigger>
@@ -159,7 +197,9 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
               onChange={handleRenameChange}
               onBlur={() => setIsRenaming(false)}
               onKeyDown={handleRenameKeyDown}
-              className={'!text-xs h-6 border-0 ring-0 px-3 outline-none focus:ring-0 focus-visible:ring-1 focus-visible:ring-blue-600 !focus-visible:bg-background'}
+              className={
+                '!text-xs h-6 border-0 ring-0 px-3 outline-none focus:ring-0 focus-visible:ring-1 focus-visible:ring-blue-600 !focus-visible:bg-background'
+              }
               // className="text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               autoFocus
             />

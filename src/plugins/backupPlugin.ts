@@ -25,13 +25,9 @@ export const backupPlugin: Omit<Plugin, 'api'> = {
       customEndpoint: '',
       authToken: '',
     },
-    excludedFiles: [
-      '**/.git/**',
-      '**/node_modules/**',
-      '**/.DS_Store',
-    ],
+    excludedFiles: ['**/.git/**', '**/node_modules/**', '**/.DS_Store'],
     backupOnSave: true,
-  }
+  },
 };
 
 /**
@@ -157,9 +153,12 @@ export class BackupPluginImplementation {
       clearInterval(this.backupInterval);
     }
 
-    this.backupInterval = setInterval(() => {
-      this.createBackup(`Auto-backup ${new Date().toLocaleString()}`);
-    }, this.config.backupInterval * 60 * 1000);
+    this.backupInterval = setInterval(
+      () => {
+        this.createBackup(`Auto-backup ${new Date().toLocaleString()}`);
+      },
+      this.config.backupInterval * 60 * 1000,
+    );
 
     console.log(`Auto-backup started with interval of ${this.config.backupInterval} minutes`);
   }
@@ -183,9 +182,12 @@ export class BackupPluginImplementation {
       clearInterval(this.syncInterval);
     }
 
-    this.syncInterval = setInterval(() => {
-      this.syncWithCloud();
-    }, this.config.cloudSync.syncInterval * 60 * 1000);
+    this.syncInterval = setInterval(
+      () => {
+        this.syncWithCloud();
+      },
+      this.config.cloudSync.syncInterval * 60 * 1000,
+    );
 
     console.log(`Auto-sync started with interval of ${this.config.cloudSync.syncInterval} minutes`);
   }
@@ -238,11 +240,14 @@ export class BackupPluginImplementation {
 
     // Limit the number of local backups
     if (this.config.maxLocalBackups > 0) {
-      const localBackups = this.backups.filter(b => b.location === 'local');
+      const localBackups = this.backups.filter((b) => b.location === 'local');
       if (localBackups.length > this.config.maxLocalBackups) {
         // Sort by timestamp (oldest first) and remove excess backups
         const sortedBackups = [...localBackups].sort((a, b) => a.timestamp - b.timestamp);
-        const backupsToRemove = sortedBackups.slice(0, localBackups.length - this.config.maxLocalBackups);
+        const backupsToRemove = sortedBackups.slice(
+          0,
+          localBackups.length - this.config.maxLocalBackups,
+        );
 
         for (const backupToRemove of backupsToRemove) {
           await this.deleteBackup(backupToRemove.id);
@@ -271,7 +276,7 @@ export class BackupPluginImplementation {
    * @param backupId Backup ID
    */
   getBackup(backupId: string): Backup | undefined {
-    return this.backups.find(b => b.id === backupId);
+    return this.backups.find((b) => b.id === backupId);
   }
 
   /**
@@ -279,7 +284,7 @@ export class BackupPluginImplementation {
    * @param backupId Backup ID
    */
   async deleteBackup(backupId: string): Promise<boolean> {
-    const index = this.backups.findIndex(b => b.id === backupId);
+    const index = this.backups.findIndex((b) => b.id === backupId);
     if (index === -1) {
       console.error(`Backup ${backupId} not found`);
       return false;
@@ -321,7 +326,7 @@ export class BackupPluginImplementation {
     // This is a mock implementation that simulates backup restoration
 
     // Simulate restoration delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     console.log(`Restored backup: ${backup.name} (${backupId})`);
     return true;
@@ -344,7 +349,7 @@ export class BackupPluginImplementation {
     // This is a mock implementation that simulates backup export
 
     // Simulate export delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Return a mock download URL
     const downloadUrl = `data:application/zip;base64,UEsDBBQAAAAAAA==`;
@@ -365,7 +370,7 @@ export class BackupPluginImplementation {
     // This is a mock implementation that simulates backup import
 
     // Simulate import delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Create a new backup with the imported data
     const backup = await this.createBackup(name);
@@ -399,7 +404,7 @@ export class BackupPluginImplementation {
       // This is a mock implementation that simulates cloud sync
 
       // Simulate sync delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Update sync status
       this.syncStatus.lastSync = Date.now();
@@ -431,7 +436,7 @@ export class BackupPluginImplementation {
    * @param providerId Provider ID
    */
   async setCloudProvider(providerId: string): Promise<boolean> {
-    const provider = this.cloudProviders.find(p => p.id === providerId);
+    const provider = this.cloudProviders.find((p) => p.id === providerId);
     if (!provider) {
       console.error(`Cloud provider ${providerId} not found`);
       return false;
@@ -460,7 +465,7 @@ export class BackupPluginImplementation {
    * @param authData Authentication data
    */
   async authenticateWithProvider(providerId: string, authData: any): Promise<boolean> {
-    const provider = this.cloudProviders.find(p => p.id === providerId);
+    const provider = this.cloudProviders.find((p) => p.id === providerId);
     if (!provider) {
       console.error(`Cloud provider ${providerId} not found`);
       return false;
@@ -472,7 +477,7 @@ export class BackupPluginImplementation {
     // This is a mock implementation that simulates authentication
 
     // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Update config
     this.config.cloudSync.provider = providerId;
@@ -518,7 +523,10 @@ export class BackupPluginImplementation {
     console.log('Updated backup configuration');
 
     // Restart auto-backup if settings changed
-    if (this.config.autoBackup !== oldAutoBackup || this.config.backupInterval !== oldBackupInterval) {
+    if (
+      this.config.autoBackup !== oldAutoBackup ||
+      this.config.backupInterval !== oldBackupInterval
+    ) {
       if (this.config.autoBackup) {
         this.startAutoBackup();
       } else {

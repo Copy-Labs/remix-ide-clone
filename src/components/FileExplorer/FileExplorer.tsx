@@ -7,6 +7,9 @@ import FileExplorerHeader from './FileExplorerHeader';
 import ContextMenu, { type ClipboardItem } from './ContextMenu';
 import { FileTypeIcon } from './FileTypeIcons';
 import { Input } from '@/components/ui/input.tsx';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import InlineHunkStager from '@/components/Git/InlineHunkStager';
+import { toast } from 'sonner';
 
 interface FileExplorerProps {
   className?: string;
@@ -30,13 +33,17 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     refreshFolders,
   } = useFileStore();
 
-  const { isInitialized, getStatus } = useGitStore();
+  const { isInitialized, getStatus, status, addFile, unstageFile, getFileHistory, getFileDiff } =
+    useGitStore();
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     file: FileNode | null;
   } | null>(null);
+
+  // State for Git-related dialogs
+  const [hunkStagerFile, setHunkStagerFile] = useState<string | null>(null);
 
   const [isCreating, setIsCreating] = useState<{
     type: 'file' | 'folder';
@@ -288,7 +295,75 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
   const handleRefresh = useCallback(() => {
     // Force re-render using the store method
     refreshFolders();
-  }, [refreshFolders]);
+
+    // Also refresh Git status if initialized
+    if (isInitialized) {
+      getStatus();
+    }
+  }, [refreshFolders, isInitialized, getStatus]);
+
+  // Git operation handlers
+  const handleStageFile = useCallback(
+    (filePath: string) => {
+      try {
+        addFile(filePath);
+        toast.success(`Staged: ${filePath}`);
+      } catch (error) {
+        toast.error(
+          `Failed to stage file: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    [addFile],
+  );
+
+  const handleUnstageFile = useCallback(
+    (filePath: string) => {
+      try {
+        unstageFile(filePath);
+        toast.success(`Unstaged: ${filePath}`);
+      } catch (error) {
+        toast.error(
+          `Failed to unstage file: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    [unstageFile],
+  );
+
+  const handleViewFileHistory = useCallback(
+    (filePath: string) => {
+      try {
+        getFileHistory(filePath);
+        toast.info(`Viewing history for: ${filePath}`);
+        // In a real implementation, this would open a dialog or navigate to a history view
+      } catch (error) {
+        toast.error(
+          `Failed to get file history: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    [getFileHistory],
+  );
+
+  const handleViewFileDiff = useCallback(
+    (filePath: string) => {
+      try {
+        getFileDiff(filePath);
+        toast.info(`Viewing changes for: ${filePath}`);
+        // In a real implementation, this would open a dialog or navigate to a diff view
+      } catch (error) {
+        toast.error(
+          `Failed to get file diff: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+    [getFileDiff],
+  );
+
+  const handleStageHunk = useCallback((filePath: string) => {
+    setHunkStagerFile(filePath);
+  }, []);
 
   const handleCollapseAll = useCallback(() => {
     // Collapse all folders using the store method
@@ -298,6 +373,27 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
+
+  // Helper function to get Git status of a file
+  const getFileGitStatus = useCallback(
+    (filePath: string) => {
+      if (!isInitialized || !status.files) {
+        return null;
+      }
+
+      const fileStatus = status.files.find((f) => f.file === filePath);
+      if (!fileStatus) {
+        return null;
+      }
+
+      return {
+        staged: fileStatus.stage === 2,
+        modified: fileStatus.stage === 1,
+        untracked: fileStatus.stage === 0,
+      };
+    },
+    [isInitialized, status.files],
+  );
 
   return (
     <div className={`flex flex-col h-full max-w-full ${className}`}>
@@ -373,8 +469,25 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
           onDuplicate={handleDuplicate}
           onRefresh={handleRefresh}
           clipboardItem={clipboardItem}
+          // Git operations
+          isGitInitialized={isInitialized}
+          fileGitStatus={contextMenu.file ? getFileGitStatus(contextMenu.file.path) : null}
+          onStageFile={handleStageFile}
+          onUnstageFile={handleUnstageFile}
+          onViewFileHistory={handleViewFileHistory}
+          onViewFileDiff={handleViewFileDiff}
+          onStageHunk={handleStageHunk}
         />
       )}
+
+      {/* Hunk Stager Dialog */}
+      <Dialog open={!!hunkStagerFile} onOpenChange={(open) => !open && setHunkStagerFile(null)}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          {hunkStagerFile && (
+            <InlineHunkStager filepath={hunkStagerFile} onClose={() => setHunkStagerFile(null)} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

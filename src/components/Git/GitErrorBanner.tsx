@@ -12,7 +12,8 @@ export function GitErrorBanner({ error }: { error: Error | string | null }) {
     <Alert variant="destructive" className="mt-4">
       <AlertTitle>Corrupted Git Index Detected</AlertTitle>
       <AlertDescription>
-        The Git index appears to be corrupted. We are attempting to resolve this issue automatically.
+        The Git index appears to be corrupted. We are attempting to resolve this issue
+        automatically.
       </AlertDescription>
     </Alert>
   );

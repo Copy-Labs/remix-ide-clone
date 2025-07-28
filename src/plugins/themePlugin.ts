@@ -58,7 +58,7 @@ export const themePlugin: Omit<Plugin, 'api'> = {
       speed: 'normal', // slow, normal, fast
     },
     customCSS: '',
-  }
+  },
 };
 
 /**

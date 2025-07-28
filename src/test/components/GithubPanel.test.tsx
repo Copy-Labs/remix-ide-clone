@@ -16,17 +16,29 @@ vi.mock('sonner', () => ({
 
 // Mock UI components that might cause issues in tests
 vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div data-testid="scroll-area">{children}</div>,
+  ScrollArea: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="scroll-area">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
     open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p data-testid="dialog-description">{children}</p>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
+  DialogContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <p data-testid="dialog-description">{children}</p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
   DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
     asChild ? children : <div data-testid="dialog-trigger">{children}</div>,
 }));
@@ -76,7 +88,9 @@ describe('GithubPanel', () => {
       render(<GithubPanel />);
 
       expect(screen.getByText('GitHub Integration')).toBeInTheDocument();
-      expect(screen.getByText('Connect to GitHub to access your repositories.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Connect to GitHub to access your repositories.'),
+      ).toBeInTheDocument();
       expect(screen.getByText('Personal Access Token')).toBeInTheDocument();
       expect(screen.getByText('Connect to GitHub')).toBeInTheDocument();
     });

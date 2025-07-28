@@ -22,7 +22,9 @@ const GitAuthManager: React.FC<GitAuthManagerProps> = () => {
             <div>
               <p className="font-medium">Browser Environment Limitation</p>
               <p className="text-sm">
-                Git functionality is not supported in browser environments. Remote operations like clone, push, pull, and fetch cannot be performed. GitHub and GitLab integrations are not available.
+                Git functionality is not supported in browser environments. Remote operations like
+                clone, push, pull, and fetch cannot be performed. GitHub and GitLab integrations are
+                not available.
               </p>
             </div>
           </div>

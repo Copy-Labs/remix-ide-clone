@@ -120,49 +120,57 @@ export const createInitialGitState = (overrides: any = {}) => ({
 
 // Test scenario builders
 export const buildRepositoryScenario = () => ({
-  initialized: () => createInitialGitState({
-    isInitialized: true,
-    currentBranch: 'main',
-    branches: [createMockBranch()],
-  }),
+  initialized: () =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: 'main',
+      branches: [createMockBranch()],
+    }),
 
-  withBranches: (branches: string[]) => createInitialGitState({
-    isInitialized: true,
-    currentBranch: branches[0] || 'main',
-    branches: branches.map((name, index) => createMockBranch({
-      name,
-      current: index === 0,
-    })),
-  }),
+  withBranches: (branches: string[]) =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: branches[0] || 'main',
+      branches: branches.map((name, index) =>
+        createMockBranch({
+          name,
+          current: index === 0,
+        }),
+      ),
+    }),
 
-  withCommits: (commits: Partial<GitCommit>[]) => createInitialGitState({
-    isInitialized: true,
-    currentBranch: 'main',
-    commits: commits.map(commit => createMockCommit(commit)),
-  }),
+  withCommits: (commits: Partial<GitCommit>[]) =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: 'main',
+      commits: commits.map((commit) => createMockCommit(commit)),
+    }),
 
-  withRemotes: (remotes: Partial<GitRemote>[]) => createInitialGitState({
-    isInitialized: true,
-    currentBranch: 'main',
-    remotes: remotes.map(remote => createMockRemote(remote)),
-  }),
+  withRemotes: (remotes: Partial<GitRemote>[]) =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: 'main',
+      remotes: remotes.map((remote) => createMockRemote(remote)),
+    }),
 
-  withStatus: (files: Partial<GitStatus>[]) => createInitialGitState({
-    isInitialized: true,
-    currentBranch: 'main',
-    status: files.map(file => createMockStatus(file)),
-  }),
+  withStatus: (files: Partial<GitStatus>[]) =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: 'main',
+      status: files.map((file) => createMockStatus(file)),
+    }),
 
-  withGithubConnection: (username: string = 'testuser') => createInitialGitState({
-    isInitialized: true,
-    currentBranch: 'main',
-    isGithubConnected: true,
-    config: {
-      user: { name: 'Test User', email: 'test@example.com' },
-      github: { token: 'test_token', username },
-    },
-    githubRepos: [createMockGithubRepo()],
-  }),
+  withGithubConnection: (username: string = 'testuser') =>
+    createInitialGitState({
+      isInitialized: true,
+      currentBranch: 'main',
+      isGithubConnected: true,
+      config: {
+        user: { name: 'Test User', email: 'test@example.com' },
+        github: { token: 'test_token', username },
+      },
+      githubRepos: [createMockGithubRepo()],
+    }),
 });
 
 // Assertion helpers
@@ -171,27 +179,34 @@ export const expectGitServiceCalled = (mockGitService: any, method: string, ...a
 };
 
 export const expectStoreState = (store: any, expectedState: Partial<any>) => {
-  Object.keys(expectedState).forEach(key => {
+  Object.keys(expectedState).forEach((key) => {
     expect(store[key]).toEqual(expectedState[key]);
   });
 };
 
 // Async test helpers
-export const waitForStoreUpdate = async (store: any, condition: (state: any) => boolean, timeout = 1000) => {
+export const waitForStoreUpdate = async (
+  store: any,
+  condition: (state: any) => boolean,
+  timeout = 1000,
+) => {
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeout) {
     if (condition(store)) {
       return;
     }
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
 
   throw new Error('Store condition not met within timeout');
 };
 
 // Mock setup helpers
-export const setupGitServiceMocks = (mockGitService: any, scenario: 'success' | 'error' = 'success') => {
+export const setupGitServiceMocks = (
+  mockGitService: any,
+  scenario: 'success' | 'error' = 'success',
+) => {
   if (scenario === 'success') {
     mockGitService.init.mockResolvedValue(undefined);
     mockGitService.clone.mockResolvedValue(undefined);
@@ -212,7 +227,7 @@ export const setupGitServiceMocks = (mockGitService: any, scenario: 'success' | 
     mockGitService.fetch.mockResolvedValue(undefined);
   } else {
     const error = new Error('Git operation failed');
-    Object.keys(mockGitService).forEach(method => {
+    Object.keys(mockGitService).forEach((method) => {
       mockGitService[method].mockRejectedValue(error);
     });
   }
@@ -221,13 +236,13 @@ export const setupGitServiceMocks = (mockGitService: any, scenario: 'success' | 
 export const setupOctokitMocks = (mockOctokit: any, scenario: 'success' | 'error' = 'success') => {
   if (scenario === 'success') {
     mockOctokit.rest.users.getAuthenticated.mockResolvedValue({
-      data: { login: 'testuser' }
+      data: { login: 'testuser' },
     });
     mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
-      data: [createMockGithubRepo()]
+      data: [createMockGithubRepo()],
     });
     mockOctokit.rest.repos.createForAuthenticatedUser.mockResolvedValue({
-      data: createMockGithubRepo({ name: 'new-repo' })
+      data: createMockGithubRepo({ name: 'new-repo' }),
     });
   } else {
     const error = new Error('GitHub API error');
@@ -273,33 +288,40 @@ export const setupFileSystemMocks = (mockFileStore: any) => {
 
 // Test data generators
 export const generateCommitHistory = (count: number): GitCommit[] => {
-  return Array.from({ length: count }, (_, index) => createMockCommit({
-    oid: `commit${index}`,
-    message: `Commit ${index + 1}`,
-    author: {
-      name: `Author ${index + 1}`,
-      email: `author${index + 1}@example.com`,
-      timestamp: Date.now() - (count - index) * 60000, // 1 minute apart
-    },
-    committer: {
-      name: `Author ${index + 1}`,
-      email: `author${index + 1}@example.com`,
-      timestamp: Date.now() - (count - index) * 60000,
-    },
-  }));
+  return Array.from({ length: count }, (_, index) =>
+    createMockCommit({
+      oid: `commit${index}`,
+      message: `Commit ${index + 1}`,
+      author: {
+        name: `Author ${index + 1}`,
+        email: `author${index + 1}@example.com`,
+        timestamp: Date.now() - (count - index) * 60000, // 1 minute apart
+      },
+      committer: {
+        name: `Author ${index + 1}`,
+        email: `author${index + 1}@example.com`,
+        timestamp: Date.now() - (count - index) * 60000,
+      },
+    }),
+  );
 };
 
-export const generateFileStatus = (files: string[], statusType: 'new' | 'modified' | 'staged' = 'new'): GitStatus[] => {
+export const generateFileStatus = (
+  files: string[],
+  statusType: 'new' | 'modified' | 'staged' = 'new',
+): GitStatus[] => {
   const statusMap = {
     new: { head: 0, workdir: 2, stage: 0 },
     modified: { head: 1, workdir: 2, stage: 0 },
     staged: { head: 0, workdir: 2, stage: 2 },
   };
 
-  return files.map(file => createMockStatus({
-    file,
-    ...statusMap[statusType],
-  }));
+  return files.map((file) =>
+    createMockStatus({
+      file,
+      ...statusMap[statusType],
+    }),
+  );
 };
 
 // Performance test helpers
@@ -317,11 +339,11 @@ export const expectExecutionTime = async (fn: () => Promise<void>, maxTime: numb
 
 // Cleanup helpers
 export const cleanupMocks = (...mocks: any[]) => {
-  mocks.forEach(mock => {
+  mocks.forEach((mock) => {
     if (mock && typeof mock.mockClear === 'function') {
       mock.mockClear();
     } else if (mock && typeof mock === 'object') {
-      Object.values(mock).forEach(method => {
+      Object.values(mock).forEach((method) => {
         if (method && typeof method.mockClear === 'function') {
           method.mockClear();
         }

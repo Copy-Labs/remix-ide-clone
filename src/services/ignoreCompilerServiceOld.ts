@@ -1,10 +1,9 @@
 import solc from 'solc';
-import type {CompilationResult, CompilerError, CompilerWarning, CompiledContract} from '@/types';
-
+import type { CompilationResult, CompilerError, CompilerWarning, CompiledContract } from '@/types';
 
 /*
-* DO NOT USE THIS CODE
-* */
+ * DO NOT USE THIS CODE
+ * */
 export class IgnoreCompilerServiceOld {
   private static instance: CompilerService;
   private currentVersion: string = '0.8.30';
@@ -30,14 +29,14 @@ export class IgnoreCompilerServiceOld {
         settings: {
           outputSelection: {
             '*': {
-              '*': ['*']
-            }
+              '*': ['*'],
+            },
           },
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
+            runs: 200,
+          },
+        },
       };
 
       // Compile using solc
@@ -49,21 +48,23 @@ export class IgnoreCompilerServiceOld {
       console.error('Compilation error:', error);
       return {
         success: false,
-        errors: [{
-          severity: 'error',
-          message: error instanceof Error ? error.message : 'Unknown compilation error',
-          sourceLocation: {
-            file: '',
-            start: 0,
-            end: 0
+        errors: [
+          {
+            severity: 'error',
+            message: error instanceof Error ? error.message : 'Unknown compilation error',
+            sourceLocation: {
+              file: '',
+              start: 0,
+              end: 0,
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0000',
           },
-          type: 'CompilerError',
-          component: 'general',
-          errorCode: '0000'
-        }],
+        ],
         warnings: [],
         contracts: {},
-        sources: {}
+        sources: {},
       };
     }
   }
@@ -86,7 +87,10 @@ export class IgnoreCompilerServiceOld {
   /**
    * Process compilation output from solc
    */
-  private processCompilationOutput(output: any, originalSources: Record<string, string>): CompilationResult {
+  private processCompilationOutput(
+    output: any,
+    originalSources: Record<string, string>,
+  ): CompilationResult {
     const errors: CompilerError[] = [];
     const warnings: CompilerWarning[] = [];
     const contracts: Record<string, CompiledContract> = {};
@@ -105,7 +109,9 @@ export class IgnoreCompilerServiceOld {
     // Process contracts
     if (output.contracts) {
       for (const [fileName, fileContracts] of Object.entries(output.contracts)) {
-        for (const [contractName, contractData] of Object.entries(fileContracts as Record<string, any>)) {
+        for (const [contractName, contractData] of Object.entries(
+          fileContracts as Record<string, any>,
+        )) {
           contracts[contractName] = this.parseContract(contractName, contractData, fileName);
         }
       }
@@ -116,7 +122,7 @@ export class IgnoreCompilerServiceOld {
       errors,
       warnings,
       contracts,
-      sources: originalSources
+      sources: originalSources,
     };
   }
 
@@ -130,7 +136,7 @@ export class IgnoreCompilerServiceOld {
       sourceLocation: this.parseSourceLocation(error.sourceLocation),
       type: error.type || 'CompilerError',
       component: error.component || 'general',
-      errorCode: error.errorCode || '0000'
+      errorCode: error.errorCode || '0000',
     };
   }
 
@@ -143,7 +149,7 @@ export class IgnoreCompilerServiceOld {
       message: warning.message || 'Unknown warning',
       sourceLocation: this.parseSourceLocation(warning.sourceLocation),
       type: warning.type || 'CompilerWarning',
-      component: warning.component || 'general'
+      component: warning.component || 'general',
     };
   }
 
@@ -155,14 +161,14 @@ export class IgnoreCompilerServiceOld {
       return {
         file: '',
         start: 0,
-        end: 0
+        end: 0,
       };
     }
 
     return {
       file: sourceLocation.file || '',
       start: sourceLocation.start || 0,
-      end: sourceLocation.end || 0
+      end: sourceLocation.end || 0,
     };
   }
 
@@ -184,7 +190,7 @@ export class IgnoreCompilerServiceOld {
       gasEstimates: contractData.evm?.gasEstimates || {},
       metadata: contractData.metadata || '',
       devdoc: contractData.devdoc || {},
-      userdoc: contractData.userdoc || {}
+      userdoc: contractData.userdoc || {},
     };
   }
 
@@ -204,7 +210,7 @@ export class IgnoreCompilerServiceOld {
       '0.8.23',
       '0.8.22',
       '0.8.21',
-      '0.8.20'
+      '0.8.20',
     ];
   }
 
@@ -252,7 +258,7 @@ export class IgnoreCompilerServiceOld {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 

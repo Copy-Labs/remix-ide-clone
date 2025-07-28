@@ -78,10 +78,10 @@ describe('FileStore Nested Folder Operations', () => {
         '/project/src/components',
         '/project/src/components/forms',
         '/project/src/components/forms/inputs',
-        '/project/src/components/forms/inputs/validation'
+        '/project/src/components/forms/inputs/validation',
       ];
 
-      paths.forEach(path => {
+      paths.forEach((path) => {
         expect(store.files.has(path)).toBe(true);
         const folder = store.files.get(path);
         expect(folder?.type).toBe('folder');
@@ -91,9 +91,15 @@ describe('FileStore Nested Folder Operations', () => {
       expect(store.files.get('/project')?.parent).toBe('/');
       expect(store.files.get('/project/src')?.parent).toBe('/project');
       expect(store.files.get('/project/src/components')?.parent).toBe('/project/src');
-      expect(store.files.get('/project/src/components/forms')?.parent).toBe('/project/src/components');
-      expect(store.files.get('/project/src/components/forms/inputs')?.parent).toBe('/project/src/components/forms');
-      expect(store.files.get('/project/src/components/forms/inputs/validation')?.parent).toBe('/project/src/components/forms/inputs');
+      expect(store.files.get('/project/src/components/forms')?.parent).toBe(
+        '/project/src/components',
+      );
+      expect(store.files.get('/project/src/components/forms/inputs')?.parent).toBe(
+        '/project/src/components/forms',
+      );
+      expect(store.files.get('/project/src/components/forms/inputs/validation')?.parent).toBe(
+        '/project/src/components/forms/inputs',
+      );
     });
   });
 
@@ -138,7 +144,10 @@ describe('FileStore Nested Folder Operations', () => {
       await store.createFile('/src/App.js', 'import React from "react";');
       await store.createFile('/src/components/Header.jsx', 'export const Header = () => {};');
       await store.createFile('/src/components/ui/Button.tsx', 'interface ButtonProps {}');
-      await store.createFile('/src/components/ui/forms/Input.tsx', 'export const Input = () => {};');
+      await store.createFile(
+        '/src/components/ui/forms/Input.tsx',
+        'export const Input = () => {};',
+      );
 
       // Verify all files exist
       expect(store.files.has('/src/App.js')).toBe(true);
@@ -150,13 +159,21 @@ describe('FileStore Nested Folder Operations', () => {
       expect(store.files.get('/src/App.js')?.parent).toBe('/src');
       expect(store.files.get('/src/components/Header.jsx')?.parent).toBe('/src/components');
       expect(store.files.get('/src/components/ui/Button.tsx')?.parent).toBe('/src/components/ui');
-      expect(store.files.get('/src/components/ui/forms/Input.tsx')?.parent).toBe('/src/components/ui/forms');
+      expect(store.files.get('/src/components/ui/forms/Input.tsx')?.parent).toBe(
+        '/src/components/ui/forms',
+      );
 
       // Verify content
       expect(store.files.get('/src/App.js')?.content).toBe('import React from "react";');
-      expect(store.files.get('/src/components/Header.jsx')?.content).toBe('export const Header = () => {};');
-      expect(store.files.get('/src/components/ui/Button.tsx')?.content).toBe('interface ButtonProps {}');
-      expect(store.files.get('/src/components/ui/forms/Input.tsx')?.content).toBe('export const Input = () => {};');
+      expect(store.files.get('/src/components/Header.jsx')?.content).toBe(
+        'export const Header = () => {};',
+      );
+      expect(store.files.get('/src/components/ui/Button.tsx')?.content).toBe(
+        'interface ButtonProps {}',
+      );
+      expect(store.files.get('/src/components/ui/forms/Input.tsx')?.content).toBe(
+        'export const Input = () => {};',
+      );
     });
 
     it('should create Solidity files in nested contract folders', async () => {
@@ -169,14 +186,20 @@ describe('FileStore Nested Folder Operations', () => {
       await store.createFolder('/contracts/utils');
 
       // Create Solidity files in nested folders
-      await store.createFile('/contracts/tokens/ERC20Token.sol',
-        'pragma solidity ^0.8.0;\n\ncontract ERC20Token {\n    // Token implementation\n}');
+      await store.createFile(
+        '/contracts/tokens/ERC20Token.sol',
+        'pragma solidity ^0.8.0;\n\ncontract ERC20Token {\n    // Token implementation\n}',
+      );
 
-      await store.createFile('/contracts/governance/Governor.sol',
-        'pragma solidity ^0.8.0;\n\ncontract Governor {\n    // Governance implementation\n}');
+      await store.createFile(
+        '/contracts/governance/Governor.sol',
+        'pragma solidity ^0.8.0;\n\ncontract Governor {\n    // Governance implementation\n}',
+      );
 
-      await store.createFile('/contracts/utils/SafeMath.sol',
-        'pragma solidity ^0.8.0;\n\nlibrary SafeMath {\n    // Math utilities\n}');
+      await store.createFile(
+        '/contracts/utils/SafeMath.sol',
+        'pragma solidity ^0.8.0;\n\nlibrary SafeMath {\n    // Math utilities\n}',
+      );
 
       // Verify all Solidity files exist
       expect(store.files.has('/contracts/tokens/ERC20Token.sol')).toBe(true);
@@ -209,11 +232,20 @@ describe('FileStore Nested Folder Operations', () => {
       await store.createFile('/project/src/index.ts', 'export * from "./components";');
 
       await store.createFolder('/project/src/components');
-      await store.createFile('/project/src/components/index.ts', 'export { Button } from "./Button";');
-      await store.createFile('/project/src/components/Button.tsx', 'export const Button = () => {};');
+      await store.createFile(
+        '/project/src/components/index.ts',
+        'export { Button } from "./Button";',
+      );
+      await store.createFile(
+        '/project/src/components/Button.tsx',
+        'export const Button = () => {};',
+      );
 
       await store.createFolder('/project/src/utils');
-      await store.createFile('/project/src/utils/helpers.ts', 'export const formatDate = () => {};');
+      await store.createFile(
+        '/project/src/utils/helpers.ts',
+        'export const formatDate = () => {};',
+      );
 
       await store.createFolder('/project/tests');
       await store.createFile('/project/tests/Button.test.tsx', 'describe("Button", () => {});');
@@ -230,10 +262,10 @@ describe('FileStore Nested Folder Operations', () => {
         '/project/src/utils',
         '/project/src/utils/helpers.ts',
         '/project/tests',
-        '/project/tests/Button.test.tsx'
+        '/project/tests/Button.test.tsx',
       ];
 
-      expectedPaths.forEach(path => {
+      expectedPaths.forEach((path) => {
         expect(store.files.has(path)).toBe(true);
       });
 
@@ -267,10 +299,10 @@ describe('FileStore Nested Folder Operations', () => {
         '/workspace/package.json',
         '/workspace/dist',
         '/workspace/.gitignore',
-        '/workspace/docs'
+        '/workspace/docs',
       ];
 
-      workspaceItems.forEach(path => {
+      workspaceItems.forEach((path) => {
         expect(store.files.has(path)).toBe(true);
         expect(store.files.get(path)?.parent).toBe('/workspace');
       });
@@ -323,7 +355,10 @@ describe('FileStore Nested Folder Operations', () => {
       // Create files in these folders
       await store.createFile('/my-project/config-file.json', '{}');
       await store.createFile('/my-project/src_files/index_main.js', 'export {};');
-      await store.createFile('/my-project/src_files/components.v2/Button-v2.tsx', 'export const Button = () => {};');
+      await store.createFile(
+        '/my-project/src_files/components.v2/Button-v2.tsx',
+        'export const Button = () => {};',
+      );
 
       // Verify all items exist
       expect(store.files.has('/my-project')).toBe(true);
@@ -342,18 +377,18 @@ describe('FileStore Nested Folder Operations', () => {
       expect(initialCount).toBe(4); // Verify we start with expected default files
 
       // Create nested structure
-      await store.createFolder('/src');                    // +1
-      await store.createFolder('/src/components');         // +1
-      await store.createFile('/src/index.js', 'content');  // +1
+      await store.createFolder('/src'); // +1
+      await store.createFolder('/src/components'); // +1
+      await store.createFile('/src/index.js', 'content'); // +1
       await store.createFile('/src/components/App.jsx', 'content'); // +1
 
       // Verify count
       expect(store.files.size).toBe(initialCount + 4);
 
       // Create more nested items
-      await store.createFolder('/src/utils');              // +1
+      await store.createFolder('/src/utils'); // +1
       await store.createFile('/src/utils/helper.js', 'content'); // +1
-      await store.createFolder('/tests/unit');             // +1
+      await store.createFolder('/tests/unit'); // +1
       await store.createFile('/tests/unit/app.test.js', 'content'); // +1
 
       // Verify final count

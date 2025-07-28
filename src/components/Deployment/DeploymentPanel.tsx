@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button.tsx';
 import {
   Select,
   SelectContent,
-  SelectGroup, SelectItem,
+  SelectGroup,
+  SelectItem,
   SelectLabel,
   SelectTrigger,
   SelectValue,
@@ -375,12 +376,7 @@ const DeploymentPanel: React.FC = () => {
         </div>
       </div>*/}
 
-      <Accordion
-        type="single"
-        collapsible
-        className="w-full px-3"
-        defaultValue="item-1"
-      >
+      <Accordion type="single" collapsible className="w-full px-3" defaultValue="item-1">
         <AccordionItem value="item-1">
           <AccordionTrigger>Wallet Connection</AccordionTrigger>
           <AccordionContent className="flex flex-col gap-4 text-balance">
@@ -418,9 +414,7 @@ const DeploymentPanel: React.FC = () => {
                   </Button>
                 </div>
                 <div className="p-3 bg-secondary rounded-lg space-y-3">
-                  <div className="text-sm font-normal text-foreground break-all">
-                    {account}
-                  </div>
+                  <div className="text-sm font-normal text-foreground break-all">{account}</div>
                   <div className="font-medium text-xs text-muted-foreground">
                     Balance: {formatBalance(balance)}{' '}
                     {availableNetworks.find((n) => n.id === selectedNetwork)?.symbol || 'ETH'}
@@ -448,7 +442,11 @@ const DeploymentPanel: React.FC = () => {
               </select>*/}
                   {/* Because selectedNetwork is in this form: ChainId-${chainId}, we use the split to retrieve the chainId */}
                   <Select
-                    defaultValue={availableNetworks.find((n) => n.id === selectedNetwork.split('-')[1])?.chainId.toString() || ''}
+                    defaultValue={
+                      availableNetworks
+                        .find((n) => n.id === selectedNetwork.split('-')[1])
+                        ?.chainId.toString() || ''
+                    }
                     onValueChange={handleNetworkValueChange}
                   >
                     <SelectTrigger className="w-full text-xs">
@@ -484,7 +482,6 @@ const DeploymentPanel: React.FC = () => {
                       Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei
                     </div>
                   )}
-
                 </div>
               </div>
             )}
@@ -508,8 +505,8 @@ const DeploymentPanel: React.FC = () => {
                 </span>
               </label>
               <p className="text-xs text-muted-foreground mt-1">
-                When enabled, contracts will be automatically verified on the block explorer after deployment.
-                You need to provide API keys for the block explorers you want to use.
+                When enabled, contracts will be automatically verified on the block explorer after
+                deployment. You need to provide API keys for the block explorers you want to use.
               </p>
             </div>
 
@@ -523,7 +520,10 @@ const DeploymentPanel: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Your saved API keys:</p>
                   <div className="bg-secondary rounded-md p-2">
                     {Array.from(apiKeys.entries()).map(([explorer, key]) => (
-                      <div key={explorer} className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                      <div
+                        key={explorer}
+                        className="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                      >
                         <span className="text-xs font-medium">{explorer}</span>
                         <div className="flex items-center">
                           <span className="text-xs text-muted-foreground mr-2">
@@ -553,13 +553,8 @@ const DeploymentPanel: React.FC = () => {
                 <h5 className="text-xs font-medium text-foreground">Add New API Key</h5>
 
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
-                    Block Explorer
-                  </label>
-                  <Select
-                    value={selectedExplorer}
-                    onValueChange={handleExplorerChange}
-                  >
+                  <label className="block text-xs text-muted-foreground mb-1">Block Explorer</label>
+                  <Select value={selectedExplorer} onValueChange={handleExplorerChange}>
                     <SelectTrigger className="w-full text-xs">
                       <SelectValue placeholder="Select Block Explorer" />
                     </SelectTrigger>
@@ -586,9 +581,7 @@ const DeploymentPanel: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
-                    API Key
-                  </label>
+                  <label className="block text-xs text-muted-foreground mb-1">API Key</label>
                   <Input
                     type="text"
                     value={apiKey}
@@ -616,146 +609,19 @@ const DeploymentPanel: React.FC = () => {
       </Accordion>
 
       <div className="p-3 space-y-6">
-        {/* Wallet Connection */}
-        <div className="hidden space-y-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Wallet Connection</h3>
-
-          {!account ? (
-            <button
-              onClick={handleConnectWallet}
-              disabled={isConnecting}
-              className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                isConnecting
-                  ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-              }`}
-            >
-              {isConnecting ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Connecting...
-                </div>
-              ) : (
-                'Connect Wallet'
-              )}
-            </button>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-muted-foreground">Connected Account</div>
-                <Button
-                  onClick={handleDisconnectWallet}
-                  className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                  // className={'h-8'}
-                  size={'sm'}
-                  variant={'ghost'}
-                >
-                  Disconnect
-                </Button>
-              </div>
-              <div className="p-3 bg-secondary rounded-lg space-y-3">
-                <div className="text-sm font-normal text-foreground break-all">
-                  {account}
-                </div>
-                <div className="font-medium text-xs text-muted-foreground">
-                  Balance: {formatBalance(balance)}{' '}
-                  {availableNetworks.find((n) => n.id === selectedNetwork)?.symbol || 'ETH'}
-                </div>
-              </div>
-
-              {/* Network Selection */}
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Network
-                </label>
-                {/*<select
-                  defaultValue={
-                    availableNetworks.find((n) => n.id === selectedNetwork)?.chainId.toString() ||
-                    ''
-                  }
-                  onChange={handleNetworkChange}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {availableNetworks.map((network) => (
-                    <option key={network.id} value={network.chainId.toString()}>
-                      {network.name} {network.isTestnet ? '(Testnet)' : ''}
-                    </option>
-                  ))}
-                </select>*/}
-                {/* Because selectedNetwork is in this form: ChainId-${chainId}, we use the split to retrieve the chainId */}
-                <Select
-                  defaultValue={availableNetworks.find((n) => n.id === selectedNetwork.split('-')[1])?.chainId.toString() || ''}
-                  onValueChange={handleNetworkValueChange}
-                >
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="Select Network" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Blockchain Network</SelectLabel>
-                      {availableNetworks.map((network) => (
-                        <SelectItem key={network.id} value={network.chainId.toString()}>
-                          {network.name} {network.isTestnet ? '(Testnet)' : ''}
-                        </SelectItem>
-                    ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Gas Settings */}
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Gas Limit
-                </label>
-                <Input
-                  type="text"
-                  value={customGasLimit}
-                  onChange={handleGasLimitChange}
-                  className={'text-xs'}
-                  // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                {gasPrice && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei
-                  </div>
-                )}
-
-                {/* Auto-verify Setting */}
-                <div className="mt-3">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={autoVerify}
-                      onChange={(e) => setAutoVerify(e.target.checked)}
-                      className="mr-2"
-                    />
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Auto-verify contracts on block explorer
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Contract Deployment */}
         {account && (
           <div className="space-y-4">
             <Separator />
-            <h3 className="text-sm font-medium text-foreground">
-              Contract Deployment
-            </h3>
+            <h3 className="text-sm font-medium text-foreground">Contract Deployment</h3>
 
             {!compilationResult?.success ? (
               <div className="text-sm text-muted-foreground">
                 Compile a contract first to deploy it.
               </div>
             ) : !compiledContract ? (
-              <div className="text-sm text-muted-foreground">
-                Select a contract to deploy.
-              </div>
+              <div className="text-sm text-muted-foreground">Select a contract to deploy.</div>
             ) : (
               <div className="space-y-3">
                 <div className="p-3 bg-secondary rounded-md">
@@ -793,7 +659,8 @@ const DeploymentPanel: React.FC = () => {
                 <button
                   onClick={handleDeploy}
                   disabled={isDeploying}
-                  className={cn('w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                  className={cn(
+                    'w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
                     isDeploying
                       ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                       : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
@@ -818,9 +685,7 @@ const DeploymentPanel: React.FC = () => {
         {account && deployedContractsForNetwork.length > 0 && (
           <div className="space-y-4">
             <Separator />
-            <h3 className="text-sm font-medium text-foreground">
-              Deployed Contracts
-            </h3>
+            <h3 className="text-sm font-medium text-foreground">Deployed Contracts</h3>
 
             <div className="space-y-3">
               {/* Contract Selection */}
@@ -855,31 +720,35 @@ const DeploymentPanel: React.FC = () => {
                           Address: {selectedDeployedContractData.address}
                         </div>
                         <div className="mt-1 text-xs text-green-600">
-                          Deployed: {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
+                          Deployed:{' '}
+                          {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
                         </div>
                       </div>
                       {selectedDeployedContractData.verified !== undefined && (
-                        <div className={`px-2 py-1 text-xs rounded ${
-                          selectedDeployedContractData.verified 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' 
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                        }`}>
+                        <div
+                          className={`px-2 py-1 text-xs rounded ${
+                            selectedDeployedContractData.verified
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                          }`}
+                        >
                           {selectedDeployedContractData.verified ? 'Verified' : 'Not Verified'}
                         </div>
                       )}
                     </div>
-                    {selectedDeployedContractData.verified && selectedDeployedContractData.verificationUrl && (
-                      <div className="mt-2">
-                        <a
-                          href={selectedDeployedContractData.verificationUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          View on Block Explorer
-                        </a>
-                      </div>
-                    )}
+                    {selectedDeployedContractData.verified &&
+                      selectedDeployedContractData.verificationUrl && (
+                        <div className="mt-2">
+                          <a
+                            href={selectedDeployedContractData.verificationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            View on Block Explorer
+                          </a>
+                        </div>
+                      )}
                     {selectedDeployedContractData.verified === false && (
                       <div className="mt-2">
                         <Button
@@ -961,9 +830,7 @@ const DeploymentPanel: React.FC = () => {
                   {/* Method Result */}
                   {methodResult !== null && (
                     <div className="p-3 bg-secondary rounded-md">
-                      <div className="text-xs font-medium text-muted-foreground mb-1">
-                        Result:
-                      </div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Result:</div>
                       <div className="text-sm text-foreground break-all">
                         {typeof methodResult === 'object'
                           ? JSON.stringify(methodResult, null, 2)

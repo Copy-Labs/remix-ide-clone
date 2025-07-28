@@ -55,7 +55,7 @@ export class StateDebugger<T> {
       logActions: options.logActions ?? true,
       logPerformance: options.logPerformance ?? true,
       saveHistory: options.saveHistory ?? true,
-      maxHistoryLength: options.maxHistoryLength ?? 50
+      maxHistoryLength: options.maxHistoryLength ?? 50,
     };
 
     if (this.options.enabled) {
@@ -84,7 +84,10 @@ export class StateDebugger<T> {
     const duration = performance.now() - this.actionStartTime;
 
     if (this.options.logPerformance) {
-      debug('StateDebugger', `[${this.options.name}] Action completed: ${this.currentActionName} (${duration.toFixed(2)}ms)`);
+      debug(
+        'StateDebugger',
+        `[${this.options.name}] Action completed: ${this.currentActionName} (${duration.toFixed(2)}ms)`,
+      );
     } else {
       debug('StateDebugger', `[${this.options.name}] Action completed: ${this.currentActionName}`);
     }
@@ -105,9 +108,15 @@ export class StateDebugger<T> {
 
     if (this.options.logChanges) {
       if (this.options.logPerformance && duration) {
-        debug('StateDebugger', `[${this.options.name}] State changed${this.currentActionName ? ` (${this.currentActionName})` : ''} (${duration.toFixed(2)}ms)`);
+        debug(
+          'StateDebugger',
+          `[${this.options.name}] State changed${this.currentActionName ? ` (${this.currentActionName})` : ''} (${duration.toFixed(2)}ms)`,
+        );
       } else {
-        debug('StateDebugger', `[${this.options.name}] State changed${this.currentActionName ? ` (${this.currentActionName})` : ''}`);
+        debug(
+          'StateDebugger',
+          `[${this.options.name}] State changed${this.currentActionName ? ` (${this.currentActionName})` : ''}`,
+        );
       }
 
       // Log the diff between previous and next state
@@ -120,7 +129,7 @@ export class StateDebugger<T> {
         previousState,
         nextState,
         actionName: this.currentActionName || undefined,
-        duration
+        duration,
       });
     }
   }
@@ -200,62 +209,63 @@ export class StateDebugger<T> {
  * @param options Debugger options
  * @returns A middleware function for Zustand
  */
-export const withDebugger = <T>(options: StateDebuggerOptions) =>
+export const withDebugger =
+  <T>(options: StateDebuggerOptions) =>
   (config: any) =>
-    (set: any, get: any, api: any) => {
-      const stateDebugger = new StateDebugger<T>(options);
+  (set: any, get: any, api: any) => {
+    const stateDebugger = new StateDebugger<T>(options);
 
-      // Create a wrapped set function that tracks state changes
-      const debugSet = (fn: (state: T) => void, actionName?: string) => {
-        if (actionName) {
-          stateDebugger.startAction(actionName);
-        }
-
-        const previousState = get();
-
-        // Call the original set function
-        set((state: T) => {
-          fn(state);
-        });
-
-        const nextState = get();
-        stateDebugger.trackStateChange(previousState, nextState);
-
-        if (actionName) {
-          stateDebugger.endAction();
-        }
-      };
-
-      // Add the debugger to the API
-      api.stateDebugger = stateDebugger;
-
-      // Call the original config function with our wrapped set
-      const state = config(debugSet, get, api);
-
-      // Wrap all functions to track actions
-      const wrappedState: any = { ...state };
-
-      for (const key in state) {
-        if (typeof state[key] === 'function') {
-          wrappedState[key] = (...args: any[]) => {
-            stateDebugger.startAction(key);
-            const result = state[key](...args);
-
-            // If the result is a promise, wait for it to complete
-            if (result instanceof Promise) {
-              return result.finally(() => {
-                stateDebugger.endAction();
-              });
-            }
-
-            stateDebugger.endAction();
-            return result;
-          };
-        }
+    // Create a wrapped set function that tracks state changes
+    const debugSet = (fn: (state: T) => void, actionName?: string) => {
+      if (actionName) {
+        stateDebugger.startAction(actionName);
       }
 
-      return wrappedState;
+      const previousState = get();
+
+      // Call the original set function
+      set((state: T) => {
+        fn(state);
+      });
+
+      const nextState = get();
+      stateDebugger.trackStateChange(previousState, nextState);
+
+      if (actionName) {
+        stateDebugger.endAction();
+      }
     };
+
+    // Add the debugger to the API
+    api.stateDebugger = stateDebugger;
+
+    // Call the original config function with our wrapped set
+    const state = config(debugSet, get, api);
+
+    // Wrap all functions to track actions
+    const wrappedState: any = { ...state };
+
+    for (const key in state) {
+      if (typeof state[key] === 'function') {
+        wrappedState[key] = (...args: any[]) => {
+          stateDebugger.startAction(key);
+          const result = state[key](...args);
+
+          // If the result is a promise, wait for it to complete
+          if (result instanceof Promise) {
+            return result.finally(() => {
+              stateDebugger.endAction();
+            });
+          }
+
+          stateDebugger.endAction();
+          return result;
+        };
+      }
+    }
+
+    return wrappedState;
+  };
 
 /**
  * Example usage:

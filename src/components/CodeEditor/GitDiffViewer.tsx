@@ -11,7 +11,14 @@ interface GitDiffViewerProps {
 
 // Enhanced diff line type to include conflict information
 interface DiffLine {
-  type: 'added' | 'removed' | 'unchanged' | 'conflict-start' | 'conflict-ours' | 'conflict-theirs' | 'conflict-end';
+  type:
+    | 'added'
+    | 'removed'
+    | 'unchanged'
+    | 'conflict-start'
+    | 'conflict-ours'
+    | 'conflict-theirs'
+    | 'conflict-end';
   content: string;
   lineNumber: {
     old: number | null;
@@ -48,7 +55,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
         enhancedLines.push({
           type: 'conflict-start',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
         continue;
       }
@@ -57,7 +64,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
         enhancedLines.push({
           type: 'conflict-end',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
         inConflict = false;
         continue;
@@ -67,7 +74,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
         enhancedLines.push({
           type: 'conflict-end',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
         continue;
       }
@@ -76,23 +83,27 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
         enhancedLines.push({
           type: 'conflict-ours',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
         conflictOurs.push({
           type: 'conflict-ours',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
-      } else if (i > 0 && diff[i-1].content.startsWith('=======') && !content.startsWith('>>>>>>>')) {
+      } else if (
+        i > 0 &&
+        diff[i - 1].content.startsWith('=======') &&
+        !content.startsWith('>>>>>>>')
+      ) {
         enhancedLines.push({
           type: 'conflict-theirs',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
         conflictTheirs.push({
           type: 'conflict-theirs',
           content: content,
-          lineNumber: line.lineNumber
+          lineNumber: line.lineNumber,
         });
       } else {
         enhancedLines.push(line);
@@ -140,7 +151,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
     // Extract "ours" content (between start and separator)
     const oursContent = enhancedDiff
       .slice(startIndex + 1, separatorIndex)
-      .map(line => line.content)
+      .map((line) => line.content)
       .join('\n');
 
     // Replace the conflict in the resolved content
@@ -151,7 +162,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
     const newLines = [
       ...lines.slice(0, startLine - 1),
       ...oursContent.split('\n'),
-      ...lines.slice(endLine)
+      ...lines.slice(endLine),
     ];
 
     setResolvedContent(newLines.join('\n'));
@@ -180,7 +191,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
     // Extract "theirs" content (between separator and end)
     const theirsContent = enhancedDiff
       .slice(separatorIndex + 1, endIndex)
-      .map(line => line.content)
+      .map((line) => line.content)
       .join('\n');
 
     // Replace the conflict in the resolved content
@@ -191,7 +202,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
     const newLines = [
       ...lines.slice(0, startLine - 1),
       ...theirsContent.split('\n'),
-      ...lines.slice(endLine)
+      ...lines.slice(endLine),
     ];
 
     setResolvedContent(newLines.join('\n'));
@@ -252,11 +263,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
               </Button>
             )}
             {isEditing && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleSaveResolution}
-              >
+              <Button variant="default" size="sm" onClick={handleSaveResolution}>
                 <Check className="h-3 w-3 mr-1" />
                 Save
               </Button>
@@ -319,13 +326,27 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({ filePath, visible }) => {
                   {lineNumberNew}
                 </div>
                 <div className="pl-4 flex-1 whitespace-pre">
-                  {line.type === 'added' && <span className="text-green-600 dark:text-green-400">+</span>}
-                  {line.type === 'removed' && <span className="text-red-600 dark:text-red-400">-</span>}
-                  {line.type === 'conflict-start' && <span className="text-amber-600 dark:text-amber-400">&lt;&lt;&lt;</span>}
-                  {line.type === 'conflict-ours' && <span className="text-blue-600 dark:text-blue-400">|</span>}
-                  {line.type === 'conflict-theirs' && <span className="text-purple-600 dark:text-purple-400">|</span>}
-                  {line.type === 'conflict-end' && <span className="text-amber-600 dark:text-amber-400">&gt;&gt;&gt;</span>}
-                  {line.type === 'unchanged' && <span className="text-gray-400 dark:text-gray-600"> </span>}
+                  {line.type === 'added' && (
+                    <span className="text-green-600 dark:text-green-400">+</span>
+                  )}
+                  {line.type === 'removed' && (
+                    <span className="text-red-600 dark:text-red-400">-</span>
+                  )}
+                  {line.type === 'conflict-start' && (
+                    <span className="text-amber-600 dark:text-amber-400">&lt;&lt;&lt;</span>
+                  )}
+                  {line.type === 'conflict-ours' && (
+                    <span className="text-blue-600 dark:text-blue-400">|</span>
+                  )}
+                  {line.type === 'conflict-theirs' && (
+                    <span className="text-purple-600 dark:text-purple-400">|</span>
+                  )}
+                  {line.type === 'conflict-end' && (
+                    <span className="text-amber-600 dark:text-amber-400">&gt;&gt;&gt;</span>
+                  )}
+                  {line.type === 'unchanged' && (
+                    <span className="text-gray-400 dark:text-gray-600"> </span>
+                  )}
                   {line.content}
                 </div>
 

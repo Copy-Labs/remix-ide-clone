@@ -18,6 +18,7 @@ import {
 import type { monaco } from '@/lib/monaco-editor';
 import GitBlameGutter from './GitBlameGutter';
 import GitDiffViewer from './GitDiffViewer';
+import InlineGitDiffViewer from './InlineGitDiffViewer';
 import EditorToolbar from './EditorToolbar';
 
 interface MonacoEditorProps {
@@ -126,7 +127,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   );
 
   // Use the detected language - memoized to prevent unnecessary recalculations
-  const detectedLanguage = useMemo(() => getLanguageFromFilePath(filePath), [filePath, getLanguageFromFilePath]);
+  const detectedLanguage = useMemo(
+    () => getLanguageFromFilePath(filePath),
+    [filePath, getLanguageFromFilePath],
+  );
 
   // Get the correct Monaco theme based on the current theme setting
   const monacoTheme = useMemo(() => {
@@ -163,7 +167,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     setLineHeight(computedLineHeight);
 
     // Track scroll position for blame gutter
-    editor.onDidScrollChange(e => {
+    editor.onDidScrollChange((e) => {
       setScrollTop(e.scrollTop);
     });
 
@@ -189,62 +193,64 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       const MAX_BATCHES = 10;
 
       // Listen for content changes
-      const disposable = model.onDidChangeContent((event: monaco.editor.IModelContentChangedEvent) => {
-        // Skip if we're in the middle of an undo/redo operation
-        if (event.isUndoing || event.isRedoing) return;
+      const disposable = model.onDidChangeContent(
+        (event: monaco.editor.IModelContentChangedEvent) => {
+          // Skip if we're in the middle of an undo/redo operation
+          if (event.isUndoing || event.isRedoing) return;
 
-        // Add new changes, but limit the total number to prevent memory issues
-        const newChanges = event.changes.filter(change =>
-          !change.text || change.text.length <= MAX_TEXT_SIZE
-        );
+          // Add new changes, but limit the total number to prevent memory issues
+          const newChanges = event.changes.filter(
+            (change) => !change.text || change.text.length <= MAX_TEXT_SIZE,
+          );
 
-        // Log skipped changes due to size
-        const skippedChanges = event.changes.length - newChanges.length;
-        if (skippedChanges > 0) {
-          console.warn(`Skipped ${skippedChanges} large text changes`);
-        }
+          // Log skipped changes due to size
+          const skippedChanges = event.changes.length - newChanges.length;
+          if (skippedChanges > 0) {
+            console.warn(`Skipped ${skippedChanges} large text changes`);
+          }
 
-        // Add new changes, but limit the total to prevent memory issues
-        if (pendingChanges.length + newChanges.length <= MAX_CHANGES_PER_BATCH * 2) {
-          pendingChanges.push(...newChanges);
-        } else {
-          // If we would exceed the limit, process current changes first
+          // Add new changes, but limit the total to prevent memory issues
+          if (pendingChanges.length + newChanges.length <= MAX_CHANGES_PER_BATCH * 2) {
+            pendingChanges.push(...newChanges);
+          } else {
+            // If we would exceed the limit, process current changes first
+            if (debounceTimeout) {
+              clearTimeout(debounceTimeout);
+              debounceTimeout = null;
+            }
+            processChanges();
+
+            // Then add the new changes, but only up to the limit
+            const spaceLeft = MAX_CHANGES_PER_BATCH * 2 - pendingChanges.length;
+            pendingChanges.push(...newChanges.slice(0, spaceLeft));
+
+            if (newChanges.length > spaceLeft) {
+              console.warn(`Dropped ${newChanges.length - spaceLeft} changes due to buffer limits`);
+            }
+          }
+
+          // Clear existing timeout
           if (debounceTimeout) {
             clearTimeout(debounceTimeout);
+          }
+
+          // Set new timeout to process changes
+          debounceTimeout = setTimeout(() => {
+            processChanges();
             debounceTimeout = null;
+          }, 500); // Increased debounce time to reduce frequency of updates
+
+          // Track timeout for cleanup
+          const win = window as any;
+          if (!win._editorTimeouts) {
+            win._editorTimeouts = {};
           }
-          processChanges();
-
-          // Then add the new changes, but only up to the limit
-          const spaceLeft = MAX_CHANGES_PER_BATCH * 2 - pendingChanges.length;
-          pendingChanges.push(...newChanges.slice(0, spaceLeft));
-
-          if (newChanges.length > spaceLeft) {
-            console.warn(`Dropped ${newChanges.length - spaceLeft} changes due to buffer limits`);
+          if (!win._editorTimeouts[filePath]) {
+            win._editorTimeouts[filePath] = [];
           }
-        }
-
-        // Clear existing timeout
-        if (debounceTimeout) {
-          clearTimeout(debounceTimeout);
-        }
-
-        // Set new timeout to process changes
-        debounceTimeout = setTimeout(() => {
-          processChanges();
-          debounceTimeout = null;
-        }, 500); // Increased debounce time to reduce frequency of updates
-
-        // Track timeout for cleanup
-        const win = window as any;
-        if (!win._editorTimeouts) {
-          win._editorTimeouts = {};
-        }
-        if (!win._editorTimeouts[filePath]) {
-          win._editorTimeouts[filePath] = [];
-        }
-        win._editorTimeouts[filePath].push(debounceTimeout);
-      });
+          win._editorTimeouts[filePath].push(debounceTimeout);
+        },
+      );
 
       // Process batched changes using iteration instead of recursion
       const processChanges = (): void => {
@@ -275,10 +281,14 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
               } else {
                 // Check if changes can be batched (same type and adjacent)
                 const canBatch =
-                  (currentBatch.rangeLength === 0 && change.rangeLength === 0 && // Both insertions
-                   currentBatch.text.length > 0 && change.text.length > 0) ||
-                  (currentBatch.rangeLength > 0 && change.rangeLength > 0 && // Both deletions
-                   currentBatch.text.length === 0 && change.text.length === 0);
+                  (currentBatch.rangeLength === 0 &&
+                    change.rangeLength === 0 && // Both insertions
+                    currentBatch.text.length > 0 &&
+                    change.text.length > 0) ||
+                  (currentBatch.rangeLength > 0 &&
+                    change.rangeLength > 0 && // Both deletions
+                    currentBatch.text.length === 0 &&
+                    change.text.length === 0);
 
                 if (canBatch && currentBatch.text.length + change.text.length <= MAX_TEXT_SIZE) {
                   // Update the current batch
@@ -393,35 +403,38 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         disposable.dispose();
       });
     },
-    [filePath, executeCommand]
+    [filePath, executeCommand],
   );
 
   // Handle content changes
-  const handleEditorChange: OnChange = useCallback((value): void => {
-    if (value !== undefined && !readOnly) {
-      // Update local state immediately for responsive UI
-      setFileContent(value);
+  const handleEditorChange: OnChange = useCallback(
+    (value): void => {
+      if (value !== undefined && !readOnly) {
+        // Update local state immediately for responsive UI
+        setFileContent(value);
 
-      // Debounce the file store update to prevent excessive calls
-      const timeoutId = setTimeout(() => {
-        updateFileContent(filePath, value).catch((error) => {
-          console.error('Failed to update file content:', error);
-        });
-      }, 300); // 300ms debounce
+        // Debounce the file store update to prevent excessive calls
+        const timeoutId = setTimeout(() => {
+          updateFileContent(filePath, value).catch((error) => {
+            console.error('Failed to update file content:', error);
+          });
+        }, 300); // 300ms debounce
 
-      // Store timeout for cleanup
-      const win = window as any;
-      if (!win._updateTimeouts) {
-        win._updateTimeouts = {};
+        // Store timeout for cleanup
+        const win = window as any;
+        if (!win._updateTimeouts) {
+          win._updateTimeouts = {};
+        }
+        if (win._updateTimeouts[filePath]) {
+          clearTimeout(win._updateTimeouts[filePath]);
+        }
+        win._updateTimeouts[filePath] = timeoutId;
+
+        onContentChange?.(value);
       }
-      if (win._updateTimeouts[filePath]) {
-        clearTimeout(win._updateTimeouts[filePath]);
-      }
-      win._updateTimeouts[filePath] = timeoutId;
-
-      onContentChange?.(value);
-    }
-  }, [filePath, readOnly, updateFileContent, onContentChange]);
+    },
+    [filePath, readOnly, updateFileContent, onContentChange],
+  );
 
   // Configure TypeScript/JavaScript language support
   const configureTypeScriptLanguage = (monaco: Monaco): void => {
@@ -490,7 +503,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
             const text = await response.text();
 
             // Only cache if the response is valid and not too large
-            if (text && text.length > 0 && text.length < 5 * 1024 * 1024) { // 5MB limit
+            if (text && text.length > 0 && text.length < 5 * 1024 * 1024) {
+              // 5MB limit
               // Cache the result
               reactTypesCache.value = text;
               reactTypesCache.timestamp = now;
@@ -974,34 +988,37 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   // Editor options are now fully managed by useMemo and useEffect
 
   // Memoize the editor options to prevent unnecessary re-renders
-  const editorOptions = useMemo(() => ({
-    fontSize,
-    fontFamily,
-    tabSize,
-    wordWrap: wordWrap ? 'on' : 'off',
-    minimap: { enabled: minimap },
-    lineNumbers: lineNumbers ? 'on' : 'off',
-    folding,
-    matchBrackets: bracketMatching ? 'always' : 'never',
-    readOnly,
-    automaticLayout: true,
-    scrollBeyondLastLine: false,
-    renderWhitespace: 'selection',
-    cursorBlinking: 'smooth',
-    cursorSmoothCaretAnimation: true,
-    theme: monacoTheme,
-  }), [
-    fontSize,
-    fontFamily,
-    tabSize,
-    wordWrap,
-    minimap,
-    lineNumbers,
-    folding,
-    bracketMatching,
-    readOnly,
-    monacoTheme,
-  ]);
+  const editorOptions = useMemo(
+    () => ({
+      fontSize,
+      fontFamily,
+      tabSize,
+      wordWrap: wordWrap ? 'on' : 'off',
+      minimap: { enabled: minimap },
+      lineNumbers: lineNumbers ? 'on' : 'off',
+      folding,
+      matchBrackets: bracketMatching ? 'always' : 'never',
+      readOnly,
+      automaticLayout: true,
+      scrollBeyondLastLine: false,
+      renderWhitespace: 'selection',
+      cursorBlinking: 'smooth',
+      cursorSmoothCaretAnimation: true,
+      theme: monacoTheme,
+    }),
+    [
+      fontSize,
+      fontFamily,
+      tabSize,
+      wordWrap,
+      minimap,
+      lineNumbers,
+      folding,
+      bracketMatching,
+      readOnly,
+      monacoTheme,
+    ],
+  );
 
   // Apply editor settings when they change, but only update what's needed
   useEffect(() => {
@@ -1118,9 +1135,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       )}
 
       {/* Editor Toolbar - only show when editor and content are loaded */}
-      {!isLoading && !isContentLoading && (
-        <EditorToolbar filePath={filePath} />
-      )}
+      {!isLoading && !isContentLoading && <EditorToolbar filePath={filePath} />}
 
       {/* Git Blame Gutter */}
       {!isLoading && !isContentLoading && (
@@ -1133,31 +1148,27 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         />
       )}
 
-      {/* Git Diff Viewer */}
-      {!isLoading && !isContentLoading && showDiff ? (
-        <GitDiffViewer
-          filePath={filePath}
-          visible={showDiff}
-        />
-      ) : (
-        <Editor
-          key={filePath} // Force recreation of editor instance for each file to prevent model issues
-          height={height}
-          language={detectedLanguage}
-          // path={filePath} // Commented out to prevent re-renders when switching files
-          value={fileContent}
-          theme={monacoTheme}
-          // theme={'vs-dark'}
-          onChange={handleEditorChange}
-          onMount={handleEditorDidMount}
-          beforeMount={handleWillMount}
-          options={{
-            ...editorOptions,
-            // Add padding to the left if blame is shown
-            lineDecorationsWidth: showBlame ? 48 : undefined,
-          }}
-        />
-      )}
+      {/* Editor */}
+      <Editor
+        key={filePath} // Force recreation of editor instance for each file to prevent model issues
+        height={height}
+        language={detectedLanguage}
+        // path={filePath} // Commented out to prevent re-renders when switching files
+        value={fileContent}
+        theme={monacoTheme}
+        // theme={'vs-dark'}
+        onChange={handleEditorChange}
+        onMount={handleEditorDidMount}
+        beforeMount={handleWillMount}
+        options={{
+          ...editorOptions,
+          // Add padding to the left if blame is shown
+          lineDecorationsWidth: showBlame ? 48 : undefined,
+        }}
+      />
+
+      {/* Inline Git Diff Viewer */}
+      <InlineGitDiffViewer filePath={filePath} visible={showDiff} />
     </div>
   );
 };

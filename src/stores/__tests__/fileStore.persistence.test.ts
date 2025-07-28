@@ -63,7 +63,7 @@ describe('FileStore Persistence', () => {
         activeFile: store.activeFile,
         selectedFiles: store.selectedFiles,
       },
-      version: 2
+      version: 2,
     };
 
     localStorage.setItem('file-storage', JSON.stringify(persistedState));
@@ -75,7 +75,9 @@ describe('FileStore Persistence', () => {
     const parsed = JSON.parse(stored!);
     expect(parsed.state.filesArray).toHaveLength(1);
     expect(parsed.state.filesArray[0][0]).toBe('/test.sol');
-    expect(parsed.state.filesArray[0][1].content).toBe('pragma solidity ^0.8.0;\n\ncontract Test {}');
+    expect(parsed.state.filesArray[0][1].content).toBe(
+      'pragma solidity ^0.8.0;\n\ncontract Test {}',
+    );
   });
 
   it('should not overwrite existing files when initializing defaults', async () => {
@@ -163,7 +165,7 @@ describe('FileStore Persistence', () => {
         activeFile: store.activeFile,
         selectedFiles: store.selectedFiles,
       },
-      version: 2
+      version: 2,
     };
 
     localStorage.setItem('file-storage', JSON.stringify(persistedState));

@@ -114,7 +114,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       // Step 2: Check status (file should appear as new)
       mockGitService.status.mockResolvedValue([
-        { file: fileName, head: 0, workdir: 2, stage: 0 } // New file
+        { file: fileName, head: 0, workdir: 2, stage: 0 }, // New file
       ]);
 
       await gitStore.getStatus();
@@ -124,7 +124,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Step 3: Stage the file
       mockGitService.add.mockResolvedValue(undefined);
       mockGitService.status.mockResolvedValue([
-        { file: fileName, head: 0, workdir: 2, stage: 2 } // Staged file
+        { file: fileName, head: 0, workdir: 2, stage: 2 }, // Staged file
       ]);
 
       await gitStore.addFile(fileName);
@@ -141,9 +141,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: commitMessage,
             author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]); // Clean working directory
 
@@ -151,7 +151,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       expect(mockGitService.commit).toHaveBeenCalledWith(commitMessage, {
         name: 'Test User',
-        email: 'test@example.com'
+        email: 'test@example.com',
       });
       expect(gitStore.commits).toHaveLength(1);
       expect(gitStore.commits[0].message).toBe(commitMessage);
@@ -164,7 +164,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       // Mock status with multiple files
       mockGitService.status.mockResolvedValue(
-        files.map(file => ({ file, head: 0, workdir: 2, stage: 0 }))
+        files.map((file) => ({ file, head: 0, workdir: 2, stage: 0 })),
       );
 
       await gitStore.getStatus();
@@ -173,7 +173,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Stage all files
       mockGitService.add.mockResolvedValue(undefined);
       mockGitService.status.mockResolvedValue(
-        files.map(file => ({ file, head: 0, workdir: 2, stage: 2 }))
+        files.map((file) => ({ file, head: 0, workdir: 2, stage: 2 })),
       );
 
       await gitStore.addAllFiles();
@@ -190,9 +190,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: commitMessage,
             author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 
@@ -208,9 +208,7 @@ describe('Git Integration - End-to-End Workflows', () => {
     beforeEach(() => {
       gitStore.isInitialized = true;
       gitStore.currentBranch = 'main';
-      gitStore.branches = [
-        { name: 'main', oid: 'abc123', current: true }
-      ];
+      gitStore.branches = [{ name: 'main', oid: 'abc123', current: true }];
     });
 
     it('should complete full branch creation and switching workflow', async () => {
@@ -225,7 +223,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       expect(mockGitService.branch).toHaveBeenCalledWith(newBranchName);
       expect(gitStore.branches).toHaveLength(2);
-      expect(gitStore.branches.find(b => b.name === newBranchName)).toBeDefined();
+      expect(gitStore.branches.find((b) => b.name === newBranchName)).toBeDefined();
 
       // Step 2: Switch to new branch
       mockGitService.checkout.mockResolvedValue(undefined);
@@ -237,12 +235,12 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       expect(mockGitService.checkout).toHaveBeenCalledWith(newBranchName);
       expect(gitStore.currentBranch).toBe(newBranchName);
-      expect(gitStore.branches.find(b => b.name === newBranchName)?.current).toBe(true);
-      expect(gitStore.branches.find(b => b.name === 'main')?.current).toBe(false);
+      expect(gitStore.branches.find((b) => b.name === newBranchName)?.current).toBe(true);
+      expect(gitStore.branches.find((b) => b.name === 'main')?.current).toBe(false);
 
       // Step 3: Make changes and commit on new branch
       mockGitService.status.mockResolvedValue([
-        { file: 'feature.sol', head: 0, workdir: 2, stage: 0 }
+        { file: 'feature.sol', head: 0, workdir: 2, stage: 0 },
       ]);
 
       await gitStore.getStatus();
@@ -260,9 +258,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: commitMessage,
             author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 
@@ -278,7 +276,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Setup: Add branch to delete
       gitStore.branches = [
         { name: 'main', oid: 'abc123', current: true },
-        { name: branchToDelete, oid: 'def456', current: false }
+        { name: branchToDelete, oid: 'def456', current: false },
       ];
 
       // Delete branch
@@ -290,7 +288,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       expect(mockGitService.deleteBranch).toHaveBeenCalledWith(branchToDelete);
       expect(gitStore.branches).toHaveLength(1);
-      expect(gitStore.branches.find(b => b.name === branchToDelete)).toBeUndefined();
+      expect(gitStore.branches.find((b) => b.name === branchToDelete)).toBeUndefined();
     });
   });
 
@@ -306,9 +304,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       // Step 1: Add remote
       mockGitService.addRemote.mockResolvedValue(undefined);
-      mockGitService.listRemotes.mockResolvedValue([
-        { remote: remoteName, url: remoteUrl }
-      ]);
+      mockGitService.listRemotes.mockResolvedValue([{ remote: remoteName, url: remoteUrl }]);
 
       await gitStore.addRemote(remoteName, remoteUrl);
 
@@ -351,7 +347,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       mockGitService.listBranches.mockResolvedValue(['main', 'develop']);
       mockGitService.currentBranch.mockResolvedValue('main');
       mockGitService.status.mockResolvedValue([
-        { file: 'existing.sol', head: 1, workdir: 1, stage: 1 }
+        { file: 'existing.sol', head: 1, workdir: 1, stage: 1 },
       ]);
 
       await gitStore.cloneRepository(repoUrl);
@@ -393,9 +389,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: commitMessage,
             author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 
@@ -458,7 +454,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Step 3: Add multiple files
       const files = ['Token.sol', 'TokenTest.sol', 'deploy.js'];
       mockGitService.status.mockResolvedValue(
-        files.map(file => ({ file, head: 0, workdir: 2, stage: 0 }))
+        files.map((file) => ({ file, head: 0, workdir: 2, stage: 0 })),
       );
 
       await gitStore.getStatus();
@@ -466,7 +462,7 @@ describe('Git Integration - End-to-End Workflows', () => {
       // Step 4: Stage and commit files
       mockGitService.add.mockResolvedValue(undefined);
       mockGitService.status.mockResolvedValue(
-        files.map(file => ({ file, head: 0, workdir: 2, stage: 2 }))
+        files.map((file) => ({ file, head: 0, workdir: 2, stage: 2 })),
       );
 
       await gitStore.addAllFiles();
@@ -481,9 +477,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: commitMessage,
             author: { name: 'Developer', email: 'dev@example.com', timestamp: Date.now() },
-            committer: { name: 'Developer', email: 'dev@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Developer', email: 'dev@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 
@@ -521,9 +517,9 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: 'Remote changes',
             author: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() },
-            committer: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 
@@ -531,7 +527,7 @@ describe('Git Integration - End-to-End Workflows', () => {
 
       // Step 3: Make local changes
       mockGitService.status.mockResolvedValue([
-        { file: 'local-change.sol', head: 0, workdir: 2, stage: 0 }
+        { file: 'local-change.sol', head: 0, workdir: 2, stage: 0 },
       ]);
 
       await gitStore.getStatus();
@@ -550,17 +546,17 @@ describe('Git Integration - End-to-End Workflows', () => {
           commit: {
             message: 'Remote changes',
             author: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() },
-            committer: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() }
-          }
+            committer: { name: 'Other Dev', email: 'other@example.com', timestamp: Date.now() },
+          },
         },
         {
           oid: localCommitOid,
           commit: {
             message: localCommitMessage,
             author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-          }
-        }
+            committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+          },
+        },
       ]);
       mockGitService.status.mockResolvedValue([]);
 

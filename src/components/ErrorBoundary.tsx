@@ -59,7 +59,8 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
+              An unexpected error occurred. Please try refreshing the page or contact support if the
+              problem persists.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
@@ -88,7 +89,9 @@ class ErrorBoundary extends Component<Props, State> {
                 Refresh Page
               </button>
               <button
-                onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}
+                onClick={() =>
+                  this.setState({ hasError: false, error: undefined, errorInfo: undefined })
+                }
                 className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Try Again

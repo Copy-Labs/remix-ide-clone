@@ -33,7 +33,6 @@ import FileExplorer from '@/components/FileExplorer/FileExplorer.tsx';
 import ErrorBoundary from '@/components/ErrorBoundary.tsx';
 import CompilerPanel from '@/components/Compiler/CompilerPanel.tsx';
 import DeploymentPanel from '@/components/Deployment/DeploymentPanel.tsx';
-import GitPanel from '@/components/Git/GitPanel.tsx';
 import GithubPanel from '@/components/Git/GithubPanel.tsx';
 // import DebuggerPluginUI from '@/components/PluginUI/DebuggerPluginUI.tsx';
 import DebuggerPanel from '@/components/Debugger/DebuggerPanel.tsx';
@@ -41,7 +40,7 @@ import CollaborationPluginUI from '@/components/PluginUI/CollaborationPluginUI.t
 import BackupPluginUI from '@/components/PluginUI/BackupPluginUI.tsx';
 import AnalysisPluginUI from '@/components/PluginUI/AnalysisPluginUI.tsx';
 import DeploymentPluginUI from '@/components/PluginUI/DeploymentPluginUI.tsx';
-import GitPluginUI from '@/components/PluginUI/GitPluginUI.tsx';
+import UnifiedGitPanel from '@/components/Git/UnifiedGitPanel.tsx';
 import TestingPluginUI from '@/components/PluginUI/TestingPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
 import ImprovedCustomThemePluginUI from '@/components/PluginUI/ImprovedCustomThemePluginUI.tsx';
@@ -70,7 +69,7 @@ const getPluginComponent = (pluginId: string) => {
     'code-analysis': AnalysisPluginUI,
     'solidity-debugger': DebuggerPanel,
     'deployment-automation': DeploymentPluginUI,
-    'git-integration': GitPluginUI,
+    'git-integration': UnifiedGitPanel,
     'testing-framework': TestingPluginUI,
   };
   return componentMap[pluginId];
@@ -128,7 +127,7 @@ const data = {
       isActive: false,
       component: (
         <ErrorBoundary>
-          <GitPanel />
+          <UnifiedGitPanel />
         </ErrorBoundary>
       ),
     },
@@ -263,9 +262,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          {/*<NavUser user={data.user} />*/}
-        </SidebarFooter>
+        <SidebarFooter>{/*<NavUser user={data.user} />*/}</SidebarFooter>
       </Sidebar>
 
       {/* This is the second sidebar */}
