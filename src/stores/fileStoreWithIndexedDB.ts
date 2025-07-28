@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { enableMapSet } from "immer";
+import { enableMapSet } from 'immer';
 import type { FileSystemState, FileNode } from '@/types';
 import { databaseService } from '@/services/databaseService';
 import { debug, info, warn, error } from '@/services/loggerService';
@@ -163,7 +163,7 @@ export const useFileStore = create<FileStore>()(
             try {
               await databaseService.saveFile({
                 ...newFile,
-                content
+                content,
               });
               debug('FileStore', `File created with content in IndexedDB: ${path}`);
             } catch (err) {
@@ -224,7 +224,7 @@ export const useFileStore = create<FileStore>()(
             if (file.parent) {
               const parent = state.files.get(file.parent);
               if (parent && parent.children) {
-                parent.children = parent.children.filter(child => child.path !== path);
+                parent.children = parent.children.filter((child) => child.path !== path);
               }
             }
 
@@ -240,7 +240,11 @@ export const useFileStore = create<FileStore>()(
                       await databaseService.deleteFile(child.path);
                       debug('FileStore', `Deleted file content from IndexedDB: ${child.path}`);
                     } catch (err) {
-                      error('FileStore', `Failed to delete file content from IndexedDB: ${child.path}`, err);
+                      error(
+                        'FileStore',
+                        `Failed to delete file content from IndexedDB: ${child.path}`,
+                        err,
+                      );
                     }
                   }
 
@@ -263,8 +267,8 @@ export const useFileStore = create<FileStore>()(
 
             // Remove from maps and arrays
             state.files.delete(path);
-            state.openTabs = state.openTabs.filter(tab => tab !== path);
-            state.selectedFiles = state.selectedFiles.filter(selected => selected !== path);
+            state.openTabs = state.openTabs.filter((tab) => tab !== path);
+            state.selectedFiles = state.selectedFiles.filter((selected) => selected !== path);
             state.expandedFolders.delete(path);
 
             // Update active file if it was deleted
@@ -301,14 +305,18 @@ export const useFileStore = create<FileStore>()(
                 // Save content with new path
                 await databaseService.saveFile({
                   ...updatedFile,
-                  content: fileWithContent.content
+                  content: fileWithContent.content,
                 });
                 // Delete old entry
                 await databaseService.deleteFile(oldPath);
                 debug('FileStore', `Renamed file content in IndexedDB: ${oldPath} -> ${newPath}`);
               }
             } catch (err) {
-              error('FileStore', `Failed to rename file content in IndexedDB: ${oldPath} -> ${newPath}`, err);
+              error(
+                'FileStore',
+                `Failed to rename file content in IndexedDB: ${oldPath} -> ${newPath}`,
+                err,
+              );
               throw err;
             }
           }
@@ -322,7 +330,7 @@ export const useFileStore = create<FileStore>()(
             if (file.parent) {
               const parent = state.files.get(file.parent);
               if (parent && parent.children) {
-                const childIndex = parent.children.findIndex(child => child.path === oldPath);
+                const childIndex = parent.children.findIndex((child) => child.path === oldPath);
                 if (childIndex !== -1) {
                   parent.children[childIndex] = updatedFile;
                 }
@@ -382,7 +390,7 @@ export const useFileStore = create<FileStore>()(
                 content,
                 contentInIndexedDB: true,
                 lastModified: Date.now(),
-                size: contentSize
+                size: contentSize,
               });
               debug('FileStore', `Updated file content in IndexedDB: ${path}`);
             } catch (err) {
@@ -432,10 +440,11 @@ export const useFileStore = create<FileStore>()(
 
         closeFile: (path: string) => {
           set((state) => {
-            state.openTabs = state.openTabs.filter(tab => tab !== path);
+            state.openTabs = state.openTabs.filter((tab) => tab !== path);
 
             if (state.activeFile === path) {
-              state.activeFile = state.openTabs.length > 0 ? state.openTabs[state.openTabs.length - 1] : null;
+              state.activeFile =
+                state.openTabs.length > 0 ? state.openTabs[state.openTabs.length - 1] : null;
             }
 
             // If file content was loaded from IndexedDB, remove it from state to save memory
@@ -455,7 +464,7 @@ export const useFileStore = create<FileStore>()(
         closeAllTabs: () => {
           set((state) => {
             // Clear content from memory for files loaded from IndexedDB
-            state.openTabs.forEach(path => {
+            state.openTabs.forEach((path) => {
               const file = state.files.get(path);
               if (file && file.type === 'file' && file.contentInIndexedDB && file.content) {
                 delete file.content;
@@ -470,7 +479,7 @@ export const useFileStore = create<FileStore>()(
         closeOtherTabs: (path: string) => {
           set((state) => {
             // Clear content from memory for files loaded from IndexedDB
-            state.openTabs.forEach(tabPath => {
+            state.openTabs.forEach((tabPath) => {
               if (tabPath !== path) {
                 const file = state.files.get(tabPath);
                 if (file && file.type === 'file' && file.contentInIndexedDB && file.content) {
@@ -534,7 +543,7 @@ export const useFileStore = create<FileStore>()(
               if (fileWithContent && fileWithContent.content) {
                 return {
                   ...file,
-                  content: fileWithContent.content
+                  content: fileWithContent.content,
                 };
               }
             } catch (err) {
@@ -603,21 +612,25 @@ export const useFileStore = create<FileStore>()(
                   result.push({
                     ...file,
                     content: fileWithContent.content,
-                    contentInIndexedDB: undefined // Remove this property for export
+                    contentInIndexedDB: undefined, // Remove this property for export
                   });
                 } else {
                   result.push({
                     ...file,
                     content: '', // Fallback to empty content
-                    contentInIndexedDB: undefined
+                    contentInIndexedDB: undefined,
                   });
                 }
               } catch (err) {
-                error('FileStore', `Failed to export file content from IndexedDB: ${file.path}`, err);
+                error(
+                  'FileStore',
+                  `Failed to export file content from IndexedDB: ${file.path}`,
+                  err,
+                );
                 result.push({
                   ...file,
                   content: '', // Fallback to empty content
-                  contentInIndexedDB: undefined
+                  contentInIndexedDB: undefined,
                 });
               }
             } else {
@@ -683,12 +696,16 @@ export const useFileStore = create<FileStore>()(
 
             // Migrate files to IndexedDB
             for (const [path, file] of filesMap.entries()) {
-              if (file.type === 'file' && file.content && file.content.length > INDEXEDDB_SIZE_THRESHOLD) {
+              if (
+                file.type === 'file' &&
+                file.content &&
+                file.content.length > INDEXEDDB_SIZE_THRESHOLD
+              ) {
                 try {
                   // Save to IndexedDB
                   await databaseService.saveFile({
                     ...file,
-                    contentInIndexedDB: true
+                    contentInIndexedDB: true,
                   });
 
                   // Update file in state
@@ -712,7 +729,7 @@ export const useFileStore = create<FileStore>()(
             error('FileStore', 'Failed to migrate from localStorage to IndexedDB', err);
             throw err;
           }
-        }
+        },
       })),
       {
         name: 'file-storage',
@@ -784,12 +801,12 @@ export const useFileStore = create<FileStore>()(
             }, 1000);
           }
         },
-      }
+      },
     ),
     {
       name: 'file-store',
-    }
-  )
+    },
+  ),
 );
 
 // Initialize with default files

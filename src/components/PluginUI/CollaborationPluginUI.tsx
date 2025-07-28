@@ -11,7 +11,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
   const { getPlugin, updatePluginConfig } = usePluginStore();
   const { files } = useFileStore();
 
-  const [implementation, setImplementation] = useState<CollaborationPluginImplementation | null>(null);
+  const [implementation, setImplementation] = useState<CollaborationPluginImplementation | null>(
+    null,
+  );
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [sharedFiles, setSharedFiles] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
@@ -23,7 +25,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
 
   // Form states
   const [selectedFile, setSelectedFile] = useState('');
-  const [shareVisibility, setShareVisibility] = useState<'private' | 'public' | 'shared'>('private');
+  const [shareVisibility, setShareVisibility] = useState<'private' | 'public' | 'shared'>(
+    'private',
+  );
   const [sharedWithUsers, setSharedWithUsers] = useState<string[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -37,7 +41,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
   const [sharingEnabled, setSharingEnabled] = useState(true);
   const [realTimeEditingEnabled, setRealTimeEditingEnabled] = useState(true);
   const [commentingEnabled, setCommentingEnabled] = useState(true);
-  const [defaultVisibility, setDefaultVisibility] = useState<'private' | 'public' | 'shared'>('private');
+  const [defaultVisibility, setDefaultVisibility] = useState<'private' | 'public' | 'shared'>(
+    'private',
+  );
   const [serverUrl, setServerUrl] = useState('https://collaboration-server.example.com');
   const [autoSyncInterval, setAutoSyncInterval] = useState(30);
   const [notifyOnComment, setNotifyOnComment] = useState(true);
@@ -73,7 +79,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
   }, [pluginId, getPlugin]);
 
   // Load collaboration data
-  const loadCollaborationData = async (impl: CollaborationPluginImplementation | null = implementation) => {
+  const loadCollaborationData = async (
+    impl: CollaborationPluginImplementation | null = implementation,
+  ) => {
     if (!impl) return;
 
     setIsLoading(true);
@@ -152,7 +160,7 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
       const sharedFile = await implementation.shareFile(
         selectedFile,
         shareVisibility,
-        shareVisibility === 'shared' ? sharedWithUsers : []
+        shareVisibility === 'shared' ? sharedWithUsers : [],
       );
 
       // Refresh shared files
@@ -279,7 +287,7 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
       const fileComments = await implementation.getComments(commentFile);
 
       // Update comments map
-      setComments(prev => {
+      setComments((prev) => {
         const newMap = new Map(prev);
         newMap.set(commentFile, fileComments);
         return newMap;
@@ -308,7 +316,7 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
       const fileComments = await implementation.getComments(filePath);
 
       // Update comments map
-      setComments(prev => {
+      setComments((prev) => {
         const newMap = new Map(prev);
         newMap.set(filePath, fileComments);
         return newMap;
@@ -334,7 +342,7 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
       const fileComments = await implementation.getComments(filePath);
 
       // Update comments map
-      setComments(prev => {
+      setComments((prev) => {
         const newMap = new Map(prev);
         if (fileComments.length > 0) {
           newMap.set(filePath, fileComments);
@@ -379,10 +387,8 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
 
   // Toggle file in session files
   const toggleFileInSession = (filePath: string) => {
-    setSessionFiles(prev =>
-      prev.includes(filePath)
-        ? prev.filter(path => path !== filePath)
-        : [...prev, filePath]
+    setSessionFiles((prev) =>
+      prev.includes(filePath) ? prev.filter((path) => path !== filePath) : [...prev, filePath],
     );
   };
 
@@ -414,7 +420,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                 <h4 className="font-medium">{currentUser.username}</h4>
                 {currentUser.email && <p className="text-sm text-gray-500">{currentUser.email}</p>}
                 <p className="text-sm">
-                  <span className={`inline-block w-2 h-2 rounded-full mr-1 ${currentUser.isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full mr-1 ${currentUser.isOnline ? 'bg-green-500' : 'bg-gray-500'}`}
+                  ></span>
                   {currentUser.isOnline ? 'Online' : 'Offline'}
                 </p>
               </div>
@@ -469,19 +477,21 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
             <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4">
               <h4 className="font-medium mb-2">Shared Files</h4>
               <div className="space-y-3">
-                {sharedFiles.map(file => (
+                {sharedFiles.map((file) => (
                   <div key={file.id} className="bg-white dark:bg-gray-800 p-3 rounded border">
                     <div className="flex justify-between items-start">
                       <div>
                         <h5 className="font-medium">{file.filePath}</h5>
                         <div className="flex items-center mt-1">
-                          <span className={`px-2 py-1 text-xs rounded mr-2 ${
-                            file.visibility === 'private' 
-                              ? 'bg-gray-100 text-gray-800' 
-                              : file.visibility === 'public' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded mr-2 ${
+                              file.visibility === 'private'
+                                ? 'bg-gray-100 text-gray-800'
+                                : file.visibility === 'public'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
                             {file.visibility.charAt(0).toUpperCase() + file.visibility.slice(1)}
                           </span>
                           <span className="text-sm text-gray-500">
@@ -537,7 +547,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                 {Array.from(files.entries())
                   .filter(([_, file]) => file.type === 'file')
                   .map(([path]) => (
-                    <option key={path} value={path}>{path}</option>
+                    <option key={path} value={path}>
+                      {path}
+                    </option>
                   ))}
               </select>
             </div>
@@ -612,7 +624,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                     Created {formatDate(activeSession.createdAt)}
                   </p>
                   <div className="mt-2">
-                    <h5 className="text-sm font-medium">Participants ({activeSession.participants.length}):</h5>
+                    <h5 className="text-sm font-medium">
+                      Participants ({activeSession.participants.length}):
+                    </h5>
                     <div className="flex flex-wrap mt-1">
                       {activeSession.participants.map((user: any) => (
                         <div key={user.id} className="flex items-center mr-3 mb-1">
@@ -628,7 +642,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                     <h5 className="text-sm font-medium">Files ({activeSession.files.length}):</h5>
                     <ul className="list-disc list-inside mt-1">
                       {activeSession.files.map((file: string) => (
-                        <li key={file} className="text-sm">{file}</li>
+                        <li key={file} className="text-sm">
+                          {file}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -650,17 +666,23 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
               <h4 className="font-medium mb-2">Available Sessions</h4>
               <div className="space-y-3">
                 {sessions
-                  .filter(session => session.active && (!activeSession || session.id !== activeSession.id))
-                  .map(session => (
+                  .filter(
+                    (session) =>
+                      session.active && (!activeSession || session.id !== activeSession.id),
+                  )
+                  .map((session) => (
                     <div key={session.id} className="bg-white dark:bg-gray-800 p-3 rounded border">
                       <div className="flex justify-between items-start">
                         <div>
                           <h5 className="font-medium">{session.name}</h5>
                           <p className="text-sm text-gray-500">
-                            Created by {session.participants.find((p: any) => p.id === session.ownerId)?.username || 'Unknown'}
+                            Created by{' '}
+                            {session.participants.find((p: any) => p.id === session.ownerId)
+                              ?.username || 'Unknown'}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {session.participants.length} participants • {session.files.length} files
+                            {session.participants.length} participants • {session.files.length}{' '}
+                            files
                           </p>
                         </div>
                         <button
@@ -735,12 +757,12 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                   <div key={filePath} className="bg-white dark:bg-gray-800 p-3 rounded border">
                     <h5 className="font-medium mb-2">{filePath}</h5>
                     <div className="space-y-3">
-                      {fileComments.map(comment => (
+                      {fileComments.map((comment) => (
                         <div
                           key={comment.id}
                           className={`p-2 rounded ${
-                            comment.resolved 
-                              ? 'bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-800' 
+                            comment.resolved
+                              ? 'bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-800'
                               : 'bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-800'
                           }`}
                         >
@@ -752,7 +774,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                                 </div>
                                 <span className="font-medium">{comment.username}</span>
                                 <span className="mx-2 text-gray-500">•</span>
-                                <span className="text-sm text-gray-500">Line {comment.lineNumber}</span>
+                                <span className="text-sm text-gray-500">
+                                  Line {comment.lineNumber}
+                                </span>
                               </div>
                               <p className="mt-1">{comment.content}</p>
                               <div className="text-xs text-gray-500 mt-1">
@@ -764,10 +788,12 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                             </div>
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => handleResolveComment(filePath, comment.id, !comment.resolved)}
+                                onClick={() =>
+                                  handleResolveComment(filePath, comment.id, !comment.resolved)
+                                }
                                 className={`px-2 py-1 text-xs rounded ${
-                                  comment.resolved 
-                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
+                                  comment.resolved
+                                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                                     : 'bg-green-100 text-green-800 hover:bg-green-200'
                                 }`}
                                 disabled={isLoading}
@@ -789,7 +815,7 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                           {/* Replies */}
                           {comment.replies.length > 0 && (
                             <div className="mt-2 pl-8 space-y-2">
-                              {comment.replies.map(reply => (
+                              {comment.replies.map((reply) => (
                                 <div
                                   key={reply.id}
                                   className="p-2 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
@@ -848,7 +874,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
                 {Array.from(files.entries())
                   .filter(([_, file]) => file.type === 'file')
                   .map(([path]) => (
-                    <option key={path} value={path}>{path}</option>
+                    <option key={path} value={path}>
+                      {path}
+                    </option>
                   ))}
               </select>
             </div>
@@ -940,7 +968,9 @@ const CollaborationPluginUI: React.FC<CollaborationPluginUIProps> = ({ pluginId 
               <label className="block text-sm font-medium mb-1">Default Visibility</label>
               <select
                 value={defaultVisibility}
-                onChange={(e) => setDefaultVisibility(e.target.value as 'private' | 'public' | 'shared')}
+                onChange={(e) =>
+                  setDefaultVisibility(e.target.value as 'private' | 'public' | 'shared')
+                }
                 className="w-full p-2 border rounded"
               >
                 <option value="private">Private</option>

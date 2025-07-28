@@ -2,7 +2,12 @@ import React, { useEffect } from 'react';
 import { useCompilerStore } from '@/stores/compilerStore.ts';
 import { useFileStore } from '@/stores/fileStore.ts';
 import { LucideLoader2 } from 'lucide-react';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
 import { selectBaseClass } from '@/utils/constant.ts';
 import { Separator } from '@/components/ui/separator.tsx';
 import { Button } from '@/components/ui/button.tsx';
@@ -141,10 +146,7 @@ const CompilerPanel: React.FC = () => {
                 onChange={(e) => setOptimizationEnabled(e.target.checked)}
                 className="h-3 w-3 text-muted-foreground rounded-sm"
               />
-              <label
-                htmlFor="optimization"
-                className="ml-2 text-xs text-muted-foreground"
-              >
+              <label htmlFor="optimization" className="ml-2 text-xs text-muted-foreground">
                 Enable optimization
               </label>
             </div>
@@ -186,8 +188,10 @@ const CompilerPanel: React.FC = () => {
               </div>
             ) : availableVersions.length === 0 ? (
               'Loading compiler...'
+            ) : compilationResult ? (
+              'Re-compile'
             ) : (
-              compilationResult ? 'Re-compile' : 'Compile'
+              'Compile'
             )}
           </Button>
         </div>
@@ -229,15 +233,21 @@ const CompilerPanel: React.FC = () => {
             {/* Errors */}
             {compilationResult.errors.length > 0 && (
               <div>
-                <h4 className="text-xs font-medium text-red-600 mb-1">Errors ({compilationResult.errors.length})</h4>
+                <h4 className="text-xs font-medium text-red-600 mb-1">
+                  Errors ({compilationResult.errors.length})
+                </h4>
                 <div className="space-y-1 max-h-24 overflow-y-auto">
                   {compilationResult.errors.map((error, index) => (
                     <div
                       key={index}
                       className="text-xs bg-red-50 dark:bg-red-900/20 p-1.5 rounded border-l-2 border-red-500"
                     >
-                      <div className="font-medium text-red-800 dark:text-red-400 text-xs">{error.type}</div>
-                      <div className="text-red-700 dark:text-red-300 mt-0.5 text-xs leading-tight">{error.message}</div>
+                      <div className="font-medium text-red-800 dark:text-red-400 text-xs">
+                        {error.type}
+                      </div>
+                      <div className="text-red-700 dark:text-red-300 mt-0.5 text-xs leading-tight">
+                        {error.message}
+                      </div>
                       {error.sourceLocation.file && (
                         <div className="text-red-600 dark:text-red-400 mt-0.5 text-xs">
                           {error.sourceLocation.file}:{error.sourceLocation.start}
@@ -252,14 +262,18 @@ const CompilerPanel: React.FC = () => {
             {/* Warnings */}
             {compilationResult.warnings.length > 0 && (
               <div>
-                <h4 className="text-xs font-medium text-yellow-600 mb-1">Warnings ({compilationResult.warnings.length})</h4>
+                <h4 className="text-xs font-medium text-yellow-600 mb-1">
+                  Warnings ({compilationResult.warnings.length})
+                </h4>
                 <div className="space-y-1 max-h-20 overflow-y-auto">
                   {compilationResult.warnings.map((warning, index) => (
                     <div
                       key={index}
                       className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-1.5 rounded border-l-2 border-yellow-500"
                     >
-                      <div className="text-yellow-700 dark:text-yellow-300 text-xs leading-tight">{warning.message}</div>
+                      <div className="text-yellow-700 dark:text-yellow-300 text-xs leading-tight">
+                        {warning.message}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -312,7 +326,10 @@ const CompilerPanel: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Functions:</span>
                     <span className="text-gray-900 dark:text-white">
-                      {selectedContractData.abi.filter((item: any) => item.type === 'function').length}
+                      {
+                        selectedContractData.abi.filter((item: any) => item.type === 'function')
+                          .length
+                      }
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -343,32 +360,45 @@ const CompilerPanel: React.FC = () => {
                         {/* Contract Overview */}
                         <div className="grid grid-cols-2 gap-2">
                           <div className="bg-border p-2 rounded-sm border">
-                            <div className="text-xs text-muted-foreground mb-0.5">Contract Size</div>
+                            <div className="text-xs text-muted-foreground mb-0.5">
+                              Contract Size
+                            </div>
                             <div className="flex items-center gap-1 text-base">
-                              <span className={cn('text-xs font-medium',
-                                !isContractSizeValid(selectedContractData.bytecode)
-                                  ? 'text-red-600 dark:text-red-400'
-                                  : 'text-green-600 dark:text-green-400',
-                              )}>
+                              <span
+                                className={cn(
+                                  'text-xs font-medium',
+                                  !isContractSizeValid(selectedContractData.bytecode)
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-green-600 dark:text-green-400',
+                                )}
+                              >
                                 {(selectedContractData.bytecode.length / 2).toLocaleString()} bytes
                               </span>
                               {!isContractSizeValid(selectedContractData.bytecode) && (
-                                <span className="text-xs text-red-500 font-medium" title="Exceeds 24KB limit">⚠️</span>
+                                <span
+                                  className="text-xs text-red-500 font-medium"
+                                  title="Exceeds 24KB limit"
+                                >
+                                  ⚠️
+                                </span>
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">
-                              {((selectedContractData.bytecode.length / 2) / 24576 * 100).toFixed(2)}% of 24KB limit
+                              {((selectedContractData.bytecode.length / 2 / 24576) * 100).toFixed(
+                                2,
+                              )}
+                              % of 24KB limit
                             </div>
                           </div>
 
                           <div className="bg-border p-2 rounded-sm border">
-                            <div className="text-xs text-muted-foreground mb-0.5">Total Elements</div>
+                            <div className="text-xs text-muted-foreground mb-0.5">
+                              Total Elements
+                            </div>
                             <div className="text-xs font-medium text-gray-900 dark:text-white">
                               {selectedContractData.abi.length} items
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              in ABI
-                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">in ABI</div>
                           </div>
                         </div>
 
@@ -386,7 +416,11 @@ const CompilerPanel: React.FC = () => {
                                 Functions
                               </span>
                               <span className="font-medium text-gray-900 dark:text-white">
-                                {selectedContractData.abi.filter((item: any) => item.type === 'function').length}
+                                {
+                                  selectedContractData.abi.filter(
+                                    (item: any) => item.type === 'function',
+                                  ).length
+                                }
                               </span>
                             </div>
 
@@ -397,7 +431,11 @@ const CompilerPanel: React.FC = () => {
                                 Events
                               </span>
                               <span className="font-medium text-gray-900 dark:text-white">
-                                {selectedContractData.abi.filter((item: any) => item.type === 'event').length}
+                                {
+                                  selectedContractData.abi.filter(
+                                    (item: any) => item.type === 'event',
+                                  ).length
+                                }
                               </span>
                             </div>
 
@@ -408,7 +446,11 @@ const CompilerPanel: React.FC = () => {
                                 Constructor
                               </span>
                               <span className="font-medium text-gray-900 dark:text-white">
-                                {selectedContractData.abi.filter((item: any) => item.type === 'constructor').length}
+                                {
+                                  selectedContractData.abi.filter(
+                                    (item: any) => item.type === 'constructor',
+                                  ).length
+                                }
                               </span>
                             </div>
 
@@ -419,25 +461,43 @@ const CompilerPanel: React.FC = () => {
                                 Errors
                               </span>
                               <span className="font-medium text-gray-900 dark:text-white">
-                                {selectedContractData.abi.filter((item: any) => item.type === 'error').length}
+                                {
+                                  selectedContractData.abi.filter(
+                                    (item: any) => item.type === 'error',
+                                  ).length
+                                }
                               </span>
                             </div>
                           </div>
                         </div>
 
                         {/* Function Details */}
-                        {selectedContractData.abi.filter((item: any) => item.type === 'function').length > 0 && (
+                        {selectedContractData.abi.filter((item: any) => item.type === 'function')
+                          .length > 0 && (
                           <div className="space-y-1.5">
                             <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               Function Types
                             </h5>
                             <div className="space-y-1">
                               {(() => {
-                                const functions = selectedContractData.abi.filter((item: any) => item.type === 'function');
-                                const publicFunctions = functions.filter((f: any) => !f.stateMutability || f.stateMutability === 'nonpayable' || f.stateMutability === 'payable');
-                                const viewFunctions = functions.filter((f: any) => f.stateMutability === 'view');
-                                const pureFunctions = functions.filter((f: any) => f.stateMutability === 'pure');
-                                const payableFunctions = functions.filter((f: any) => f.stateMutability === 'payable');
+                                const functions = selectedContractData.abi.filter(
+                                  (item: any) => item.type === 'function',
+                                );
+                                const publicFunctions = functions.filter(
+                                  (f: any) =>
+                                    !f.stateMutability ||
+                                    f.stateMutability === 'nonpayable' ||
+                                    f.stateMutability === 'payable',
+                                );
+                                const viewFunctions = functions.filter(
+                                  (f: any) => f.stateMutability === 'view',
+                                );
+                                const pureFunctions = functions.filter(
+                                  (f: any) => f.stateMutability === 'pure',
+                                );
+                                const payableFunctions = functions.filter(
+                                  (f: any) => f.stateMutability === 'payable',
+                                );
 
                                 return (
                                   <div className="grid grid-cols-2 gap-1 text-xs">
@@ -456,13 +516,17 @@ const CompilerPanel: React.FC = () => {
                                     {payableFunctions.length > 0 && (
                                       <div className="flex justify-between py-1.5 px-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-sm text-yellow-700 dark:text-yellow-300 border">
                                         <span>Payable</span>
-                                        <span className="font-medium">{payableFunctions.length}</span>
+                                        <span className="font-medium">
+                                          {payableFunctions.length}
+                                        </span>
                                       </div>
                                     )}
-                                    {(publicFunctions.length - payableFunctions.length) > 0 && (
+                                    {publicFunctions.length - payableFunctions.length > 0 && (
                                       <div className="flex justify-between py-1.5 px-1.5 bg-gray-50 dark:bg-gray-700 rounded-sm text-gray-700 dark:text-gray-300 border">
                                         <span>State-changing</span>
-                                        <span className="font-medium">{publicFunctions.length - payableFunctions.length}</span>
+                                        <span className="font-medium">
+                                          {publicFunctions.length - payableFunctions.length}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
@@ -474,7 +538,9 @@ const CompilerPanel: React.FC = () => {
 
                         {/* Constructor Info */}
                         {(() => {
-                          const constructor = selectedContractData.abi.find((item: any) => item.type === 'constructor');
+                          const constructor = selectedContractData.abi.find(
+                            (item: any) => item.type === 'constructor',
+                          );
                           if (constructor && constructor.inputs && constructor.inputs.length > 0) {
                             return (
                               <div className="space-y-1.5">
@@ -483,7 +549,10 @@ const CompilerPanel: React.FC = () => {
                                 </h5>
                                 <div className="bg-white dark:bg-gray-700 rounded border p-2 space-y-1">
                                   {constructor.inputs.map((input: any, index: number) => (
-                                    <div key={index} className="flex justify-between items-center text-xs">
+                                    <div
+                                      key={index}
+                                      className="flex justify-between items-center text-xs"
+                                    >
                                       <span className="text-gray-600 dark:text-gray-400">
                                         {input.name || `param${index}`}
                                       </span>

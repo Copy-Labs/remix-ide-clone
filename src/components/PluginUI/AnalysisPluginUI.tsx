@@ -67,7 +67,7 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
   const filterResults = (results: any[]) => {
     if (!results) return;
 
-    const filtered = results.filter(result => {
+    const filtered = results.filter((result) => {
       // Filter by severity
       if (result.severity === AnalysisSeverity.ERROR && !showErrors) return false;
       if (result.severity === AnalysisSeverity.WARNING && !showWarnings) return false;
@@ -102,7 +102,7 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
     showSecurityIssues,
     showGasIssues,
     showStyleIssues,
-    showBestPracticeIssues
+    showBestPracticeIssues,
   ]);
 
   // Run analysis on all files
@@ -145,7 +145,7 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
         error: showErrors,
         warning: showWarnings,
         info: showInfo,
-      }
+      },
     };
 
     updatePluginConfig(pluginId, config);
@@ -227,8 +227,10 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
             className="w-full p-2 border rounded"
           >
             <option value="">All Files</option>
-            {getSolidityFiles().map(path => (
-              <option key={path} value={path}>{path}</option>
+            {getSolidityFiles().map((path) => (
+              <option key={path} value={path}>
+                {path}
+              </option>
             ))}
           </select>
         </div>
@@ -338,7 +340,8 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
               </div>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Analysis completed in {(analysisSummary.duration / 1000).toFixed(2)} seconds at {new Date(analysisSummary.timestamp).toLocaleString()}
+              Analysis completed in {(analysisSummary.duration / 1000).toFixed(2)} seconds at{' '}
+              {new Date(analysisSummary.timestamp).toLocaleString()}
             </div>
           </div>
         </div>
@@ -347,20 +350,28 @@ const AnalysisPluginUI: React.FC<AnalysisPluginUIProps> = ({ pluginId }) => {
       {/* Analysis Results */}
       {filteredResults.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-2">Analysis Results ({filteredResults.length})</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Analysis Results ({filteredResults.length})
+          </h3>
           <div className="space-y-4">
             {filteredResults.map((result, index) => (
               <div key={index} className="bg-white dark:bg-gray-800 border rounded shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4 className="font-medium">{result.name}</h4>
-                    <div className="text-sm text-gray-500">{result.file}:{result.line}:{result.column}</div>
+                    <div className="text-sm text-gray-500">
+                      {result.file}:{result.line}:{result.column}
+                    </div>
                   </div>
                   <div className="flex space-x-2">
-                    <span className={`px-2 py-1 text-xs rounded ${getSeverityBadgeColor(result.severity)}`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded ${getSeverityBadgeColor(result.severity)}`}
+                    >
                       {result.severity}
                     </span>
-                    <span className={`px-2 py-1 text-xs rounded ${getCategoryBadgeColor(result.category)}`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded ${getCategoryBadgeColor(result.category)}`}
+                    >
                       {result.category}
                     </span>
                   </div>

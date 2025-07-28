@@ -10,6 +10,12 @@ import {
   LucideClipboard,
   LucideFiles,
   LucideRefreshCw,
+  GitBranch,
+  Plus,
+  Minus,
+  History,
+  GitCommit,
+  FileText,
 } from 'lucide-react';
 
 export interface ClipboardItem {
@@ -32,6 +38,15 @@ interface ContextMenuProps {
   onDuplicate?: (file: FileNode) => void;
   onRefresh?: () => void;
   clipboardItem?: ClipboardItem | null;
+  // Git operations
+  onStageFile?: (filePath: string) => void;
+  onUnstageFile?: (filePath: string) => void;
+  onViewFileHistory?: (filePath: string) => void;
+  onViewFileDiff?: (filePath: string) => void;
+  onStageHunk?: (filePath: string) => void;
+  // Git status
+  isGitInitialized?: boolean;
+  fileGitStatus?: { staged: boolean; modified: boolean; untracked: boolean };
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -49,6 +64,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onDuplicate,
   onRefresh,
   clipboardItem,
+  // Git operations
+  onStageFile,
+  onUnstageFile,
+  onViewFileHistory,
+  onViewFileDiff,
+  onStageHunk,
+  // Git status
+  isGitInitialized,
+  fileGitStatus,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +189,80 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         ]
       : []),
 
+    // Git operations (only show for files and when Git is initialized)
+    ...(isGitInitialized && file && file.type === 'file'
+      ? [
+          // Git section header
+          {
+            label: 'Git',
+            icon: GitBranch,
+            disabled: true,
+            header: true,
+          },
+
+          // Stage file (only for unstaged files)
+          ...(fileGitStatus && !fileGitStatus.staged
+            ? [
+                {
+                  label: 'Stage File',
+                  icon: Plus,
+                  action: () => {
+                    onStageFile?.(file.path);
+                    onClose();
+                  },
+                },
+              ]
+            : []),
+
+          // Unstage file (only for staged files)
+          ...(fileGitStatus && fileGitStatus.staged
+            ? [
+                {
+                  label: 'Unstage File',
+                  icon: Minus,
+                  action: () => {
+                    onUnstageFile?.(file.path);
+                    onClose();
+                  },
+                },
+              ]
+            : []),
+
+          // Stage hunks (for partial staging)
+          {
+            label: 'Stage Hunks',
+            icon: FileText,
+            action: () => {
+              onStageHunk?.(file.path);
+              onClose();
+            },
+          },
+
+          // View file history
+          {
+            label: 'View History',
+            icon: History,
+            action: () => {
+              onViewFileHistory?.(file.path);
+              onClose();
+            },
+          },
+
+          // View file diff
+          {
+            label: 'View Changes',
+            icon: GitCommit,
+            action: () => {
+              onViewFileDiff?.(file.path);
+              onClose();
+            },
+            disabled: !(fileGitStatus && (fileGitStatus.modified || fileGitStatus.staged)),
+          },
+
+          { separator: true },
+        ]
+      : []),
+
     // Creation actions
     {
       label: 'New File',
@@ -202,12 +300,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     >
       {menuItems.map((item, index) => {
         if ('separator' in item) {
-          return (
-            <div
-              key={index}
-              className="h-px bg-gray-200 dark:bg-gray-600 mx-1 my-1"
-            />
-          );
+          return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 mx-1 my-1" />;
         }
 
         const IconComponent = item.icon;
@@ -219,23 +312,21 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             onClick={item.action}
             disabled={isDisabled}
             className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed ${
-              item.dangerous
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-gray-700 dark:text-gray-300'
+              item.dangerous ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
             }`}
           >
             <div className="flex items-center space-x-2">
               {typeof IconComponent === 'function' ? (
                 <IconComponent size={16} />
               ) : (
-                <span><IconComponent size={16} /></span>
+                <span>
+                  <IconComponent size={16} />
+                </span>
               )}
               <span>{item.label}</span>
             </div>
             {'shortcut' in item && item.shortcut && (
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                {item.shortcut}
-              </span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{item.shortcut}</span>
             )}
           </button>
         );

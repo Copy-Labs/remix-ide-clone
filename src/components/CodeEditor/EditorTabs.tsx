@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu';
 import { LucideEllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 
@@ -197,10 +197,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
             >
               Close Other Tabs
             </DropdownMenuItem>
-            <DropdownMenuItem
-              title="Close All Tabs"
-              onClick={() => closeAllTabs()}
-            >
+            <DropdownMenuItem title="Close All Tabs" onClick={() => closeAllTabs()}>
               Close All Tabs
             </DropdownMenuItem>
           </DropdownMenuContent>

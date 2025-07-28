@@ -253,9 +253,10 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
     setError(null);
 
     try {
-      const authData = selectedProvider === 'custom'
-        ? { endpoint: customEndpoint, token: authToken }
-        : { token: authToken };
+      const authData =
+        selectedProvider === 'custom'
+          ? { endpoint: customEndpoint, token: authToken }
+          : { token: authToken };
 
       await implementation.authenticateWithProvider(selectedProvider, authData);
 
@@ -266,7 +267,11 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
       // Update cloud sync enabled state
       setCloudSyncEnabled(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to authenticate with provider: ${selectedProvider}`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to authenticate with provider: ${selectedProvider}`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -332,15 +337,20 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
           <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4">
             <h4 className="font-medium mb-2">Available Backups</h4>
             <div className="space-y-3">
-              {backups.map(backup => (
+              {backups.map((backup) => (
                 <div key={backup.id} className="bg-white dark:bg-gray-800 p-3 rounded border">
                   <div className="flex justify-between items-start">
                     <div>
                       <h5 className="font-medium">{backup.name}</h5>
                       <div className="text-sm text-gray-500 mt-1">
                         <div>Created: {formatDate(backup.timestamp)}</div>
-                        <div>Size: {formatSize(backup.size)} • Files: {backup.files}</div>
-                        <div>Location: {backup.location === 'local' ? 'Local Storage' : 'Cloud Storage'}</div>
+                        <div>
+                          Size: {formatSize(backup.size)} • Files: {backup.files}
+                        </div>
+                        <div>
+                          Location:{' '}
+                          {backup.location === 'local' ? 'Local Storage' : 'Cloud Storage'}
+                        </div>
                       </div>
                     </div>
                     <div className="flex space-x-2">
@@ -420,13 +430,15 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
           {syncStatus ? (
             <div>
               <div className="flex items-center mb-2">
-                <span className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                  syncStatus.inProgress 
-                    ? 'bg-yellow-500' 
-                    : syncStatus.error 
-                      ? 'bg-red-500' 
-                      : 'bg-green-500'
-                }`}></span>
+                <span
+                  className={`inline-block w-3 h-3 rounded-full mr-2 ${
+                    syncStatus.inProgress
+                      ? 'bg-yellow-500'
+                      : syncStatus.error
+                        ? 'bg-red-500'
+                        : 'bg-green-500'
+                  }`}
+                ></span>
                 <span className="font-medium">
                   {syncStatus.inProgress
                     ? 'Sync in progress'
@@ -486,7 +498,7 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
               onChange={(e) => handleSetCloudProvider(e.target.value)}
               className="w-full p-2 border rounded"
             >
-              {cloudProviders.map(provider => (
+              {cloudProviders.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name}
                 </option>
@@ -523,7 +535,9 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
               <button
                 onClick={handleAuthenticateWithProvider}
                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                disabled={isLoading || (selectedProvider === 'custom' && !customEndpoint) || !authToken}
+                disabled={
+                  isLoading || (selectedProvider === 'custom' && !customEndpoint) || !authToken
+                }
               >
                 Authenticate
               </button>
@@ -654,7 +668,9 @@ const BackupPluginUI: React.FC<BackupPluginUIProps> = ({ pluginId }) => {
 **/node_modules/**
 **/.DS_Store"
               />
-              <p className="text-xs text-gray-500 mt-1">One pattern per line. Use * for wildcards.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                One pattern per line. Use * for wildcards.
+              </p>
             </div>
 
             <button

@@ -115,7 +115,7 @@ export const useHistoryStore = create<HistoryStore>()(
               timestamp: Date.now(),
               operation: 'insert', // Simplified for storage
               data: { description: command.description },
-              inverse: { description: `Undo ${command.description}` }
+              inverse: { description: `Undo ${command.description}` },
             });
           } catch (err) {
             // Non-critical error, just log it
@@ -205,7 +205,7 @@ export const useHistoryStore = create<HistoryStore>()(
       clearFileHistory: (fileId: string) => {
         set((state) => {
           // Remove all entries for the specified file
-          state.history = state.history.filter(entry => entry.fileId !== fileId);
+          state.history = state.history.filter((entry) => entry.fileId !== fileId);
 
           // Update current index
           state.currentIndex = Math.min(state.currentIndex, state.history.length - 1);
@@ -259,13 +259,13 @@ export const useHistoryStore = create<HistoryStore>()(
       },
 
       getHistoryForFile: (fileId: string) => {
-        return get().history.filter(entry => entry.fileId === fileId);
+        return get().history.filter((entry) => entry.fileId === fileId);
       },
     })),
     {
       name: 'history-store',
-    }
-  )
+    },
+  ),
 );
 
 /**
@@ -283,7 +283,7 @@ export function createInsertTextCommand(
   editor: monaco.editor.IStandaloneCodeEditor,
   position: monaco.Position,
   text: string,
-  description: string = 'Insert text'
+  description: string = 'Insert text',
 ): Command {
   const model = editor.getModel();
   if (!model) {
@@ -299,11 +299,11 @@ export function createInsertTextCommand(
             position.lineNumber,
             position.column,
             position.lineNumber,
-            position.column
+            position.column,
           ),
           text,
-          forceMoveMarkers: true
-        }
+          forceMoveMarkers: true,
+        },
       ]);
     },
     undo: async () => {
@@ -314,7 +314,7 @@ export function createInsertTextCommand(
       // Monaco will handle the redo internally
       editor.trigger('redo-command', 'redo', null);
     },
-    description
+    description,
   };
 }
 
@@ -327,7 +327,7 @@ export function createInsertTextCommand(
 export function createDeleteTextCommand(
   editor: monaco.editor.IStandaloneCodeEditor,
   range: monaco.Range,
-  description: string = 'Delete text'
+  description: string = 'Delete text',
 ): Command {
   const model = editor.getModel();
   if (!model) {
@@ -343,8 +343,8 @@ export function createDeleteTextCommand(
         {
           range,
           text: '',
-          forceMoveMarkers: true
-        }
+          forceMoveMarkers: true,
+        },
       ]);
     },
     undo: async () => {
@@ -355,7 +355,7 @@ export function createDeleteTextCommand(
       // Monaco will handle the redo internally
       editor.trigger('redo-command', 'redo', null);
     },
-    description
+    description,
   };
 }
 
@@ -370,7 +370,7 @@ export function createReplaceTextCommand(
   editor: monaco.editor.IStandaloneCodeEditor,
   range: monaco.Range,
   text: string,
-  description: string = 'Replace text'
+  description: string = 'Replace text',
 ): Command {
   const model = editor.getModel();
   if (!model) {
@@ -386,8 +386,8 @@ export function createReplaceTextCommand(
         {
           range,
           text,
-          forceMoveMarkers: true
-        }
+          forceMoveMarkers: true,
+        },
       ]);
     },
     undo: async () => {
@@ -398,7 +398,7 @@ export function createReplaceTextCommand(
       // Monaco will handle the redo internally
       editor.trigger('redo-command', 'redo', null);
     },
-    description
+    description,
   };
 }
 
@@ -409,7 +409,7 @@ export function createReplaceTextCommand(
  */
 export function createFormatDocumentCommand(
   editor: monaco.editor.IStandaloneCodeEditor,
-  description: string = 'Format document'
+  description: string = 'Format document',
 ): Command {
   return {
     execute: async () => {
@@ -423,6 +423,6 @@ export function createFormatDocumentCommand(
       // Monaco will handle the redo internally
       editor.trigger('redo-command', 'redo', null);
     },
-    description
+    description,
   };
 }

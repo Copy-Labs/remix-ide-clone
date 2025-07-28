@@ -1,5 +1,5 @@
 import Web3 from 'web3';
-import type {Network} from '@/types';
+import type { Network } from '@/types';
 import { debug, info, warn, error } from '@/services/loggerService';
 
 /**
@@ -30,7 +30,7 @@ export class Web3Service {
       chainId: 1,
       symbol: 'ETH',
       blockExplorer: 'https://etherscan.io',
-      isTestnet: false
+      isTestnet: false,
     },
     {
       id: 'goerli',
@@ -39,7 +39,7 @@ export class Web3Service {
       chainId: 5,
       symbol: 'ETH',
       blockExplorer: 'https://goerli.etherscan.io',
-      isTestnet: true
+      isTestnet: true,
     },
     {
       id: 'sepolia',
@@ -48,7 +48,7 @@ export class Web3Service {
       chainId: 11155111,
       symbol: 'ETH',
       blockExplorer: 'https://sepolia.etherscan.io',
-      isTestnet: true
+      isTestnet: true,
     },
     {
       id: 'polygon',
@@ -57,7 +57,7 @@ export class Web3Service {
       chainId: 137,
       symbol: 'MATIC',
       blockExplorer: 'https://polygonscan.com',
-      isTestnet: false
+      isTestnet: false,
     },
     {
       id: 'mumbai',
@@ -66,7 +66,7 @@ export class Web3Service {
       chainId: 80001,
       symbol: 'MATIC',
       blockExplorer: 'https://mumbai.polygonscan.com',
-      isTestnet: true
+      isTestnet: true,
     },
     {
       id: 'localhost',
@@ -75,8 +75,8 @@ export class Web3Service {
       chainId: 1337,
       symbol: 'ETH',
       blockExplorer: 'http://localhost:8545',
-      isTestnet: true
-    }
+      isTestnet: true,
+    },
   ];
 
   private constructor() {
@@ -269,7 +269,7 @@ export class Web3Service {
    * @returns The network or null if not found
    */
   public getNetworkByChainId(chainId: number): Network | null {
-    return this.networks.find(network => network.chainId === chainId) || null;
+    return this.networks.find((network) => network.chainId === chainId) || null;
   }
 
   /**
@@ -456,7 +456,11 @@ export class Web3Service {
    * @param interval Interval between attempts in milliseconds
    * @returns Whether the contract was deployed successfully
    */
-  public async waitForContract(address: string, maxAttempts: number = 10, interval: number = 2000): Promise<boolean> {
+  public async waitForContract(
+    address: string,
+    maxAttempts: number = 10,
+    interval: number = 2000,
+  ): Promise<boolean> {
     try {
       if (!this.web3 || !address) {
         return false;
@@ -471,7 +475,7 @@ export class Web3Service {
         }
 
         // Wait before next attempt
-        await new Promise(resolve => setTimeout(resolve, interval));
+        await new Promise((resolve) => setTimeout(resolve, interval));
         attempts++;
       }
 
@@ -495,7 +499,7 @@ export class Web3Service {
     abi: any[],
     bytecode: string,
     args: any[] = [],
-    options: any = {}
+    options: any = {},
   ): Promise<{ address: string; transactionHash: string } | null> {
     try {
       if (!this.web3 || !this.account) {
@@ -510,12 +514,12 @@ export class Web3Service {
       if (!options.gas) {
         const deployTx = contract.deploy({
           data: bytecode,
-          arguments: args
+          arguments: args,
         });
 
         const estimatedGas = await this.estimateGas({
           from: this.account,
-          data: deployTx.encodeABI()
+          data: deployTx.encodeABI(),
         });
 
         options.gas = Math.floor(estimatedGas * 1.2); // Add 20% buffer
@@ -524,21 +528,23 @@ export class Web3Service {
       // Deploy the contract
       const deployOptions = {
         from: this.account,
-        ...options
+        ...options,
       };
 
       info('Web3Service', 'Deploying contract...', { args, options: deployOptions });
 
-      const deployed = await contract.deploy({
-        data: bytecode,
-        arguments: args
-      }).send(deployOptions);
+      const deployed = await contract
+        .deploy({
+          data: bytecode,
+          arguments: args,
+        })
+        .send(deployOptions);
 
       info('Web3Service', `Contract deployed at ${deployed.options.address}`);
 
       return {
         address: deployed.options.address,
-        transactionHash: deployed._transactionHash
+        transactionHash: deployed._transactionHash,
       };
     } catch (err) {
       error('Web3Service', 'Failed to deploy contract', err);
@@ -561,7 +567,7 @@ export class Web3Service {
     abi: any[],
     method: string,
     args: any[] = [],
-    options: any = {}
+    options: any = {},
   ): Promise<any> {
     try {
       if (!this.web3 || !this.account) {
@@ -579,8 +585,9 @@ export class Web3Service {
       }
 
       // Determine if this is a read or write operation
-      const methodAbi = abi.find(item => item.name === method);
-      const isReadOperation = methodAbi?.stateMutability === 'view' || methodAbi?.stateMutability === 'pure';
+      const methodAbi = abi.find((item) => item.name === method);
+      const isReadOperation =
+        methodAbi?.stateMutability === 'view' || methodAbi?.stateMutability === 'pure';
 
       if (isReadOperation) {
         // Call (read operation)
@@ -590,12 +597,14 @@ export class Web3Service {
         // Send (write operation)
         const txOptions = {
           from: this.account,
-          ...options
+          ...options,
         };
 
         // Estimate gas if not provided
         if (!txOptions.gas) {
-          const estimatedGas = await contract.methods[method](...args).estimateGas({ from: this.account });
+          const estimatedGas = await contract.methods[method](...args).estimateGas({
+            from: this.account,
+          });
           txOptions.gas = Math.floor(estimatedGas * 1.2); // Add 20% buffer
         }
 

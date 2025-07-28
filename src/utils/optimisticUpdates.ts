@@ -25,15 +25,13 @@ export type OptimisticUpdateOperation<T, R = any> = {
  * @param setState The setState function from a Zustand store
  * @returns A function to perform optimistic updates
  */
-export function withOptimisticUpdates<T>(
-  setState: (fn: (state: T) => void) => void
-) {
+export function withOptimisticUpdates<T>(setState: (fn: (state: T) => void) => void) {
   return async <R = any>({
     asyncOperation,
     optimisticUpdate,
     rollback,
     onSuccess,
-    onError
+    onError,
   }: OptimisticUpdateOperation<T, R>): Promise<R | undefined> => {
     // Apply the optimistic update immediately
     setState((state) => {

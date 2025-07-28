@@ -351,7 +351,7 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
           <div className="mt-2">
             <h4 className="font-medium mb-1">Current Breakpoints:</h4>
             <ul className="list-disc pl-5">
-              {breakpoints.map(line => (
+              {breakpoints.map((line) => (
                 <li key={line} className="mb-1 flex items-center justify-between">
                   <span>Line {line}</span>
                   <button
@@ -375,8 +375,13 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Debug State</h3>
           <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded">
-            <p><span className="font-medium">Current Line:</span> {debugState.currentLine}</p>
-            <p><span className="font-medium">Contract Address:</span> {debugState.contractAddress || 'N/A'}</p>
+            <p>
+              <span className="font-medium">Current Line:</span> {debugState.currentLine}
+            </p>
+            <p>
+              <span className="font-medium">Contract Address:</span>{' '}
+              {debugState.contractAddress || 'N/A'}
+            </p>
 
             {/* Local Variables */}
             {showLocalVariables && debugState.localVariables && (
@@ -385,7 +390,9 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
                 {Object.keys(debugState.localVariables).length > 0 ? (
                   <ul className="list-disc pl-5">
                     {Object.entries(debugState.localVariables).map(([name, value]) => (
-                      <li key={name}>{name}: {String(value)}</li>
+                      <li key={name}>
+                        {name}: {String(value)}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -401,7 +408,9 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
                 {Object.keys(debugState.stateVariables).length > 0 ? (
                   <ul className="list-disc pl-5">
                     {Object.entries(debugState.stateVariables).map(([name, value]) => (
-                      <li key={name}>{name}: {String(value)}</li>
+                      <li key={name}>
+                        {name}: {String(value)}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -417,7 +426,10 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
                 {debugState.callStack.length > 0 ? (
                   <ul className="list-disc pl-5">
                     {debugState.callStack.map((call: any, index: number) => (
-                      <li key={index}>{call.function} {call.from ? `from: ${call.from}` : ''} {call.to ? `to: ${call.to}` : ''}</li>
+                      <li key={index}>
+                        {call.function} {call.from ? `from: ${call.from}` : ''}{' '}
+                        {call.to ? `to: ${call.to}` : ''}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -510,7 +522,9 @@ const DebuggerPluginUI: React.FC<DebuggerPluginUIProps> = ({ pluginId }) => {
 
           {evaluationResult !== null && (
             <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-              <p><span className="font-medium">Result:</span> {String(evaluationResult)}</p>
+              <p>
+                <span className="font-medium">Result:</span> {String(evaluationResult)}
+              </p>
             </div>
           )}
         </div>

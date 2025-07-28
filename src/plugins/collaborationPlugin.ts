@@ -25,7 +25,7 @@ export const collaborationPlugin: Omit<Plugin, 'api'> = {
       collaboratorJoined: true,
       collaboratorLeft: true,
     },
-  }
+  },
 };
 
 /**
@@ -151,7 +151,7 @@ export class CollaborationPluginImplementation {
     // This is a mock implementation that simulates syncing
 
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     console.log('Sync completed');
   }
@@ -183,7 +183,11 @@ export class CollaborationPluginImplementation {
    * @param visibility Visibility level
    * @param userIds User IDs to share with (if visibility is 'shared')
    */
-  async shareFile(filePath: string, visibility: 'private' | 'public' | 'shared', userIds: string[] = []): Promise<SharedFile> {
+  async shareFile(
+    filePath: string,
+    visibility: 'private' | 'public' | 'shared',
+    userIds: string[] = [],
+  ): Promise<SharedFile> {
     console.log(`Sharing file ${filePath} with visibility ${visibility}`);
 
     if (!this.currentUser) {
@@ -209,9 +213,8 @@ export class CollaborationPluginImplementation {
 
     // Create new shared file
     const shareId = 'share-' + Math.random().toString(36).substring(2, 9);
-    const shareUrl = visibility === 'private'
-      ? undefined
-      : `${this.config.serverUrl}/share/${shareId}`;
+    const shareUrl =
+      visibility === 'private' ? undefined : `${this.config.serverUrl}/share/${shareId}`;
 
     const sharedFile: SharedFile = {
       id: shareId,
@@ -279,7 +282,12 @@ export class CollaborationPluginImplementation {
    * @param content Comment content
    * @param replyTo ID of the comment to reply to (optional)
    */
-  async addComment(filePath: string, lineNumber: number, content: string, replyTo?: string): Promise<Comment> {
+  async addComment(
+    filePath: string,
+    lineNumber: number,
+    content: string,
+    replyTo?: string,
+  ): Promise<Comment> {
     console.log(`Adding comment to ${filePath} at line ${lineNumber}`);
 
     if (!this.currentUser) {
@@ -294,7 +302,7 @@ export class CollaborationPluginImplementation {
 
     if (replyTo) {
       // Find the parent comment
-      const parentComment = fileComments.find(c => c.id === replyTo);
+      const parentComment = fileComments.find((c) => c.id === replyTo);
       if (!parentComment) {
         throw new Error(`Parent comment ${replyTo} not found`);
       }
@@ -362,11 +370,11 @@ export class CollaborationPluginImplementation {
     const fileComments = this.comments.get(filePath) || [];
 
     // Find the comment
-    const comment = fileComments.find(c => c.id === commentId);
+    const comment = fileComments.find((c) => c.id === commentId);
     if (!comment) {
       // Check if it's a reply
       for (const parentComment of fileComments) {
-        const reply = parentComment.replies.find(r => r.id === commentId);
+        const reply = parentComment.replies.find((r) => r.id === commentId);
         if (reply) {
           reply.resolved = resolved;
           this.comments.set(filePath, fileComments);
@@ -400,7 +408,7 @@ export class CollaborationPluginImplementation {
     const fileComments = this.comments.get(filePath) || [];
 
     // Find the comment index
-    const commentIndex = fileComments.findIndex(c => c.id === commentId);
+    const commentIndex = fileComments.findIndex((c) => c.id === commentId);
     if (commentIndex !== -1) {
       // Check if the current user is the comment author
       if (fileComments[commentIndex].userId !== this.currentUser?.id) {
@@ -419,7 +427,7 @@ export class CollaborationPluginImplementation {
 
     // Check if it's a reply
     for (const parentComment of fileComments) {
-      const replyIndex = parentComment.replies.findIndex(r => r.id === commentId);
+      const replyIndex = parentComment.replies.findIndex((r) => r.id === commentId);
       if (replyIndex !== -1) {
         // Check if the current user is the reply author
         if (parentComment.replies[replyIndex].userId !== this.currentUser?.id) {
@@ -495,7 +503,7 @@ export class CollaborationPluginImplementation {
     }
 
     // Check if user is already a participant
-    if (!session.participants.some(p => p.id === this.currentUser!.id)) {
+    if (!session.participants.some((p) => p.id === this.currentUser!.id)) {
       session.participants.push(this.currentUser);
     }
 
@@ -524,7 +532,7 @@ export class CollaborationPluginImplementation {
     }
 
     // Remove user from participants
-    const participantIndex = session.participants.findIndex(p => p.id === this.currentUser!.id);
+    const participantIndex = session.participants.findIndex((p) => p.id === this.currentUser!.id);
     if (participantIndex !== -1) {
       session.participants.splice(participantIndex, 1);
     }

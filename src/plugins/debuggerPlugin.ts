@@ -19,7 +19,7 @@ export const debuggerPlugin: Omit<Plugin, 'api'> = {
     showMemory: true,
     showStorage: true,
     autoBreakOnError: true,
-  }
+  },
 };
 
 /**
@@ -123,7 +123,8 @@ export class DebuggerPluginImplementation {
     if (!this.isDebugging) return false;
 
     console.log('Continuing execution until next breakpoint');
-    this.currentLine = Array.from(this.breakpoints).find(bp => bp > this.currentLine) || this.currentLine + 1;
+    this.currentLine =
+      Array.from(this.breakpoints).find((bp) => bp > this.currentLine) || this.currentLine + 1;
     this.updateDebugState();
 
     // In a real implementation, this would use a Solidity debugger to continue
@@ -184,15 +185,15 @@ export class DebuggerPluginImplementation {
   private updateDebugState(): void {
     // In a real implementation, this would use a Solidity debugger to get the current state
     this.localVariables = {
-      'i': 42,
-      'balance': 1000000000000000000n,
-      'sender': '0x123...',
+      i: 42,
+      balance: 1000000000000000000n,
+      sender: '0x123...',
     };
 
     this.stateVariables = {
-      'owner': '0x456...',
-      'totalSupply': 1000000n,
-      'name': 'MyToken',
+      owner: '0x456...',
+      totalSupply: 1000000n,
+      name: 'MyToken',
     };
 
     this.callStack = [

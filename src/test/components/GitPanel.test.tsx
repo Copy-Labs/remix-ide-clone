@@ -16,17 +16,29 @@ vi.mock('react-hot-toast', () => ({
 
 // Mock UI components that might cause issues in tests
 vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div data-testid="scroll-area">{children}</div>,
+  ScrollArea: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="scroll-area">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
     open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p data-testid="dialog-description">{children}</p>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div data-testid="dialog-footer">{children}</div>,
+  DialogContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <p data-testid="dialog-description">{children}</p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
   DialogTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
     asChild ? children : <div data-testid="dialog-trigger">{children}</div>,
 }));
@@ -92,7 +104,9 @@ describe('GitPanel', () => {
       render(<GitPanel />);
 
       expect(screen.getByText('Git Integration')).toBeInTheDocument();
-      expect(screen.getByText('Initialize a git repository or clone an existing one to get started.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Initialize a git repository or clone an existing one to get started.'),
+      ).toBeInTheDocument();
       expect(screen.getByText('Initialize Repository')).toBeInTheDocument();
       expect(screen.getByText('Clone Repository')).toBeInTheDocument();
     });
@@ -129,7 +143,9 @@ describe('GitPanel', () => {
 
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
       expect(screen.getByText('Clone Repository')).toBeInTheDocument();
-      expect(screen.getByText('Enter the URL of the repository you want to clone.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Enter the URL of the repository you want to clone.'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -141,9 +157,7 @@ describe('GitPanel', () => {
         { name: 'main', oid: 'abc123', current: true },
         { name: 'develop', oid: 'def456', current: false },
       ];
-      mockStore.status = [
-        { file: 'test.txt', head: 1, workdir: 2, stage: 0 },
-      ];
+      mockStore.status = [{ file: 'test.txt', head: 1, workdir: 2, stage: 0 }];
       mockStore.commits = [
         {
           oid: 'abc123',
@@ -355,7 +369,9 @@ describe('GitPanel', () => {
 
         expect(screen.getByTestId('dialog')).toBeInTheDocument();
         expect(screen.getByText('Connect to GitHub')).toBeInTheDocument();
-        expect(screen.getByText('Enter your GitHub personal access token to connect.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Enter your GitHub personal access token to connect.'),
+        ).toBeInTheDocument();
       });
 
       it('should connect to GitHub when token is provided', async () => {
@@ -456,7 +472,10 @@ describe('GitPanel', () => {
           await user.type(repoDescInput, 'New test repository');
           await user.click(createButton);
 
-          expect(mockStore.createGithubRepo).toHaveBeenCalledWith('new-test-repo', 'New test repository');
+          expect(mockStore.createGithubRepo).toHaveBeenCalledWith(
+            'new-test-repo',
+            'New test repository',
+          );
         });
 
         it('should refresh repositories when Refresh button is clicked', async () => {

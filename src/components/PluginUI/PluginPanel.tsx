@@ -1,12 +1,30 @@
 import React, { useState, useMemo } from 'react';
 import { usePluginStore } from '@/stores/pluginStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardAction } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardAction,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Search, Settings, Zap, Shield, Palette, Code, Bug, Rocket, GitBranch, TestTube } from 'lucide-react';
+import {
+  Search,
+  Settings,
+  Zap,
+  Shield,
+  Palette,
+  Code,
+  Bug,
+  Rocket,
+  GitBranch,
+  TestTube,
+} from 'lucide-react';
 import CollaborationPluginUI from './CollaborationPluginUI';
 import BackupPluginUI from './BackupPluginUI';
 import CustomThemePluginUI from './CustomThemePluginUI';
@@ -19,7 +37,7 @@ import TestingPluginUI from './TestingPluginUI';
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
   const iconMap: Record<string, React.ComponentType<any>> = {
-    'collaboration': Zap,
+    collaboration: Zap,
     'backup-sync': Shield,
     'custom-theme-ui': Palette,
     'code-analysis': Code,
@@ -40,13 +58,15 @@ const PluginPanel: React.FC = () => {
   // Filter and search plugins
   const filteredPlugins = useMemo(() => {
     return plugins.filter((plugin) => {
-      const matchesSearch = plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           plugin.author.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plugin.author.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesFilter = filterStatus === 'all' ||
-                           (filterStatus === 'enabled' && plugin.enabled) ||
-                           (filterStatus === 'disabled' && !plugin.enabled);
+      const matchesFilter =
+        filterStatus === 'all' ||
+        (filterStatus === 'enabled' && plugin.enabled) ||
+        (filterStatus === 'disabled' && !plugin.enabled);
 
       return matchesSearch && matchesFilter;
     });
@@ -55,7 +75,7 @@ const PluginPanel: React.FC = () => {
   // Get plugin statistics
   const pluginStats = useMemo(() => {
     const total = plugins.length;
-    const enabled = plugins.filter(p => p.enabled).length;
+    const enabled = plugins.filter((p) => p.enabled).length;
     const disabled = total - enabled;
     return { total, enabled, disabled };
   }, [plugins]);
@@ -81,9 +101,7 @@ const PluginPanel: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Plugin Manager</h1>
-            <p className="text-muted-foreground">
-              Manage and configure your development plugins
-            </p>
+            <p className="text-muted-foreground">Manage and configure your development plugins</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
@@ -141,7 +159,9 @@ const PluginPanel: React.FC = () => {
                 <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No plugins found</h3>
                 <p className="text-muted-foreground">
-                  {searchQuery ? 'Try adjusting your search terms' : 'No plugins match the current filter'}
+                  {searchQuery
+                    ? 'Try adjusting your search terms'
+                    : 'No plugins match the current filter'}
                 </p>
               </div>
             ) : (
@@ -161,11 +181,13 @@ const PluginPanel: React.FC = () => {
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${
-                              plugin.enabled 
-                                ? 'bg-primary/10 text-primary' 
-                                : 'bg-muted text-muted-foreground'
-                            }`}>
+                            <div
+                              className={`p-2 rounded-lg ${
+                                plugin.enabled
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
                               <IconComponent className="h-4 w-4" />
                             </div>
                             <div>
@@ -197,9 +219,7 @@ const PluginPanel: React.FC = () => {
                           {plugin.description}
                         </CardDescription>
                         <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                          <span className="text-xs text-muted-foreground">
-                            by {plugin.author}
-                          </span>
+                          <span className="text-xs text-muted-foreground">by {plugin.author}</span>
                           {plugin.enabled && (
                             <Button
                               variant="ghost"
@@ -233,18 +253,14 @@ const PluginPanel: React.FC = () => {
               {activePluginId === 'custom-theme-ui' && (
                 <CustomThemePluginUI pluginId={activePluginId} />
               )}
-              {activePluginId === 'code-analysis' && (
-                <AnalysisPluginUI pluginId={activePluginId} />
-              )}
+              {activePluginId === 'code-analysis' && <AnalysisPluginUI pluginId={activePluginId} />}
               {activePluginId === 'solidity-debugger' && (
                 <DebuggerPluginUI pluginId={activePluginId} />
               )}
               {activePluginId === 'deployment-automation' && (
                 <DeploymentPluginUI pluginId={activePluginId} />
               )}
-              {activePluginId === 'git-integration' && (
-                <GitPluginUI pluginId={activePluginId} />
-              )}
+              {activePluginId === 'git-integration' && <GitPluginUI pluginId={activePluginId} />}
               {activePluginId === 'testing-framework' && (
                 <TestingPluginUI pluginId={activePluginId} />
               )}
@@ -255,11 +271,10 @@ const PluginPanel: React.FC = () => {
                 <div className="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
                   <Settings className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">
-                  Select a Plugin to Configure
-                </h3>
+                <h3 className="text-xl font-semibold mb-3">Select a Plugin to Configure</h3>
                 <p className="text-muted-foreground mb-6">
-                  Choose an enabled plugin from the list to view its configuration options and settings.
+                  Choose an enabled plugin from the list to view its configuration options and
+                  settings.
                 </p>
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2 justify-center">

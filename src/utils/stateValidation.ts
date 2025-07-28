@@ -24,7 +24,7 @@ export type ValidationSchema<T> = {
  */
 export function validateState<T extends Record<string, any>>(
   state: T,
-  schema: ValidationSchema<T>
+  schema: ValidationSchema<T>,
 ): { isValid: boolean; errors: string[]; sanitizedState: T } {
   const errors: string[] = [];
   const sanitizedState = { ...state };
@@ -53,7 +53,7 @@ export function validateState<T extends Record<string, any>>(
   return {
     isValid: errors.length === 0,
     errors,
-    sanitizedState
+    sanitizedState,
   };
 }
 
@@ -63,68 +63,80 @@ export function validateState<T extends Record<string, any>>(
 export const rules = {
   required: <T>(message = 'Field is required'): ValidationRule<T> => ({
     validate: (value: T) => value !== undefined && value !== null,
-    message
+    message,
   }),
 
   string: {
-    minLength: (min: number, message = `Must be at least ${min} characters`): ValidationRule<string> => ({
+    minLength: (
+      min: number,
+      message = `Must be at least ${min} characters`,
+    ): ValidationRule<string> => ({
       validate: (value: string) => typeof value === 'string' && value.length >= min,
       message,
-      sanitize: (value: string) => typeof value === 'string' ? value : ''
+      sanitize: (value: string) => (typeof value === 'string' ? value : ''),
     }),
 
-    maxLength: (max: number, message = `Must be at most ${max} characters`): ValidationRule<string> => ({
+    maxLength: (
+      max: number,
+      message = `Must be at most ${max} characters`,
+    ): ValidationRule<string> => ({
       validate: (value: string) => typeof value === 'string' && value.length <= max,
       message,
-      sanitize: (value: string) => typeof value === 'string' ? value.slice(0, max) : ''
+      sanitize: (value: string) => (typeof value === 'string' ? value.slice(0, max) : ''),
     }),
 
     pattern: (pattern: RegExp, message = 'Invalid format'): ValidationRule<string> => ({
       validate: (value: string) => typeof value === 'string' && pattern.test(value),
-      message
-    })
+      message,
+    }),
   },
 
   number: {
     min: (min: number, message = `Must be at least ${min}`): ValidationRule<number> => ({
       validate: (value: number) => typeof value === 'number' && value >= min,
       message,
-      sanitize: (value: number) => typeof value === 'number' ? Math.max(value, min) : min
+      sanitize: (value: number) => (typeof value === 'number' ? Math.max(value, min) : min),
     }),
 
     max: (max: number, message = `Must be at most ${max}`): ValidationRule<number> => ({
       validate: (value: number) => typeof value === 'number' && value <= max,
       message,
-      sanitize: (value: number) => typeof value === 'number' ? Math.min(value, max) : max
+      sanitize: (value: number) => (typeof value === 'number' ? Math.min(value, max) : max),
     }),
 
     integer: (message = 'Must be an integer'): ValidationRule<number> => ({
       validate: (value: number) => typeof value === 'number' && Number.isInteger(value),
       message,
-      sanitize: (value: number) => typeof value === 'number' ? Math.round(value) : 0
-    })
+      sanitize: (value: number) => (typeof value === 'number' ? Math.round(value) : 0),
+    }),
   },
 
   array: {
-    minLength: <T>(min: number, message = `Must have at least ${min} items`): ValidationRule<T[]> => ({
+    minLength: <T>(
+      min: number,
+      message = `Must have at least ${min} items`,
+    ): ValidationRule<T[]> => ({
       validate: (value: T[]) => Array.isArray(value) && value.length >= min,
-      message
+      message,
     }),
 
-    maxLength: <T>(max: number, message = `Must have at most ${max} items`): ValidationRule<T[]> => ({
+    maxLength: <T>(
+      max: number,
+      message = `Must have at most ${max} items`,
+    ): ValidationRule<T[]> => ({
       validate: (value: T[]) => Array.isArray(value) && value.length <= max,
       message,
-      sanitize: (value: T[]) => Array.isArray(value) ? value.slice(0, max) : []
-    })
+      sanitize: (value: T[]) => (Array.isArray(value) ? value.slice(0, max) : []),
+    }),
   },
 
   boolean: {
     isBoolean: (message = 'Must be a boolean'): ValidationRule<boolean> => ({
       validate: (value: boolean) => typeof value === 'boolean',
       message,
-      sanitize: (value: boolean) => Boolean(value)
-    })
-  }
+      sanitize: (value: boolean) => Boolean(value),
+    }),
+  },
 };
 
 /**
@@ -135,7 +147,7 @@ export const rules = {
  */
 export function withValidation<T extends Record<string, any>>(
   setState: (fn: (state: T) => void) => void,
-  schema: ValidationSchema<T>
+  schema: ValidationSchema<T>,
 ) {
   return (fn: (state: T) => void) => {
     setState((state) => {

@@ -71,7 +71,10 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
       setAutoVerify(plugin.config.autoVerify || true);
 
       // Set selected network to default
-      if (plugin.config.defaultNetwork && networks.some(n => n.id === plugin.config.defaultNetwork)) {
+      if (
+        plugin.config.defaultNetwork &&
+        networks.some((n) => n.id === plugin.config.defaultNetwork)
+      ) {
         setSelectedNetwork(plugin.config.defaultNetwork);
       } else if (networks.length > 0) {
         setSelectedNetwork(networks[0].id);
@@ -98,8 +101,25 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
 
     // In a real implementation, this would compile the contract and get the bytecode and ABI
     // For now, we'll use mock data
-    setContractBytecode('0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b60405161005091906100d9565b60405180910390f35b610073600480360381019061006e919061009d565b61007e565b005b60008054905090565b8060008190555050565b60008135905061009781610103565b92915050565b6000602082840312156100b3576100b26100fe565b5b60006100c184828501610088565b91505092915050565b6100d3816100f4565b82525050565b60006020820190506100ee60008301846100ca565b92915050565b6000819050919050565b600080fd5b61010c816100f4565b811461011757600080fd5b5056fea2646970667358221220223b76b2a4b83584962b3155b370beb66a7a7d6869dd947e2a7c8a6b0ffa58d364736f6c63430008070033');
-    setContractAbi([{"inputs":[],"name":"retrieve","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"num","type":"uint256"}],"name":"store","outputs":[],"stateMutability":"nonpayable","type":"function"}]);
+    setContractBytecode(
+      '0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b60405161005091906100d9565b60405180910390f35b610073600480360381019061006e919061009d565b61007e565b005b60008054905090565b8060008190555050565b60008135905061009781610103565b92915050565b6000602082840312156100b3576100b26100fe565b5b60006100c184828501610088565b91505092915050565b6100d3816100f4565b82525050565b60006020820190506100ee60008301846100ca565b92915050565b6000819050919050565b600080fd5b61010c816100f4565b811461011757600080fd5b5056fea2646970667358221220223b76b2a4b83584962b3155b370beb66a7a7d6869dd947e2a7c8a6b0ffa58d364736f6c63430008070033',
+    );
+    setContractAbi([
+      {
+        inputs: [],
+        name: 'retrieve',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+      {
+        inputs: [{ internalType: 'uint256', name: 'num', type: 'uint256' }],
+        name: 'store',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function',
+      },
+    ]);
 
     // Check if the contract has constructor arguments
     setConstructorArgs([]);
@@ -118,7 +138,7 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
         contractBytecode,
         contractAbi,
         constructorArgs,
-        selectedNetwork
+        selectedNetwork,
       );
 
       if (result.success) {
@@ -198,7 +218,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
 
   // Add deployment script
   const handleAddScript = async () => {
-    if (!implementation || !newScriptName || !selectedContract || newScriptNetworks.length === 0) return;
+    if (!implementation || !newScriptName || !selectedContract || newScriptNetworks.length === 0)
+      return;
 
     setIsLoading(true);
     setError(null);
@@ -294,10 +315,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
 
   // Toggle network in script networks
   const toggleNetworkInScript = (networkId: string) => {
-    setNewScriptNetworks(prev =>
-      prev.includes(networkId)
-        ? prev.filter(id => id !== networkId)
-        : [...prev, networkId]
+    setNewScriptNetworks((prev) =>
+      prev.includes(networkId) ? prev.filter((id) => id !== networkId) : [...prev, networkId],
     );
   };
 
@@ -327,12 +346,14 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                 </tr>
               </thead>
               <tbody>
-                {networks.map(network => (
+                {networks.map((network) => (
                   <tr key={network.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="border px-4 py-2">
                       {network.name}
                       {defaultNetwork === network.id && (
-                        <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Default</span>
+                        <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                          Default
+                        </span>
                       )}
                     </td>
                     <td className="border px-4 py-2">{network.chainId}</td>
@@ -342,8 +363,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                       <button
                         onClick={() => setSelectedNetwork(network.id)}
                         className={`px-2 py-1 text-xs rounded mr-2 ${
-                          selectedNetwork === network.id 
-                            ? 'bg-blue-500 text-white' 
+                          selectedNetwork === network.id
+                            ? 'bg-blue-500 text-white'
                             : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                         }`}
                       >
@@ -446,7 +467,9 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
               >
                 <option value="">Select a contract</option>
                 {getSolidityContracts().map(({ path, contractName }) => (
-                  <option key={path} value={contractName}>{contractName}</option>
+                  <option key={path} value={contractName}>
+                    {contractName}
+                  </option>
                 ))}
               </select>
             </div>
@@ -458,20 +481,23 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                 className="w-full p-2 border rounded"
               >
                 <option value="">Select a network</option>
-                {networks.map(network => (
-                  <option key={network.id} value={network.id}>{network.name}</option>
+                {networks.map((network) => (
+                  <option key={network.id} value={network.id}>
+                    {network.name}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           {/* Constructor Arguments */}
-          {contractAbi.length > 0 && contractAbi.some(item => item.type === 'constructor') && (
+          {contractAbi.length > 0 && contractAbi.some((item) => item.type === 'constructor') && (
             <div className="mb-4">
               <h4 className="font-medium mb-2">Constructor Arguments</h4>
               <div className="bg-white dark:bg-gray-800 p-3 rounded border">
                 <p className="text-gray-500 dark:text-gray-400">
-                  This contract requires constructor arguments. In a real implementation, this would show input fields for each argument.
+                  This contract requires constructor arguments. In a real implementation, this would
+                  show input fields for each argument.
                 </p>
               </div>
             </div>
@@ -494,16 +520,21 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
         {deploymentScripts.length > 0 ? (
           <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded mb-4">
             <div className="space-y-3">
-              {deploymentScripts.map(script => (
+              {deploymentScripts.map((script) => (
                 <div key={script.id} className="bg-white dark:bg-gray-800 p-3 rounded border">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium">{script.name}</h4>
                       <p className="text-sm text-gray-500">{script.description}</p>
                       <div className="mt-1">
-                        <span className="text-sm">Contract: <span className="font-medium">{script.contractName}</span></span>
+                        <span className="text-sm">
+                          Contract: <span className="font-medium">{script.contractName}</span>
+                        </span>
                         <span className="mx-2">•</span>
-                        <span className="text-sm">Networks: <span className="font-medium">{script.networks.join(', ')}</span></span>
+                        <span className="text-sm">
+                          Networks:{' '}
+                          <span className="font-medium">{script.networks.join(', ')}</span>
+                        </span>
                       </div>
                     </div>
                     <button
@@ -547,7 +578,9 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
               >
                 <option value="">Select a contract</option>
                 {getSolidityContracts().map(({ path, contractName }) => (
-                  <option key={path} value={contractName}>{contractName}</option>
+                  <option key={path} value={contractName}>
+                    {contractName}
+                  </option>
                 ))}
               </select>
             </div>
@@ -569,7 +602,7 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
             <div className="bg-white dark:bg-gray-800 p-3 rounded border max-h-40 overflow-y-auto">
               {networks.length > 0 ? (
                 <div className="space-y-1">
-                  {networks.map(network => (
+                  {networks.map((network) => (
                     <label key={network.id} className="flex items-center">
                       <input
                         type="checkbox"
@@ -602,7 +635,9 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
           <button
             onClick={handleAddScript}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            disabled={isLoading || !newScriptName || !selectedContract || newScriptNetworks.length === 0}
+            disabled={
+              isLoading || !newScriptName || !selectedContract || newScriptNetworks.length === 0
+            }
           >
             Create Script
           </button>
@@ -619,8 +654,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                 <div
                   key={index}
                   className={`p-3 rounded border ${
-                    result.success 
-                      ? 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-800' 
+                    result.success
+                      ? 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-800'
                       : 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-800'
                   }`}
                 >
@@ -632,7 +667,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                         {result.deployedAt && (
                           <>
                             <span className="mx-2">•</span>
-                            Deployed: <span className="font-medium">{formatDate(result.deployedAt)}</span>
+                            Deployed:{' '}
+                            <span className="font-medium">{formatDate(result.deployedAt)}</span>
                           </>
                         )}
                       </p>
@@ -646,7 +682,8 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                           </p>
                           {result.gasUsed && (
                             <p className="text-sm">
-                              Gas Used: <span className="font-medium">{result.gasUsed.toLocaleString()}</span>
+                              Gas Used:{' '}
+                              <span className="font-medium">{result.gasUsed.toLocaleString()}</span>
                             </p>
                           )}
                         </div>
@@ -655,11 +692,13 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                       )}
                     </div>
                     {result.success && result.verified !== undefined && (
-                      <div className={`px-2 py-1 text-xs rounded ${
-                        result.verified 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                      <div
+                        className={`px-2 py-1 text-xs rounded ${
+                          result.verified
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
                         {result.verified ? 'Verified' : 'Not Verified'}
                       </div>
                     )}
@@ -705,8 +744,10 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
                 className="w-full p-2 border rounded"
               >
                 <option value="">Select a default network</option>
-                {networks.map(network => (
-                  <option key={network.id} value={network.id}>{network.name}</option>
+                {networks.map((network) => (
+                  <option key={network.id} value={network.id}>
+                    {network.name}
+                  </option>
                 ))}
               </select>
             </div>

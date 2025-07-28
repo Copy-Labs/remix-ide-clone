@@ -10,7 +10,7 @@ vi.mock('@/services/loggerService', () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
 }));
 
 // Mock data
@@ -19,17 +19,17 @@ const mockCompiledContract = {
   abi: [
     {
       type: 'constructor',
-      inputs: [{ name: 'initialValue', type: 'uint256' }]
+      inputs: [{ name: 'initialValue', type: 'uint256' }],
     },
     {
       type: 'function',
       name: 'getValue',
       inputs: [],
       outputs: [{ type: 'uint256' }],
-      stateMutability: 'view'
-    }
+      stateMutability: 'view',
+    },
   ],
-  bytecode: '0x608060405234801561001057600080fd5b50...'
+  bytecode: '0x608060405234801561001057600080fd5b50...',
 };
 
 const mockNetwork = {
@@ -38,7 +38,7 @@ const mockNetwork = {
   chainId: 1,
   rpcUrl: 'https://mainnet.infura.io/v3/...',
   symbol: 'ETH',
-  isTestnet: false
+  isTestnet: false,
 };
 
 const mockDeployedContract = {
@@ -46,7 +46,7 @@ const mockDeployedContract = {
   name: 'TestContract',
   abi: mockCompiledContract.abi,
   deployedAt: Date.now(),
-  networkId: 'ethereum-mainnet'
+  networkId: 'ethereum-mainnet',
 };
 
 describe('DeploymentStore', () => {
@@ -65,7 +65,7 @@ describe('DeploymentStore', () => {
     vi.mocked(web3Service.switchNetwork).mockResolvedValue(true);
     vi.mocked(web3Service.addNetwork).mockResolvedValue(true);
     vi.mocked(web3Service.deployContract).mockResolvedValue({
-      options: { address: '0x1234567890123456789012345678901234567890' }
+      options: { address: '0x1234567890123456789012345678901234567890' },
     } as any);
     vi.mocked(web3Service.callContractMethod).mockResolvedValue('42');
     vi.mocked(web3Service.isWalletConnected).mockReturnValue(true);
@@ -94,7 +94,7 @@ describe('DeploymentStore', () => {
       isDeploying: false,
       selectedNetwork: 'ethereum-mainnet',
       availableNetworks: [],
-      deployedContracts: new Map()
+      deployedContracts: new Map(),
     });
   });
 
@@ -121,7 +121,7 @@ describe('DeploymentStore', () => {
       useDeploymentStore.setState({
         account: '0x1234567890123456789012345678901234567890',
         balance: '1.5',
-        gasPrice: '20'
+        gasPrice: '20',
       });
 
       store.disconnectWallet();
@@ -158,7 +158,7 @@ describe('DeploymentStore', () => {
         chainId: 137,
         rpcUrl: 'https://polygon-rpc.com',
         symbol: 'MATIC',
-        isTestnet: false
+        isTestnet: false,
       };
 
       const success = await store.addNetwork(newNetwork);
@@ -173,7 +173,7 @@ describe('DeploymentStore', () => {
     beforeEach(() => {
       // Set wallet as connected
       useDeploymentStore.setState({
-        account: '0x1234567890123456789012345678901234567890'
+        account: '0x1234567890123456789012345678901234567890',
       });
     });
 
@@ -187,7 +187,7 @@ describe('DeploymentStore', () => {
         mockCompiledContract.abi,
         mockCompiledContract.bytecode,
         args,
-        options
+        options,
       );
       expect(result).toBeDefined();
       expect(store.deployedContracts.size).toBe(1);
@@ -236,8 +236,8 @@ describe('DeploymentStore', () => {
       useDeploymentStore.setState({
         account: '0x1234567890123456789012345678901234567890',
         deployedContracts: new Map([
-          ['0x1234567890123456789012345678901234567890', mockDeployedContract]
-        ])
+          ['0x1234567890123456789012345678901234567890', mockDeployedContract],
+        ]),
       });
     });
 
@@ -246,7 +246,7 @@ describe('DeploymentStore', () => {
         '0x1234567890123456789012345678901234567890',
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(web3Service.callContractMethod).toHaveBeenCalledWith(
@@ -254,7 +254,7 @@ describe('DeploymentStore', () => {
         mockDeployedContract.abi,
         'getValue',
         [],
-        {}
+        {},
       );
       expect(result).toBe('42');
     });
@@ -266,7 +266,7 @@ describe('DeploymentStore', () => {
         '0x1234567890123456789012345678901234567890',
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -281,7 +281,7 @@ describe('DeploymentStore', () => {
         '0x1234567890123456789012345678901234567890',
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -294,7 +294,7 @@ describe('DeploymentStore', () => {
         '0x9999999999999999999999999999999999999999',
         'getValue',
         [],
-        {}
+        {},
       );
 
       expect(result).toBeNull();
@@ -307,8 +307,8 @@ describe('DeploymentStore', () => {
     beforeEach(() => {
       useDeploymentStore.setState({
         deployedContracts: new Map([
-          ['0x1234567890123456789012345678901234567890', mockDeployedContract]
-        ])
+          ['0x1234567890123456789012345678901234567890', mockDeployedContract],
+        ]),
       });
     });
 

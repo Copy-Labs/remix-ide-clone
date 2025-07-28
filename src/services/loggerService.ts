@@ -1,4 +1,4 @@
-import type {LogLevel} from '@/types';
+import type { LogLevel } from '@/types';
 
 /**
  * Logger Service for the application
@@ -9,9 +9,9 @@ class LoggerService {
   private static instance: LoggerService;
   private logLevel: LogLevel = 'info'; // Default log level
   private remoteLoggingEndpoint: string | null = null;
-  private appVersion: string = '1.0.0';
-  private enableConsoleLogging: boolean = true;
-  private enableRemoteLogging: boolean = false;
+  private appVersion = '1.0.0';
+  private enableConsoleLogging = true;
+  private enableRemoteLogging = false;
   private context: Record<string, any> = {};
 
   private constructor() {
@@ -59,7 +59,7 @@ class LoggerService {
    * @param endpoint The endpoint URL for remote logging
    * @param enabled Whether remote logging is enabled
    */
-  public configureRemoteLogging(endpoint: string, enabled: boolean = true): void {
+  public configureRemoteLogging(endpoint: string, enabled = true): void {
     this.remoteLoggingEndpoint = endpoint;
     this.enableRemoteLogging = enabled;
     this.info('Logger', `Remote logging ${enabled ? 'enabled' : 'disabled'}`);
@@ -226,7 +226,7 @@ class LoggerService {
           body: JSON.stringify(logEntry),
           // Use keepalive to ensure the request is sent even if the page is unloading
           keepalive: true,
-        }).catch(err => {
+        }).catch((err) => {
           // Fallback to console if remote logging fails
           console.error('Failed to send log to remote endpoint:', err);
         });

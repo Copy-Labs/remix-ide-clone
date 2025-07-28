@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type {EditorState, EditorSettings} from '@/types';
+import type { EditorState, EditorSettings } from '@/types';
 
 interface EditorStoreActions {
   // Editor instance management
@@ -70,7 +70,10 @@ export const useEditorStore = create<EditorStore>()(
         // Apply current settings to the new editor
         const settings = get();
         const editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
-          theme: settings.theme === 'auto' ? get().detectSystemTheme() + '-theme' : settings.theme + '-theme',
+          theme:
+            settings.theme === 'auto'
+              ? get().detectSystemTheme() + '-theme'
+              : settings.theme + '-theme',
           fontSize: settings.fontSize,
           fontFamily: settings.fontFamily,
           tabSize: settings.tabSize,
@@ -253,10 +256,13 @@ export const useEditorStore = create<EditorStore>()(
           // Set search and replace text programmatically
           const findController = editor.getContribution('editor.contrib.findController') as any;
           if (findController) {
-            findController.getState().change({
-              searchString: searchText,
-              replaceString: replaceText
-            }, false);
+            findController.getState().change(
+              {
+                searchString: searchText,
+                replaceString: replaceText,
+              },
+              false,
+            );
           }
         }
       },
@@ -339,8 +345,8 @@ export const useEditorStore = create<EditorStore>()(
     })),
     {
       name: 'editor-store',
-    }
-  )
+    },
+  ),
 );
 
 // Load settings on initialization

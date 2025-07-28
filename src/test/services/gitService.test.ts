@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { GitService, GitFileSystemAdapter } from '@/services/gitService';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GitFileSystemAdapter, GitService } from '@/services/gitService';
 import { useFileStore } from '@/stores/fileStore';
 import git from 'isomorphic-git';
+import { databaseService } from '@/services/databaseService.ts';
 
 // Mock the file store
 vi.mock('@/stores/fileStore');
@@ -16,7 +17,6 @@ vi.mock('@/services/loggerService', () => ({
 vi.mock('isomorphic-git', () => ({
   default: {
     init: vi.fn(),
-    clone: vi.fn(),
     add: vi.fn(),
     commit: vi.fn(),
     statusMatrix: vi.fn(),
@@ -26,12 +26,8 @@ vi.mock('isomorphic-git', () => ({
     checkout: vi.fn(),
     deleteBranch: vi.fn(),
     log: vi.fn(),
-    addRemote: vi.fn(),
-    deleteRemote: vi.fn(),
-    listRemotes: vi.fn(),
     push: vi.fn(),
     pull: vi.fn(),
-    fetch: vi.fn(),
   },
 }));
 
@@ -81,7 +77,7 @@ describe('GitFileSystemAdapter', () => {
       mockFileStore.getFileContent.mockResolvedValue(undefined);
 
       await expect(adapter.promises.readFile(filepath)).rejects.toThrow(
-        `ENOENT: no such file or directory, open '${filepath}'`
+        `ENOENT: no such file or directory, open '${filepath}'`,
       );
     });
 
@@ -151,7 +147,11 @@ describe('GitFileSystemAdapter', () => {
 
       mockFileStore.files = files;
       mockFileStore.getParentPath.mockImplementation((path: string) => {
-        if (path === '/test-dir/file1.txt' || path === '/test-dir/file2.txt' || path === '/test-dir/subdir') {
+        if (
+          path === '/test-dir/file1.txt' ||
+          path === '/test-dir/file2.txt' ||
+          path === '/test-dir/subdir'
+        ) {
           return '/test-dir';
         }
         return '/';
@@ -208,7 +208,7 @@ describe('GitFileSystemAdapter', () => {
       mockFileStore.getFile.mockResolvedValue(null);
 
       await expect(adapter.promises.stat(filepath)).rejects.toThrow(
-        `ENOENT: no such file or directory, stat '${filepath}'`
+        `ENOENT: no such file or directory, stat '${filepath}'`,
       );
     });
   });
@@ -251,75 +251,60 @@ describe('GitService', () => {
     it('should initialize repository with default branch', async () => {
       await gitService.init();
 
-      expect(mockGit.init).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        defaultBranch: 'main',
-      });
+      // The implementation creates a .git directory and sets the default branch
+      expect(gitService['branches']).toContain('main');
+      expect(gitService['currentBranchName']).toBe('main');
     });
 
     it('should initialize repository with custom branch', async () => {
       await gitService.init('develop');
 
-      expect(mockGit.init).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        defaultBranch: 'develop',
-      });
+      // The implementation creates a .git directory and sets the custom branch
+      expect(gitService['branches']).toContain('develop');
+      expect(gitService['currentBranchName']).toBe('develop');
     });
 
     it('should handle initialization errors', async () => {
-      const error = new Error('Init failed');
-      mockGit.init.mockRejectedValue(error);
+      // Mock the fs.promises.mkdir to throw an error
+      const originalMkdir = gitService['fs'].promises.mkdir;
+      gitService['fs'].promises.mkdir = vi.fn().mockRejectedValue(new Error('Init failed'));
 
       await expect(gitService.init()).rejects.toThrow('Init failed');
-    });
-  });
 
-  describe('clone', () => {
-    it('should clone repository successfully', async () => {
-      const url = 'https://github.com/user/repo.git';
-
-      await gitService.clone(url);
-
-      expect(mockGit.clone).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        http: fetch,
-        dir: '/test',
-        url,
-        singleBranch: true,
-        depth: 1,
-      });
-    });
-
-    it('should clone to custom directory', async () => {
-      const url = 'https://github.com/user/repo.git';
-      const dir = '/custom';
-
-      await gitService.clone(url, dir);
-
-      expect(mockGit.clone).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        http: fetch,
-        dir: '/custom',
-        url,
-        singleBranch: true,
-        depth: 1,
-      });
+      // Restore the original mkdir function
+      gitService['fs'].promises.mkdir = originalMkdir;
     });
   });
 
   describe('add', () => {
     it('should add file to staging area', async () => {
       const filepath = 'test.txt';
+      const content = 'test content';
+
+      // Mock the fs.promises.stat and fs.promises.readFile methods
+      const originalStat = gitService['fs'].promises.stat;
+      const originalReadFile = gitService['fs'].promises.readFile;
+      gitService['fs'].promises.stat = vi.fn().mockResolvedValue({});
+      gitService['fs'].promises.readFile = vi.fn().mockResolvedValue(content);
+
+      // Mock the databaseService.saveFile method
+      const originalSaveFile = databaseService.saveFile;
+      databaseService.saveFile = vi.fn().mockResolvedValue(undefined);
 
       await gitService.add(filepath);
 
-      expect(mockGit.add).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        filepath,
+      // Verify that the file was added to staging
+      expect(databaseService.saveFile).toHaveBeenCalledWith({
+        id: expect.stringContaining(filepath),
+        content,
+        lastModified: expect.any(Number),
+        type: 'staged',
       });
+
+      // Restore the original methods
+      gitService['fs'].promises.stat = originalStat;
+      gitService['fs'].promises.readFile = originalReadFile;
+      databaseService.saveFile = originalSaveFile;
     });
   });
 
@@ -327,57 +312,217 @@ describe('GitService', () => {
     it('should create commit successfully', async () => {
       const message = 'Test commit';
       const author = { name: 'Test User', email: 'test@example.com' };
-      const oid = 'abc123';
-      mockGit.commit.mockResolvedValue(oid);
+
+      // Mock the getStagedFiles method to return some staged files
+      const originalGetStagedFiles = gitService['getStagedFiles'];
+      gitService['getStagedFiles'] = vi.fn().mockResolvedValue(['test.txt']);
+
+      // Mock the databaseService.getFile method
+      const originalGetFile = databaseService.getFile;
+      databaseService.getFile = vi.fn().mockResolvedValue({
+        content: 'test content',
+        lastModified: Date.now(),
+      });
+
+      // Mock the resetGitIndex method
+      const originalResetGitIndex = gitService.resetGitIndex;
+      gitService.resetGitIndex = vi.fn().mockResolvedValue(undefined);
+
+      // Mock the generateOid method to return a predictable value
+      const originalGenerateOid = gitService['generateOid'];
+      const mockOid = 'abc123';
+      gitService['generateOid'] = vi.fn().mockReturnValue(mockOid);
 
       const result = await gitService.commit(message, author);
 
-      expect(mockGit.commit).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        message,
-        author,
-      });
-      expect(result).toBe(oid);
+      // Verify that a commit was created with the expected properties
+      expect(result).toBe(mockOid);
+      expect(gitService['commits'].length).toBeGreaterThan(0);
+      const lastCommit = gitService['commits'][gitService['commits'].length - 1];
+      expect(lastCommit.oid).toBe(mockOid);
+      expect(lastCommit.message).toBe(message);
+      expect(lastCommit.author.name).toBe(author.name);
+      expect(lastCommit.author.email).toBe(author.email);
+
+      // Verify that the staged files were reset
+      expect(gitService.resetGitIndex).toHaveBeenCalled();
+
+      // Restore the original methods
+      gitService['getStagedFiles'] = originalGetStagedFiles;
+      databaseService.getFile = originalGetFile;
+      gitService.resetGitIndex = originalResetGitIndex;
+      gitService['generateOid'] = originalGenerateOid;
     });
   });
 
   describe('status', () => {
     it('should return repository status', async () => {
-      const statusMatrix = [
-        ['file1.txt', 1, 2, 0],
-        ['file2.txt', 0, 2, 0],
-      ];
-      mockGit.statusMatrix.mockResolvedValue(statusMatrix);
+      // Mock the fs.getFileStore method to return a store with some files
+      const originalGetFileStore = gitService['fs'].getFileStore;
+      gitService['fs'].getFileStore = vi.fn().mockReturnValue({
+        files: new Map([
+          ['/file1.txt', { type: 'file', content: 'file1 content' }],
+          ['/file2.txt', { type: 'file', content: 'file2 content' }],
+        ]),
+      });
+
+      // Mock the isFileStaged method to indicate that file1.txt is staged
+      const originalIsFileStaged = gitService['isFileStaged'];
+      gitService['isFileStaged'] = vi.fn().mockImplementation((filepath) => {
+        return Promise.resolve(filepath === 'file1.txt');
+      });
 
       const result = await gitService.status();
 
-      expect(result).toEqual([
-        { file: 'file1.txt', head: 1, workdir: 2, stage: 0 },
-        { file: 'file2.txt', head: 0, workdir: 2, stage: 0 },
-      ]);
+      // Verify that the status includes the expected files
+      expect(result.files.length).toBe(2);
+      expect(result.files).toContainEqual({
+        file: 'file1.txt',
+        head: 0, // Not in head
+        workdir: 2, // Modified in workdir
+        stage: 2, // Staged
+      });
+      expect(result.files).toContainEqual({
+        file: 'file2.txt',
+        head: 0, // Not in head
+        workdir: 2, // Modified in workdir
+        stage: 0, // Not staged
+      });
+      expect(result.hasMore).toBe(false);
+      expect(result.total).toBe(2);
+
+      // Restore the original methods
+      gitService['fs'].getFileStore = originalGetFileStore;
+      gitService['isFileStaged'] = originalIsFileStaged;
+    });
+
+    it('should filter files based on the filter option', async () => {
+      // Mock the fs.getFileStore method to return a store with some files
+      const originalGetFileStore = gitService['fs'].getFileStore;
+      gitService['fs'].getFileStore = vi.fn().mockReturnValue({
+        files: new Map([
+          ['/file1.txt', { type: 'file', content: 'file1 content' }],
+          ['/file2.txt', { type: 'file', content: 'file2 content' }],
+          ['/file3.txt', { type: 'file', content: 'file3 content' }],
+        ]),
+      });
+
+      // Mock the isFileStaged method to indicate that file1.txt is staged
+      const originalIsFileStaged = gitService['isFileStaged'];
+      gitService['isFileStaged'] = vi.fn().mockImplementation((filepath) => {
+        return Promise.resolve(filepath === 'file1.txt');
+      });
+
+      // Mock the commits array to simulate file2.txt being in the latest commit
+      const originalCommits = gitService['commits'];
+      gitService['commits'] = [
+        {
+          oid: 'commit1',
+          message: 'Initial commit',
+          author: { name: 'Test', email: 'test@example.com', timestamp: Date.now() },
+          files: new Map([['file2.txt', 'file2 content']]),
+        },
+      ];
+
+      // Test filtering for staged files
+      const stagedResult = await gitService.status({ filter: 'staged' });
+      expect(stagedResult.files.length).toBe(1);
+      expect(stagedResult.files[0].file).toBe('file1.txt');
+      expect(stagedResult.files[0].stage).toBe(2);
+
+      // Test filtering for modified files
+      const modifiedResult = await gitService.status({ filter: 'modified' });
+      expect(modifiedResult.files.length).toBe(1);
+      expect(modifiedResult.files[0].file).toBe('file2.txt');
+      expect(modifiedResult.files[0].head).toBe(1);
+      expect(modifiedResult.files[0].workdir).toBe(2);
+      expect(modifiedResult.files[0].stage).toBe(0);
+
+      // Test filtering for untracked files
+      const untrackedResult = await gitService.status({ filter: 'untracked' });
+      expect(untrackedResult.files.length).toBe(1);
+      expect(untrackedResult.files[0].file).toBe('file3.txt');
+      expect(untrackedResult.files[0].head).toBe(0);
+      expect(untrackedResult.files[0].workdir).toBe(2);
+      expect(untrackedResult.files[0].stage).toBe(0);
+
+      // Restore the original methods and properties
+      gitService['fs'].getFileStore = originalGetFileStore;
+      gitService['isFileStaged'] = originalIsFileStaged;
+      gitService['commits'] = originalCommits;
+    });
+
+    it('should paginate results based on skip and limit options', async () => {
+      // Mock the fs.getFileStore method to return a store with many files
+      const originalGetFileStore = gitService['fs'].getFileStore;
+      const files = new Map();
+      for (let i = 1; i <= 10; i++) {
+        files.set(`/file${i}.txt`, { type: 'file', content: `file${i} content` });
+      }
+      gitService['fs'].getFileStore = vi.fn().mockReturnValue({ files });
+
+      // Mock the isFileStaged method to return false for all files
+      const originalIsFileStaged = gitService['isFileStaged'];
+      gitService['isFileStaged'] = vi.fn().mockResolvedValue(false);
+
+      // Test pagination with skip and limit
+      const result1 = await gitService.status({ skip: 0, limit: 3 });
+      expect(result1.files.length).toBe(3);
+      expect(result1.hasMore).toBe(true);
+      expect(result1.total).toBe(10);
+      expect(result1.files[0].file).toBe('file1.txt');
+      expect(result1.files[1].file).toBe('file2.txt');
+      expect(result1.files[2].file).toBe('file3.txt');
+
+      const result2 = await gitService.status({ skip: 3, limit: 3 });
+      expect(result2.files.length).toBe(3);
+      expect(result2.hasMore).toBe(true);
+      expect(result2.total).toBe(10);
+      expect(result2.files[0].file).toBe('file4.txt');
+      expect(result2.files[1].file).toBe('file5.txt');
+      expect(result2.files[2].file).toBe('file6.txt');
+
+      const result3 = await gitService.status({ skip: 6, limit: 3 });
+      expect(result3.files.length).toBe(3);
+      expect(result3.hasMore).toBe(true);
+      expect(result3.total).toBe(10);
+      expect(result3.files[0].file).toBe('file7.txt');
+      expect(result3.files[1].file).toBe('file8.txt');
+      expect(result3.files[2].file).toBe('file9.txt');
+
+      const result4 = await gitService.status({ skip: 9, limit: 3 });
+      expect(result4.files.length).toBe(1);
+      expect(result4.hasMore).toBe(false);
+      expect(result4.total).toBe(10);
+      expect(result4.files[0].file).toBe('file10.txt');
+
+      // Restore the original methods
+      gitService['fs'].getFileStore = originalGetFileStore;
+      gitService['isFileStaged'] = originalIsFileStaged;
     });
   });
 
   describe('listBranches', () => {
     it('should list all branches', async () => {
-      const branches = ['main', 'develop', 'feature/test'];
-      mockGit.listBranches.mockResolvedValue(branches);
+      // Set some branches in the GitService instance
+      gitService['branches'] = ['main', 'develop', 'feature/test'];
 
       const result = await gitService.listBranches();
 
-      expect(result).toEqual(branches);
+      // Verify that the result includes all branches
+      expect(result).toEqual(['main', 'develop', 'feature/test']);
     });
   });
 
   describe('currentBranch', () => {
     it('should return current branch', async () => {
-      const branch = 'main';
-      mockGit.currentBranch.mockResolvedValue(branch);
+      // Set the current branch in the GitService instance
+      gitService['currentBranchName'] = 'main';
 
       const result = await gitService.currentBranch();
 
-      expect(result).toBe(branch);
+      // Verify that the result is the current branch
+      expect(result).toBe('main');
     });
   });
 
@@ -385,13 +530,23 @@ describe('GitService', () => {
     it('should create new branch', async () => {
       const name = 'feature/new';
 
+      // Set initial branches in the GitService instance
+      gitService['branches'] = ['main'];
+
       await gitService.branch(name);
 
-      expect(mockGit.branch).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        ref: name,
-      });
+      // Verify that the branch was added to the branches array
+      expect(gitService['branches']).toContain(name);
+    });
+
+    it('should throw error if branch already exists', async () => {
+      const name = 'main';
+
+      // Set initial branches in the GitService instance
+      gitService['branches'] = ['main'];
+
+      // Verify that creating an existing branch throws an error
+      await expect(gitService.branch(name)).rejects.toThrow(`Branch ${name} already exists`);
     });
   });
 
@@ -399,13 +554,24 @@ describe('GitService', () => {
     it('should switch to branch', async () => {
       const ref = 'develop';
 
+      // Set initial branches and current branch in the GitService instance
+      gitService['branches'] = ['main', 'develop'];
+      gitService['currentBranchName'] = 'main';
+
       await gitService.checkout(ref);
 
-      expect(mockGit.checkout).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        ref,
-      });
+      // Verify that the current branch was updated
+      expect(gitService['currentBranchName']).toBe(ref);
+    });
+
+    it('should throw error if branch does not exist', async () => {
+      const ref = 'nonexistent';
+
+      // Set initial branches in the GitService instance
+      gitService['branches'] = ['main'];
+
+      // Verify that checking out a non-existent branch throws an error
+      await expect(gitService.checkout(ref)).rejects.toThrow(`Branch ${ref} does not exist`);
     });
   });
 
@@ -413,93 +579,95 @@ describe('GitService', () => {
     it('should delete branch', async () => {
       const name = 'feature/old';
 
+      // Set initial branches and current branch in the GitService instance
+      gitService['branches'] = ['main', 'feature/old'];
+      gitService['currentBranchName'] = 'main';
+
       await gitService.deleteBranch(name);
 
-      expect(mockGit.deleteBranch).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        ref: name,
-      });
+      // Verify that the branch was removed from the branches array
+      expect(gitService['branches']).not.toContain(name);
+    });
+
+    it('should throw error if trying to delete current branch', async () => {
+      const name = 'main';
+
+      // Set initial branches and current branch in the GitService instance
+      gitService['branches'] = ['main'];
+      gitService['currentBranchName'] = 'main';
+
+      // Verify that deleting the current branch throws an error
+      await expect(gitService.deleteBranch(name)).rejects.toThrow(
+        `Cannot delete the current branch: ${name}`,
+      );
+    });
+
+    it('should throw error if branch does not exist', async () => {
+      const name = 'nonexistent';
+
+      // Set initial branches in the GitService instance
+      gitService['branches'] = ['main'];
+      gitService['currentBranchName'] = 'main';
+
+      // Verify that deleting a non-existent branch throws an error
+      await expect(gitService.deleteBranch(name)).rejects.toThrow(`Branch ${name} does not exist`);
     });
   });
 
   describe('log', () => {
     it('should return commit history', async () => {
-      const commits = [
-        { oid: 'abc123', commit: { message: 'Test commit' } },
-        { oid: 'def456', commit: { message: 'Another commit' } },
+      // Set some commits in the GitService instance
+      const testCommits = [
+        {
+          oid: 'abc123',
+          message: 'Test commit',
+          author: {
+            name: 'Test User',
+            email: 'test@example.com',
+            timestamp: 1234567890,
+          },
+          files: new Map(),
+        },
+        {
+          oid: 'def456',
+          message: 'Another commit',
+          author: {
+            name: 'Another User',
+            email: 'another@example.com',
+            timestamp: 1234567891,
+          },
+          files: new Map(),
+        },
       ];
-      mockGit.log.mockResolvedValue(commits);
+      gitService['commits'] = testCommits;
 
-      const result = await gitService.log(5);
+      const result = await gitService.log({ limit: 5 });
 
-      expect(mockGit.log).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        depth: 5,
+      // Verify that the result includes the expected commits
+      expect(result.commits.length).toBe(2);
+      expect(result.commits[0]).toMatchObject({
+        oid: 'def456',
+        commit: {
+          message: 'Another commit',
+          author: {
+            name: 'Another User',
+            email: 'another@example.com',
+            timestamp: 1234567891,
+          },
+        },
       });
-      expect(result).toEqual(commits);
-    });
-  });
-
-  describe('addRemote', () => {
-    it('should add remote successfully', async () => {
-      const remote = 'origin';
-      const url = 'https://github.com/user/repo.git';
-
-      await gitService.addRemote(remote, url);
-
-      expect(mockGit.addRemote).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        remote,
-        url,
-        force: false,
+      expect(result.commits[1]).toMatchObject({
+        oid: 'abc123',
+        commit: {
+          message: 'Test commit',
+          author: {
+            name: 'Test User',
+            email: 'test@example.com',
+            timestamp: 1234567890,
+          },
+        },
       });
-    });
-
-    it('should add remote with force option', async () => {
-      const remote = 'origin';
-      const url = 'https://github.com/user/repo.git';
-      const force = true;
-
-      await gitService.addRemote(remote, url, force);
-
-      expect(mockGit.addRemote).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        remote,
-        url,
-        force,
-      });
-    });
-  });
-
-  describe('deleteRemote', () => {
-    it('should delete remote successfully', async () => {
-      const remote = 'origin';
-
-      await gitService.deleteRemote(remote);
-
-      expect(mockGit.deleteRemote).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        dir: '/test',
-        remote,
-      });
-    });
-  });
-
-  describe('listRemotes', () => {
-    it('should list all remotes', async () => {
-      const remotes = [
-        { remote: 'origin', url: 'https://github.com/user/repo.git' },
-        { remote: 'upstream', url: 'https://github.com/upstream/repo.git' },
-      ];
-      mockGit.listRemotes.mockResolvedValue(remotes);
-
-      const result = await gitService.listRemotes();
-
-      expect(result).toEqual(remotes);
+      expect(result.hasMore).toBe(false);
     });
   });
 
@@ -508,15 +676,9 @@ describe('GitService', () => {
       const remote = 'origin';
       const ref = 'main';
 
-      await gitService.push(remote, ref);
+      const result = await gitService.push(remote, ref);
 
-      expect(mockGit.push).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        http: fetch,
-        dir: '/test',
-        remote,
-        ref,
-      });
+      expect(result).toBe(true);
     });
   });
 
@@ -525,30 +687,9 @@ describe('GitService', () => {
       const remote = 'origin';
       const ref = 'main';
 
-      await gitService.pull(remote, ref);
+      const result = await gitService.pull(remote, ref);
 
-      expect(mockGit.pull).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        http: fetch,
-        dir: '/test',
-        ref,
-        singleBranch: true,
-      });
-    });
-  });
-
-  describe('fetch', () => {
-    it('should fetch from remote', async () => {
-      const remote = 'origin';
-
-      await gitService.fetch(remote);
-
-      expect(mockGit.fetch).toHaveBeenCalledWith({
-        fs: expect.any(GitFileSystemAdapter),
-        http: fetch,
-        dir: '/test',
-        remote,
-      });
+      expect(result).toBe(true);
     });
   });
 });

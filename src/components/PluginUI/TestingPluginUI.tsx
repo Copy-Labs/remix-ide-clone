@@ -9,7 +9,13 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,7 +32,7 @@ import {
   ChevronRight,
   TestTube,
   BarChart3,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 
 interface TestingPluginUIProps {
@@ -146,10 +152,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
     setError(null);
 
     try {
-      const testPath = await implementation.createTestFile(
-        `${testName}.test.js`,
-        selectedContract
-      );
+      const testPath = await implementation.createTestFile(`${testName}.test.js`, selectedContract);
 
       setTestName('');
       setSelectedContract('');
@@ -202,7 +205,9 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
           case 't':
             event.preventDefault();
             // Focus on test name input
-            const testNameInput = document.querySelector('input[placeholder="Enter test name"]') as HTMLInputElement;
+            const testNameInput = document.querySelector(
+              'input[placeholder="Enter test name"]',
+            ) as HTMLInputElement;
             testNameInput?.focus();
             break;
         }
@@ -242,11 +247,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
               <Play className="h-5 w-5" />
               <CardTitle>Test Controls</CardTitle>
             </div>
-            <Button
-              onClick={handleRunAllTests}
-              disabled={isLoading}
-              className="gap-2"
-            >
+            <Button onClick={handleRunAllTests} disabled={isLoading} className="gap-2">
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -273,7 +274,12 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <div>
-                      <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.passed, 0)}</div>
+                      <div className="text-lg font-bold">
+                        {Array.from(testResults.values()).reduce(
+                          (sum, result) => sum + result.passed,
+                          0,
+                        )}
+                      </div>
                       <div className="text-xs text-green-600">Tests Passed</div>
                     </div>
                   </div>
@@ -282,7 +288,12 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                   <div className="flex items-center gap-2">
                     <XCircle className="h-4 w-4 text-red-600" />
                     <div>
-                      <div className="text-lg font-bold">{Array.from(testResults.values()).reduce((sum, result) => sum + result.failed, 0)}</div>
+                      <div className="text-lg font-bold">
+                        {Array.from(testResults.values()).reduce(
+                          (sum, result) => sum + result.failed,
+                          0,
+                        )}
+                      </div>
                       <div className="text-xs text-red-600">Tests Failed</div>
                     </div>
                   </div>
@@ -301,7 +312,12 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                     <Clock className="h-4 w-4 text-purple-600" />
                     <div>
                       <div className="text-lg font-bold">
-                        {formatDuration(Array.from(testResults.values()).reduce((sum, result) => sum + result.duration, 0))}
+                        {formatDuration(
+                          Array.from(testResults.values()).reduce(
+                            (sum, result) => sum + result.duration,
+                            0,
+                          ),
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">Total Duration</div>
                     </div>
@@ -358,11 +374,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
             disabled={isLoading || !selectedContract || !testName}
             className="w-full gap-2"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4" />
-            )}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             {isLoading ? 'Creating...' : 'Create Test File'}
           </Button>
         </CardContent>
@@ -376,12 +388,14 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
               <TestTube className="h-5 w-5" />
               <CardTitle>Test Results</CardTitle>
               <Badge variant="outline" className="ml-auto">
-                {Array.from(testResults.values()).reduce((sum, result) => sum + result.tests.length, 0)} tests
+                {Array.from(testResults.values()).reduce(
+                  (sum, result) => sum + result.tests.length,
+                  0,
+                )}{' '}
+                tests
               </Badge>
             </div>
-            <CardDescription>
-              Detailed results from your test executions
-            </CardDescription>
+            <CardDescription>Detailed results from your test executions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {Array.from(testResults.entries()).map(([testPath, result]) => (
@@ -398,7 +412,10 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <Badge variant={result.failed > 0 ? "destructive" : "default"} className="gap-1">
+                          <Badge
+                            variant={result.failed > 0 ? 'destructive' : 'default'}
+                            className="gap-1"
+                          >
                             {result.failed > 0 ? (
                               <XCircle className="h-3 w-3" />
                             ) : (
@@ -436,7 +453,10 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                     <CardContent className="pt-0">
                       <div className="space-y-2">
                         {result.tests.map((test: any, index: number) => (
-                          <Card key={index} className={`p-3 ${test.passed ? 'border-green-200 bg-green-50 dark:bg-green-950' : 'border-red-200 bg-red-50 dark:bg-red-950'}`}>
+                          <Card
+                            key={index}
+                            className={`p-3 ${test.passed ? 'border-green-200 bg-green-50 dark:bg-green-950' : 'border-red-200 bg-red-50 dark:bg-red-950'}`}
+                          >
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-2">
                                 {test.passed ? (
@@ -481,9 +501,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                 {coverageData.size} contracts
               </Badge>
             </div>
-            <CardDescription>
-              Code coverage analysis for your smart contracts
-            </CardDescription>
+            <CardDescription>Code coverage analysis for your smart contracts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {Array.from(coverageData.entries()).map(([contractName, data]) => (
@@ -571,9 +589,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                   <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
                 </div>
               </div>
-              <CardDescription>
-                Customize testing framework settings and behavior
-              </CardDescription>
+              <CardDescription>Customize testing framework settings and behavior</CardDescription>
             </CardHeader>
           </CollapsibleTrigger>
 

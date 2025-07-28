@@ -9,7 +9,8 @@ import {
   Save,
   Package,
   PackageOpen,
-  LucideUndo, LucideRedo,
+  LucideUndo,
+  LucideRedo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -20,7 +21,8 @@ interface EditorToolbarProps {
 }
 
 const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
-  const { canUndo, canRedo, undo, redo, getUndoDescription, getRedoDescription } = useHistoryStore();
+  const { canUndo, canRedo, undo, redo, getUndoDescription, getRedoDescription } =
+    useHistoryStore();
   const {
     isInitialized,
     showBlame,
@@ -32,7 +34,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
     getFileDiff,
     createStash,
     listStashes,
-    stashes
+    stashes,
   } = useGitStore();
 
   const [showStashDialog, setShowStashDialog] = useState(false);
@@ -74,10 +76,9 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
         onClick={() => undo()}
         disabled={!canUndo()}
         title={getUndoDescription() || 'Undo'}
-        className={cn('rounded-md size-8',
-          canUndo()
-            ? ''
-            : 'text-muted-foreground !cursor-not-allowed',
+        className={cn(
+          'rounded-md size-8',
+          canUndo() ? '' : 'text-muted-foreground !cursor-not-allowed',
         )}
         variant={'ghost'}
       >
@@ -93,10 +94,9 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
         disabled={!canRedo()}
         size={'icon'}
         title={getRedoDescription() || 'Redo'}
-        className={cn('rounded-md size-8',
-          canRedo()
-            ? ''
-            : 'text-muted-foreground !cursor-not-allowed',
+        className={cn(
+          'rounded-md size-8',
+          canRedo() ? '' : 'text-muted-foreground !cursor-not-allowed',
         )}
         variant={'ghost'}
       >
@@ -123,7 +123,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
             onClick={handleToggleBlame}
             size={'icon'}
             title="Toggle Git Blame"
-            className={cn('size-8',
+            className={cn(
+              'size-8',
               // showBlame
               //   ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
               //   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -137,7 +138,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ filePath }) => {
             onClick={handleToggleDiff}
             size={'icon'}
             title="Toggle Git Diff"
-            className={cn('size-8',
+            className={cn(
+              'size-8',
               // showDiff
               //   ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
               //   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',

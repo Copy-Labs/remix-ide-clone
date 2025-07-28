@@ -42,7 +42,9 @@ export class CompilerService {
       } else {
         // If not found, use a fallback format
         this.currentVersionFull = `soljson-v${this.currentVersion}+commit.00000000.js`;
-        console.warn(`Could not find full version for ${this.currentVersion}, using fallback: ${this.currentVersionFull}`);
+        console.warn(
+          `Could not find full version for ${this.currentVersion}, using fallback: ${this.currentVersionFull}`,
+        );
       }
     } catch (error) {
       console.error('Failed to initialize versions:', error);
@@ -88,27 +90,32 @@ export class CompilerService {
    * @param sources Record of file paths and their source code
    * @returns CompilationResult containing compilation output or errors
    */
-  public async compile(sources: Record<string, string>, optimizerSettings?: { enabled: boolean, runs: number }): Promise<CompilationResult> {
+  public async compile(
+    sources: Record<string, string>,
+    optimizerSettings?: { enabled: boolean; runs: number },
+  ): Promise<CompilationResult> {
     try {
       // Validate input sources
       if (!sources || typeof sources !== 'object') {
         return {
           success: false,
-          errors: [{
-            severity: 'error',
-            message: 'Invalid input source specified. Sources must be a valid object.',
-            sourceLocation: {
-              file: '',
-              start: 0,
-              end: 0
+          errors: [
+            {
+              severity: 'error',
+              message: 'Invalid input source specified. Sources must be a valid object.',
+              sourceLocation: {
+                file: '',
+                start: 0,
+                end: 0,
+              },
+              type: 'CompilerError',
+              component: 'general',
+              errorCode: '0001',
             },
-            type: 'CompilerError',
-            component: 'general',
-            errorCode: '0001'
-          }],
+          ],
           warnings: [],
           contracts: {},
-          sources: {}
+          sources: {},
         };
       }
 
@@ -117,21 +124,23 @@ export class CompilerService {
       if (sourceKeys.length === 0) {
         return {
           success: false,
-          errors: [{
-            severity: 'error',
-            message: 'No source files provided for compilation.',
-            sourceLocation: {
-              file: '',
-              start: 0,
-              end: 0
+          errors: [
+            {
+              severity: 'error',
+              message: 'No source files provided for compilation.',
+              sourceLocation: {
+                file: '',
+                start: 0,
+                end: 0,
+              },
+              type: 'CompilerError',
+              component: 'general',
+              errorCode: '0002',
             },
-            type: 'CompilerError',
-            component: 'general',
-            errorCode: '0002'
-          }],
+          ],
           warnings: [],
           contracts: {},
-          sources: {}
+          sources: {},
         };
       }
 
@@ -151,21 +160,23 @@ export class CompilerService {
       if (contractBody == null || typeof contractBody !== 'string') {
         return {
           success: false,
-          errors: [{
-            severity: 'error',
-            message: `Invalid contract content for file: ${firstSourcePath}`,
-            sourceLocation: {
-              file: firstSourcePath,
-              start: 0,
-              end: 0
+          errors: [
+            {
+              severity: 'error',
+              message: `Invalid contract content for file: ${firstSourcePath}`,
+              sourceLocation: {
+                file: firstSourcePath,
+                start: 0,
+                end: 0,
+              },
+              type: 'CompilerError',
+              component: 'general',
+              errorCode: '0003',
             },
-            type: 'CompilerError',
-            component: 'general',
-            errorCode: '0003'
-          }],
+          ],
           warnings: [],
           contracts: {},
-          sources: {}
+          sources: {},
         };
       }
 
@@ -177,10 +188,10 @@ export class CompilerService {
       } else {
         // Fallback to the old format if full version is not available
         versionUrl = `https://binaries.soliditylang.org/bin/soljson-v${this.currentVersion}.js`;
-        console.warn("Using fallback version URL format. This may cause compilation errors.");
+        console.warn('Using fallback version URL format. This may cause compilation errors.');
       }
 
-      console.log("COMPILE SERVICE::COMPILE::VERSION", versionUrl);
+      console.log('COMPILE SERVICE::COMPILE::VERSION', versionUrl);
 
       // Prepare optimizer options
       const options: any = {};
@@ -189,64 +200,68 @@ export class CompilerService {
       if (optimizerSettings?.enabled) {
         options.optimizer = {
           enabled: optimizerSettings.enabled,
-          runs: optimizerSettings.runs
+          runs: optimizerSettings.runs,
         };
       }
 
-      console.log("COMPILE SERVICE::COMPILE::OPTIONS", options);
+      console.log('COMPILE SERVICE::COMPILE::OPTIONS', options);
 
       try {
         // Compile using the library's solidityCompiler function
         const output = await solidityCompiler({
           version: versionUrl,
           contractBody,
-          options
+          options,
         });
 
-        console.log("COMPILE SERVICE::COMPILE::OUTPUT", output);
+        console.log('COMPILE SERVICE::COMPILE::OUTPUT', output);
         // Process compilation result
         return this.processCompilationOutput(output, sources);
       } catch (e) {
-        console.error("COMPILE SERVICE::COMPILE::ERROR", e);
+        console.error('COMPILE SERVICE::COMPILE::ERROR', e);
         // Return proper error result when solidityCompiler fails
         return {
           success: false,
-          errors: [{
-            severity: 'error',
-            message: e instanceof Error ? e.message : 'Solidity compiler error',
-            sourceLocation: {
-              file: firstSourcePath,
-              start: 0,
-              end: 0
+          errors: [
+            {
+              severity: 'error',
+              message: e instanceof Error ? e.message : 'Solidity compiler error',
+              sourceLocation: {
+                file: firstSourcePath,
+                start: 0,
+                end: 0,
+              },
+              type: 'CompilerError',
+              component: 'solidity-compiler',
+              errorCode: '0004',
             },
-            type: 'CompilerError',
-            component: 'solidity-compiler',
-            errorCode: '0004'
-          }],
+          ],
           warnings: [],
           contracts: {},
-          sources: {}
+          sources: {},
         };
       }
     } catch (error) {
       console.error('Compilation error:', error);
       return {
         success: false,
-        errors: [{
-          severity: 'error',
-          message: error instanceof Error ? error.message : 'Unknown compilation error',
-          sourceLocation: {
-            file: '',
-            start: 0,
-            end: 0
+        errors: [
+          {
+            severity: 'error',
+            message: error instanceof Error ? error.message : 'Unknown compilation error',
+            sourceLocation: {
+              file: '',
+              start: 0,
+              end: 0,
+            },
+            type: 'CompilerError',
+            component: 'general',
+            errorCode: '0000',
           },
-          type: 'CompilerError',
-          component: 'general',
-          errorCode: '0000'
-        }],
+        ],
         warnings: [],
         contracts: {},
-        sources: {}
+        sources: {},
       };
     }
   }
@@ -274,7 +289,10 @@ export class CompilerService {
    * @param originalSources Original source files
    * @returns Processed CompilationResult
    */
-  private processCompilationOutput(output: any, originalSources: Record<string, string>): CompilationResult {
+  private processCompilationOutput(
+    output: any,
+    originalSources: Record<string, string>,
+  ): CompilationResult {
     const errors: CompilerError[] = [];
     const warnings: CompilerWarning[] = [];
     const contracts: Record<string, CompiledContract> = {};
@@ -293,13 +311,21 @@ export class CompilerService {
     // Process contracts - handle the specific output format from solidityCompiler
     // debug('Compiler Service', 'output.contracts', output.contracts);
     if (output.contracts && output.contracts.Compiled_Contracts) {
-      for (const [contractName, contractData] of Object.entries(output.contracts.Compiled_Contracts)) {
-        contracts[contractName] = this.parseContract(contractName, contractData as any, 'Compiled_Contracts');
+      for (const [contractName, contractData] of Object.entries(
+        output.contracts.Compiled_Contracts,
+      )) {
+        contracts[contractName] = this.parseContract(
+          contractName,
+          contractData as any,
+          'Compiled_Contracts',
+        );
       }
     } else if (output.contracts) {
       // Fallback to the original processing logic
       for (const [fileName, fileContracts] of Object.entries(output.contracts)) {
-        for (const [contractName, contractData] of Object.entries(fileContracts as Record<string, any>)) {
+        for (const [contractName, contractData] of Object.entries(
+          fileContracts as Record<string, any>,
+        )) {
           contracts[contractName] = this.parseContract(contractName, contractData, fileName);
         }
       }
@@ -310,7 +336,7 @@ export class CompilerService {
       errors,
       warnings,
       contracts,
-      sources: originalSources
+      sources: originalSources,
     };
   }
 
@@ -326,7 +352,7 @@ export class CompilerService {
       sourceLocation: this.parseSourceLocation(error.sourceLocation),
       type: error.type || 'CompilerError',
       component: error.component || 'general',
-      errorCode: error.errorCode || '0000'
+      errorCode: error.errorCode || '0000',
     };
   }
 
@@ -341,7 +367,7 @@ export class CompilerService {
       message: warning.message || 'Unknown warning',
       sourceLocation: this.parseSourceLocation(warning.sourceLocation),
       type: warning.type || 'CompilerWarning',
-      component: warning.component || 'general'
+      component: warning.component || 'general',
     };
   }
 
@@ -355,14 +381,14 @@ export class CompilerService {
       return {
         file: '',
         start: 0,
-        end: 0
+        end: 0,
       };
     }
 
     return {
       file: sourceLocation.file || '',
       start: sourceLocation.start || 0,
-      end: sourceLocation.end || 0
+      end: sourceLocation.end || 0,
     };
   }
 
@@ -388,7 +414,7 @@ export class CompilerService {
       gasEstimates: contractData.evm?.gasEstimates || {},
       metadata: contractData.metadata || '',
       devdoc: contractData.devdoc || {},
-      userdoc: contractData.userdoc || {}
+      userdoc: contractData.userdoc || {},
     };
   }
 
@@ -414,7 +440,7 @@ export class CompilerService {
       const versionNumbers = Object.keys(releases);
 
       // Store the mapping between version numbers and full version strings
-      versionNumbers.forEach(version => {
+      versionNumbers.forEach((version) => {
         this.versionMap.set(version, releases[version]);
       });
 
@@ -435,13 +461,22 @@ export class CompilerService {
       console.error('Failed to get compiler versions:', error);
       // Fallback to hardcoded versions if API fails
       const fallbackVersions = [
-        '0.8.30', '0.8.29', '0.8.28', '0.8.27', '0.8.26',
-        '0.8.25', '0.8.24', '0.8.23', '0.8.22', '0.8.21', '0.8.20'
+        '0.8.30',
+        '0.8.29',
+        '0.8.28',
+        '0.8.27',
+        '0.8.26',
+        '0.8.25',
+        '0.8.24',
+        '0.8.23',
+        '0.8.22',
+        '0.8.21',
+        '0.8.20',
       ];
 
       // Clear the version map and add fallback mappings
       this.versionMap.clear();
-      fallbackVersions.forEach(version => {
+      fallbackVersions.forEach((version) => {
         // Use a placeholder full version string for fallbacks
         this.versionMap.set(version, `soljson-v${version}+commit.00000000.js`);
       });
@@ -480,12 +515,16 @@ export class CompilerService {
           } else {
             // If still not found, use a fallback format
             this.currentVersionFull = `soljson-v${version}+commit.00000000.js`;
-            console.warn(`Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`);
+            console.warn(
+              `Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`,
+            );
           }
         } else {
           // If versions are loaded but this one is not found, use a fallback format
           this.currentVersionFull = `soljson-v${version}+commit.00000000.js`;
-          console.warn(`Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`);
+          console.warn(
+            `Could not find full version for ${version}, using fallback: ${this.currentVersionFull}`,
+          );
         }
       }
 
@@ -535,7 +574,7 @@ export class CompilerService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -568,7 +607,10 @@ export class CompilerService {
    * @param fileName Optional file name
    * @returns Compiled contract or null if compilation failed
    */
-  public async compileContract(source: string, fileName: string = 'Contract.sol'): Promise<CompiledContract | null> {
+  public async compileContract(
+    source: string,
+    fileName: string = 'Contract.sol',
+  ): Promise<CompiledContract | null> {
     const sources = { [fileName]: source };
     const result = await this.compile(sources);
 

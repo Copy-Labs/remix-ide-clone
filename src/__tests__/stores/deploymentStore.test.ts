@@ -113,7 +113,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the contract was added to the store
@@ -128,7 +128,9 @@ describe('DeploymentStore', () => {
 
       // We can't directly verify that verifyContract was called because it's not mocked
       // Instead, we verify that the toast.info was called with the expected message
-      expect(toast.info).toHaveBeenCalledWith('Contract confirmed on blockchain. Starting verification process...');
+      expect(toast.info).toHaveBeenCalledWith(
+        'Contract confirmed on blockchain. Starting verification process...',
+      );
     });
 
     it('should handle deployment with undefined contract address', async () => {
@@ -153,7 +155,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the contract was added to the store
@@ -166,7 +168,9 @@ describe('DeploymentStore', () => {
       expect(web3Service.waitForContract).not.toHaveBeenCalled();
 
       // Verify error toast was shown
-      expect(toast.error).toHaveBeenCalledWith('Cannot verify contract: Contract address is undefined.');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Cannot verify contract: Contract address is undefined.',
+      );
     });
 
     it('should handle deployment failure', async () => {
@@ -187,7 +191,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the result is null
@@ -225,7 +229,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the contract was added to the store
@@ -243,7 +247,7 @@ describe('DeploymentStore', () => {
 
       // Verify error toast was shown
       expect(toast.error).toHaveBeenCalledWith(
-        'Contract not confirmed on blockchain after multiple attempts. Verification skipped.'
+        'Contract not confirmed on blockchain after multiple attempts. Verification skipped.',
       );
     });
   });
@@ -301,7 +305,7 @@ describe('DeploymentStore', () => {
 
       // Verify error toast was shown
       expect(toast.error).toHaveBeenCalledWith(
-        'Verification failed: Missing or invalid contractAddress (should start with 0x): invalid-address'
+        'Verification failed: Missing or invalid contractAddress (should start with 0x): invalid-address',
       );
     });
 
@@ -314,7 +318,7 @@ describe('DeploymentStore', () => {
 
       // Verify error toast was shown
       expect(toast.error).toHaveBeenCalledWith(
-        'Verification failed: Contract not found in deployment store'
+        'Verification failed: Contract not found in deployment store',
       );
     });
 
@@ -347,7 +351,7 @@ describe('DeploymentStore', () => {
 
       // Verify error toast was shown
       expect(toast.error).toHaveBeenCalledWith(
-        'Verification failed: Contract not found on blockchain at address 0x123'
+        'Verification failed: Contract not found on blockchain at address 0x123',
       );
     });
 
@@ -429,7 +433,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the contract was added to the store
@@ -437,7 +441,9 @@ describe('DeploymentStore', () => {
       expect(result?.address).toBe('0x123');
 
       // Verify the initial toast message
-      expect(toast.info).toHaveBeenCalledWith('Contract deployed successfully. Waiting for blockchain confirmation before verification...');
+      expect(toast.info).toHaveBeenCalledWith(
+        'Contract deployed successfully. Waiting for blockchain confirmation before verification...',
+      );
 
       // Fast-forward timers to trigger the verification process
       vi.runAllTimers();
@@ -446,14 +452,18 @@ describe('DeploymentStore', () => {
       expect(web3Service.waitForContract).toHaveBeenCalledWith('0x123', 15, 2000);
 
       // Verify the confirmation toast message
-      expect(toast.info).toHaveBeenCalledWith('Contract confirmed on blockchain. Starting verification process...');
+      expect(toast.info).toHaveBeenCalledWith(
+        'Contract confirmed on blockchain. Starting verification process...',
+      );
 
       // Here's the issue: contractExists is called during verification, but it returns false
       // This means verification will fail even though waitForContract returned true
       expect(web3Service.contractExists).toHaveBeenCalledWith('0x123');
 
       // Verify the error toast message
-      expect(toast.error).toHaveBeenCalledWith('Verification failed: Contract not found on blockchain at address 0x123');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Verification failed: Contract not found on blockchain at address 0x123',
+      );
 
       // The contract should not be verified
       const contract = store.deployedContracts.get('0x123');
@@ -506,7 +516,7 @@ describe('DeploymentStore', () => {
         mockContract.abi,
         mockContract.bytecode,
         [],
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // Verify the contract was added to the store

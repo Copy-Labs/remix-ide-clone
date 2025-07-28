@@ -17,16 +17,19 @@ describe('FileStore Initialization Fix', () => {
     expect(shouldInitializeForFresh).toBe(true);
 
     // Scenario 2: Empty localStorage data
-    localStorage.setItem('file-storage', JSON.stringify({
-      state: {
-        filesArray: [],
-        expandedFoldersArray: ['/'],
-        openTabs: [],
-        activeFile: null,
-        selectedFiles: [],
-      },
-      version: 2
-    }));
+    localStorage.setItem(
+      'file-storage',
+      JSON.stringify({
+        state: {
+          filesArray: [],
+          expandedFoldersArray: ['/'],
+          openTabs: [],
+          activeFile: null,
+          selectedFiles: [],
+        },
+        version: 2,
+      }),
+    );
 
     const stored = localStorage.getItem('file-storage');
     const parsed = JSON.parse(stored!);
@@ -34,25 +37,31 @@ describe('FileStore Initialization Fix', () => {
     expect(shouldInitializeForEmpty).toBe(true);
 
     // Scenario 3: Existing files in localStorage
-    localStorage.setItem('file-storage', JSON.stringify({
-      state: {
-        filesArray: [
-          ['/MyContract.sol', {
-            id: '123',
-            name: 'MyContract.sol',
-            path: '/MyContract.sol',
-            type: 'file',
-            content: 'pragma solidity ^0.8.0;\n\ncontract MyContract {}',
-            contentInIndexedDB: false
-          }]
-        ],
-        expandedFoldersArray: ['/'],
-        openTabs: ['/MyContract.sol'],
-        activeFile: '/MyContract.sol',
-        selectedFiles: [],
-      },
-      version: 2
-    }));
+    localStorage.setItem(
+      'file-storage',
+      JSON.stringify({
+        state: {
+          filesArray: [
+            [
+              '/MyContract.sol',
+              {
+                id: '123',
+                name: 'MyContract.sol',
+                path: '/MyContract.sol',
+                type: 'file',
+                content: 'pragma solidity ^0.8.0;\n\ncontract MyContract {}',
+                contentInIndexedDB: false,
+              },
+            ],
+          ],
+          expandedFoldersArray: ['/'],
+          openTabs: ['/MyContract.sol'],
+          activeFile: '/MyContract.sol',
+          selectedFiles: [],
+        },
+        version: 2,
+      }),
+    );
 
     const storedWithFiles = localStorage.getItem('file-storage');
     const parsedWithFiles = JSON.parse(storedWithFiles!);
@@ -71,8 +80,9 @@ describe('FileStore Initialization Fix', () => {
       parent: '/',
       lastModified: Date.now(),
       size: 100,
-      content: 'pragma solidity ^0.8.0;\n\ncontract UserContract {\n    string public name = "User";\n}',
-      contentInIndexedDB: false
+      content:
+        'pragma solidity ^0.8.0;\n\ncontract UserContract {\n    string public name = "User";\n}',
+      contentInIndexedDB: false,
     };
 
     // Simulate the partialize function logic
@@ -86,7 +96,7 @@ describe('FileStore Initialization Fix', () => {
         activeFile: userFile.path,
         selectedFiles: [],
       },
-      version: 2
+      version: 2,
     };
 
     localStorage.setItem('file-storage', JSON.stringify(persistedState));
@@ -108,18 +118,21 @@ describe('FileStore Initialization Fix', () => {
 
     const persistedState = {
       filesArray: [
-        ['/test.sol', {
-          id: 'test123',
-          name: 'test.sol',
-          path: '/test.sol',
-          type: 'file',
-          content: 'contract Test {}'
-        }]
+        [
+          '/test.sol',
+          {
+            id: 'test123',
+            name: 'test.sol',
+            path: '/test.sol',
+            type: 'file',
+            content: 'contract Test {}',
+          },
+        ],
       ],
       expandedFoldersArray: ['/', '/contracts'],
       openTabs: ['/test.sol'],
       activeFile: '/test.sol',
-      selectedFiles: []
+      selectedFiles: [],
     };
 
     const currentState = {
@@ -127,7 +140,7 @@ describe('FileStore Initialization Fix', () => {
       expandedFolders: new Set(['/']),
       openTabs: [],
       activeFile: null,
-      selectedFiles: []
+      selectedFiles: [],
     };
 
     // Simulate the merge function
@@ -174,7 +187,7 @@ describe('FileStore Initialization Fix', () => {
       lastModified: Date.now(),
       size: 85,
       content: 'pragma solidity ^0.8.0;\n\ncontract NewContract {\n    uint256 public value;\n}',
-      contentInIndexedDB: false
+      contentInIndexedDB: false,
     };
 
     // Step 2: File gets persisted to localStorage (via Zustand)
@@ -186,7 +199,7 @@ describe('FileStore Initialization Fix', () => {
         activeFile: userCreatedFile.path,
         selectedFiles: [],
       },
-      version: 2
+      version: 2,
     };
 
     localStorage.setItem('file-storage', JSON.stringify(persistedState));

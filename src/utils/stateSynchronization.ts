@@ -49,8 +49,8 @@ export class StateSync<T> {
       enabled: options.enabled ?? true,
       mergeUpdates: options.mergeUpdates ?? true,
       customMerge: options.customMerge ?? this.defaultMerge,
-      filter: options.filter ?? (state => state as Partial<T>),
-      onReceiveState: options.onReceiveState ?? (() => {})
+      filter: options.filter ?? ((state) => state as Partial<T>),
+      onReceiveState: options.onReceiveState ?? (() => {}),
     };
 
     if (this.options.enabled) {
@@ -115,7 +115,7 @@ export class StateSync<T> {
       type: 'STATE_SYNC',
       key: this.options.key,
       state: filteredState,
-      timestamp: now
+      timestamp: now,
     };
 
     try {
@@ -155,41 +155,42 @@ export class StateSync<T> {
  * @param options Synchronization options
  * @returns A middleware function for Zustand
  */
-export const withStateSync = <T>(options: StateSyncOptions) =>
+export const withStateSync =
+  <T>(options: StateSyncOptions) =>
   (config: any) =>
-    (set: any, get: any, api: any) => {
-      const stateSync = new StateSync<T>(options);
+  (set: any, get: any, api: any) => {
+    const stateSync = new StateSync<T>(options);
 
-      // Create a wrapped set function that broadcasts state changes
-      const syncSet = (fn: (state: T) => void) => {
-        set((state: T) => {
-          fn(state);
+    // Create a wrapped set function that broadcasts state changes
+    const syncSet = (fn: (state: T) => void) => {
+      set((state: T) => {
+        fn(state);
 
-          // Broadcast the updated state
-          stateSync.broadcastState(get());
-        });
-      };
-
-      // Set up listener for state changes from other tabs
-      const handleExternalStateChange = (receivedState: Partial<T>) => {
-        set((state: T) => {
-          // Apply the received state
-          const newState = stateSync.applyReceivedState(state, receivedState);
-          Object.assign(state, newState);
-        });
-      };
-
-      // Register the handler
-      stateSync.options.onReceiveState = handleExternalStateChange;
-
-      // Add the sync instance to the API
-      api.stateSync = stateSync;
-
-      // Call the original config function with our wrapped set
-      const state = config(syncSet, get, api);
-
-      return state;
+        // Broadcast the updated state
+        stateSync.broadcastState(get());
+      });
     };
+
+    // Set up listener for state changes from other tabs
+    const handleExternalStateChange = (receivedState: Partial<T>) => {
+      set((state: T) => {
+        // Apply the received state
+        const newState = stateSync.applyReceivedState(state, receivedState);
+        Object.assign(state, newState);
+      });
+    };
+
+    // Register the handler
+    stateSync.options.onReceiveState = handleExternalStateChange;
+
+    // Add the sync instance to the API
+    api.stateSync = stateSync;
+
+    // Call the original config function with our wrapped set
+    const state = config(syncSet, get, api);
+
+    return state;
+  };
 
 /**
  * Example usage:

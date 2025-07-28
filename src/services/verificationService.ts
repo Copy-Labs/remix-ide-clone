@@ -19,15 +19,15 @@ export class VerificationService {
 
   // Block explorer API endpoints for verification
   private verificationEndpoints: Record<string, string> = {
-    'etherscan': 'https://api.etherscan.io/api',
+    etherscan: 'https://api.etherscan.io/api',
     'goerli.etherscan': 'https://api-goerli.etherscan.io/api',
     'sepolia.etherscan': 'https://api.etherscan.io/api',
-    'polygonscan': 'https://api.polygonscan.com/api',
+    polygonscan: 'https://api.polygonscan.com/api',
     'mumbai.polygonscan': 'https://api-testnet.polygonscan.com/api',
-    'bscscan': 'https://api.bscscan.com/api',
-    'arbiscan': 'https://api.arbiscan.io/api',
+    bscscan: 'https://api.bscscan.com/api',
+    arbiscan: 'https://api.arbiscan.io/api',
     'optimistic.etherscan': 'https://api-optimistic.etherscan.io/api',
-    'localhost': 'http://localhost:8545/api',
+    localhost: 'http://localhost:8545/api',
   };
 
   // Map chain IDs to explorer types
@@ -188,7 +188,7 @@ export class VerificationService {
    */
   public async verifyContract(
     contract: DeployedContract,
-    compiledContract: CompiledContract
+    compiledContract: CompiledContract,
   ): Promise<{ success: boolean; message: string; url?: string }> {
     try {
       // Get current network
@@ -228,7 +228,7 @@ export class VerificationService {
           const compilationResult = useCompilerStore.getState().compilationResult;
           console.log('Verification Service::Compilation Result', compilationResult);
 
-          Object.keys(metadataObj.sources).forEach(sourceFile => {
+          Object.keys(metadataObj.sources).forEach((sourceFile) => {
             if (!metadataObj.sources[sourceFile].content) {
               // Try to get the content from the compilation result
               if (compilationResult && compilationResult.sources) {
@@ -247,7 +247,10 @@ export class VerificationService {
               // If we still don't have content, use a placeholder
               if (!metadataObj.sources[sourceFile].content) {
                 metadataObj.sources[sourceFile].content = '';
-                warn('VerificationService', `Could not find source content for ${sourceFile}, using empty string`);
+                warn(
+                  'VerificationService',
+                  `Could not find source content for ${sourceFile}, using empty string`,
+                );
               }
             }
           });
@@ -280,15 +283,15 @@ export class VerificationService {
           sources: Object.fromEntries(
             Object.entries(compilationResult?.sources || {}).map(([key, value]) => [
               key.replace(/^\/*/, ''),
-              { content: value }
-            ])
+              { content: value },
+            ]),
           ),
           settings: {
             optimizer: {
               enabled: this.extractOptimizationUsed(compiledContract.metadata),
-              runs: this.extractOptimizationRuns(compiledContract.metadata)
-            }
-          }
+              runs: this.extractOptimizationRuns(compiledContract.metadata),
+            },
+          },
         }),
         codeformat: 'solidity-standard-json-input',
         // contractname: this.formatContractName(compiledContract),
@@ -348,7 +351,7 @@ export class VerificationService {
    */
   private async submitVerification(
     endpoint: string,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): Promise<{ status: string; result: string }> {
     try {
       // Convert data to FormData
@@ -385,12 +388,12 @@ export class VerificationService {
   private async checkVerificationStatus(
     endpoint: string,
     guid: string,
-    apiKey: string
+    apiKey: string,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log("Check Verify Status entered");
+      console.log('Check Verify Status entered');
       // Wait a bit before checking status
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Check status
       const url = `${endpoint}?apikey=${apiKey}&module=contract&action=checkverifystatus&guid=${guid}`;
@@ -425,7 +428,7 @@ export class VerificationService {
     try {
       const parsedMetadata = JSON.parse(metadata);
       // Prefix the version with a 'v', else verification will fail
-      return 'v'+parsedMetadata.compiler.version || 'v0.8.0+commit.c7dfd78e';
+      return 'v' + parsedMetadata.compiler.version || 'v0.8.0+commit.c7dfd78e';
     } catch (err) {
       error('VerificationService', 'Failed to extract compiler version from metadata', err);
       return 'v0.8.0+commit.c7dfd78e'; // Default to a common version
@@ -475,7 +478,7 @@ export class VerificationService {
       const web3 = web3Service.getWeb3();
       if (!web3) return '';
 
-      const constructorAbi = abi.find(item => item.type === 'constructor');
+      const constructorAbi = abi.find((item) => item.type === 'constructor');
       if (!constructorAbi) return '';
 
       // Encode constructor arguments
@@ -510,9 +513,10 @@ export class VerificationService {
       const sourceFiles = Object.keys(sources);
 
       // Try to find a source file that matches the contract name
-      let sourceFile = sourceFiles.find(file =>
-        file.includes(`/${compiledContract.name}.sol`) ||
-        file.endsWith(`${compiledContract.name}.sol`)
+      let sourceFile = sourceFiles.find(
+        (file) =>
+          file.includes(`/${compiledContract.name}.sol`) ||
+          file.endsWith(`${compiledContract.name}.sol`),
       );
 
       // If no matching file is found, use the first source file

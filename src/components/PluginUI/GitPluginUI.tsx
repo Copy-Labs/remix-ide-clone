@@ -177,7 +177,7 @@ const GitPluginUI: React.FC<GitPluginUIProps> = ({ pluginId }) => {
         updatePluginConfig(pluginId, {
           ...plugin.config,
           username,
-          email
+          email,
         });
       }
     } catch (err) {
@@ -202,7 +202,7 @@ const GitPluginUI: React.FC<GitPluginUIProps> = ({ pluginId }) => {
       if (plugin) {
         updatePluginConfig(pluginId, {
           ...plugin.config,
-          remoteUrl
+          remoteUrl,
         });
       }
     } catch (err) {
@@ -214,10 +214,8 @@ const GitPluginUI: React.FC<GitPluginUIProps> = ({ pluginId }) => {
 
   // Toggle file selection
   const toggleFileSelection = (filePath: string) => {
-    setSelectedFiles(prev =>
-      prev.includes(filePath)
-        ? prev.filter(path => path !== filePath)
-        : [...prev, filePath]
+    setSelectedFiles((prev) =>
+      prev.includes(filePath) ? prev.filter((path) => path !== filePath) : [...prev, filePath],
     );
   };
 
@@ -236,10 +234,18 @@ const GitPluginUI: React.FC<GitPluginUIProps> = ({ pluginId }) => {
         <h3 className="text-lg font-semibold mb-2">Repository Status</h3>
         {status ? (
           <div>
-            <p><span className="font-medium">Branch:</span> {status.branch}</p>
-            <p><span className="font-medium">Modified:</span> {status.modified.length} files</p>
-            <p><span className="font-medium">Staged:</span> {status.staged.length} files</p>
-            <p><span className="font-medium">Untracked:</span> {status.untracked.length} files</p>
+            <p>
+              <span className="font-medium">Branch:</span> {status.branch}
+            </p>
+            <p>
+              <span className="font-medium">Modified:</span> {status.modified.length} files
+            </p>
+            <p>
+              <span className="font-medium">Staged:</span> {status.staged.length} files
+            </p>
+            <p>
+              <span className="font-medium">Untracked:</span> {status.untracked.length} files
+            </p>
           </div>
         ) : (
           <p>No repository initialized</p>

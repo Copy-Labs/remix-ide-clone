@@ -1,6 +1,8 @@
 # Git Integration Test Suite
 
-This directory contains comprehensive tests for the Git integration functionality in the Remix IDE clone. The test suite covers all aspects of the Git integration including services, stores, UI components, and end-to-end workflows.
+This directory contains comprehensive tests for the Git integration functionality in the Remix IDE
+clone. The test suite covers all aspects of the Git integration including services, stores, UI
+components, and end-to-end workflows.
 
 ## Test Structure
 
@@ -31,6 +33,7 @@ Tests the low-level Git operations and file system adapter:
 - **File System Integration**: Tests integration with the file store
 
 **Key Test Areas:**
+
 - File operations (read, write, delete)
 - Directory operations (create, list, remove)
 - Git repository operations
@@ -50,6 +53,7 @@ Tests the Git store state management and business logic:
 - **Error States**: Loading states, error handling
 
 **Key Test Areas:**
+
 - State transitions and updates
 - Async operation handling
 - Error state management
@@ -69,6 +73,7 @@ Tests the Git panel UI component and user interactions:
 - **Error Display**: Error messages and alerts
 
 **Key Test Areas:**
+
 - Component rendering
 - User event handling
 - Form validation
@@ -87,6 +92,7 @@ Tests complete end-to-end workflows:
 - **Complex Scenarios**: Multi-step development workflows
 
 **Key Test Areas:**
+
 - Complete user workflows
 - Multi-step operations
 - Error recovery scenarios
@@ -98,6 +104,7 @@ Tests complete end-to-end workflows:
 Comprehensive utilities for testing:
 
 ### Mock Factories
+
 - `createMockCommit()`: Creates mock commit objects
 - `createMockBranch()`: Creates mock branch objects
 - `createMockRemote()`: Creates mock remote objects
@@ -105,17 +112,20 @@ Comprehensive utilities for testing:
 - `createMockGithubRepo()`: Creates mock GitHub repository objects
 
 ### Service Mocks
+
 - `createMockGitService()`: Creates mocked Git service
 - `createMockFileStore()`: Creates mocked file store
 - `createMockOctokit()`: Creates mocked Octokit instance
 
 ### Scenario Builders
+
 - `buildRepositoryScenario()`: Builds different repository states
 - `setupGitServiceMocks()`: Sets up Git service mocks
 - `setupOctokitMocks()`: Sets up GitHub API mocks
 - `setupFileSystemMocks()`: Sets up file system mocks
 
 ### Test Helpers
+
 - `expectGitServiceCalled()`: Assertion helper for service calls
 - `expectStoreState()`: Assertion helper for store state
 - `waitForStoreUpdate()`: Async helper for state changes
@@ -124,11 +134,13 @@ Comprehensive utilities for testing:
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 npm run test
 ```
 
 ### Run Specific Test Suites
+
 ```bash
 # Run only Git service tests
 npm run test src/test/services/gitService.test.ts
@@ -144,16 +156,19 @@ npm run test src/test/integration/gitIntegration.test.ts
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 npm run test:coverage
 ```
 
 ### Run Tests in Watch Mode
+
 ```bash
 npm run test -- --watch
 ```
 
 ### Run Tests with UI
+
 ```bash
 npm run test:ui
 ```
@@ -180,12 +195,14 @@ The test suite aims for comprehensive coverage:
 ## Test Data and Mocking
 
 ### Mock Strategy
+
 - **Services**: Fully mocked to isolate business logic
 - **External APIs**: Mocked GitHub API responses
 - **File System**: Mocked file operations
 - **UI Components**: Mocked complex UI components
 
 ### Test Data
+
 - **Commits**: Generated with realistic metadata
 - **Branches**: Various branch scenarios
 - **Files**: Different file types and states
@@ -194,24 +211,28 @@ The test suite aims for comprehensive coverage:
 ## Best Practices
 
 ### Test Organization
+
 - Group related tests in describe blocks
 - Use descriptive test names
 - Follow AAA pattern (Arrange, Act, Assert)
 - Clean up after each test
 
 ### Mocking
+
 - Mock external dependencies
 - Use factory functions for test data
 - Reset mocks between tests
 - Verify mock interactions
 
 ### Assertions
+
 - Use specific assertions
 - Test both success and error cases
 - Verify state changes
 - Check side effects
 
 ### Async Testing
+
 - Use proper async/await patterns
 - Handle promise rejections
 - Test loading states
@@ -220,18 +241,21 @@ The test suite aims for comprehensive coverage:
 ## Debugging Tests
 
 ### Common Issues
+
 1. **Mock not working**: Check mock setup and imports
 2. **Async test failing**: Ensure proper await usage
 3. **State not updating**: Check store state management
 4. **Component not rendering**: Verify mock components
 
 ### Debugging Tools
+
 - Use `console.log` for debugging
 - Check mock call history
 - Verify test data setup
 - Use debugger statements
 
 ### Test Isolation
+
 - Ensure tests don't depend on each other
 - Reset state between tests
 - Clear mocks properly
@@ -240,12 +264,14 @@ The test suite aims for comprehensive coverage:
 ## Performance Considerations
 
 ### Test Performance
+
 - Keep tests fast and focused
 - Use minimal setup
 - Avoid unnecessary async operations
 - Mock heavy operations
 
 ### Memory Management
+
 - Clean up resources
 - Reset large objects
 - Avoid memory leaks in mocks
@@ -254,13 +280,16 @@ The test suite aims for comprehensive coverage:
 ## Continuous Integration
 
 ### CI Configuration
+
 Tests are configured to run in CI with:
+
 - Coverage reporting
 - JUnit XML output
 - JSON coverage reports
 - Parallel execution
 
 ### Quality Gates
+
 - All tests must pass
 - Coverage thresholds must be met
 - No console errors or warnings
@@ -277,12 +306,14 @@ When adding new Git functionality:
 5. **Update Documentation**: Update this README
 
 ### Test Naming Convention
+
 - Use descriptive names
 - Follow pattern: `should [expected behavior] when [condition]`
 - Group related tests in describe blocks
 - Use consistent terminology
 
 ### Mock Guidelines
+
 - Mock external dependencies
 - Use realistic test data
 - Verify mock interactions
@@ -322,15 +353,18 @@ When adding new Git functionality:
 ## Future Improvements
 
 ### Planned Enhancements
+
 - Add performance benchmarks
 - Expand error scenario coverage
 - Add accessibility testing
 - Improve test data generation
 
 ### Test Automation
+
 - Automated test generation
 - Visual regression testing
 - Cross-browser testing
 - Load testing scenarios
 
-This comprehensive test suite ensures the Git integration functionality works correctly and reliably across all use cases and scenarios.
+This comprehensive test suite ensures the Git integration functionality works correctly and reliably
+across all use cases and scenarios.

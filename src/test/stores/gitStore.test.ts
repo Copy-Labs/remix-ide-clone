@@ -162,7 +162,7 @@ describe('GitStore', () => {
 
         expect(mockGitService.branch).toHaveBeenCalledWith(branchName);
         expect(store.branches).toHaveLength(2);
-        expect(store.branches.find(b => b.name === branchName)).toBeDefined();
+        expect(store.branches.find((b) => b.name === branchName)).toBeDefined();
         expect(store.isLoading).toBe(false);
         expect(store.error).toBe(null);
       });
@@ -243,8 +243,8 @@ describe('GitStore', () => {
         await store.getBranches();
 
         expect(store.branches).toHaveLength(3);
-        expect(store.branches.find(b => b.name === 'main')?.current).toBe(true);
-        expect(store.branches.find(b => b.name === 'develop')?.current).toBe(false);
+        expect(store.branches.find((b) => b.name === 'main')?.current).toBe(true);
+        expect(store.branches.find((b) => b.name === 'develop')?.current).toBe(false);
         expect(store.currentBranch).toBe(currentBranch);
         expect(store.error).toBe(null);
       });
@@ -272,7 +272,7 @@ describe('GitStore', () => {
         const filepath = 'test.txt';
         mockGitService.add.mockResolvedValue(undefined);
         mockGitService.status.mockResolvedValue([
-          { file: filepath, head: 0, workdir: 2, stage: 2 }
+          { file: filepath, head: 0, workdir: 2, stage: 2 },
         ]);
 
         await store.addFile(filepath);
@@ -298,7 +298,7 @@ describe('GitStore', () => {
         mockGitService.add.mockResolvedValue(undefined);
         mockGitService.status.mockResolvedValue([
           { file: 'file1.txt', head: 0, workdir: 2, stage: 2 },
-          { file: 'file2.txt', head: 1, workdir: 2, stage: 2 }
+          { file: 'file2.txt', head: 1, workdir: 2, stage: 2 },
         ]);
 
         await store.addAllFiles();
@@ -320,9 +320,9 @@ describe('GitStore', () => {
             commit: {
               message,
               author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-            }
-          }
+              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+            },
+          },
         ]);
         mockGitService.status.mockResolvedValue([]);
 
@@ -330,7 +330,7 @@ describe('GitStore', () => {
 
         expect(mockGitService.commit).toHaveBeenCalledWith(message, {
           name: 'Test User',
-          email: 'test@example.com'
+          email: 'test@example.com',
         });
         expect(store.commits).toHaveLength(1);
         expect(store.commits[0].message).toBe(message);
@@ -369,17 +369,17 @@ describe('GitStore', () => {
             commit: {
               message: 'First commit',
               author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-            }
+              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+            },
           },
           {
             oid: 'def456',
             commit: {
               message: 'Second commit',
               author: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
-              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() }
-            }
-          }
+              committer: { name: 'Test User', email: 'test@example.com', timestamp: Date.now() },
+            },
+          },
         ];
         mockGitService.log.mockResolvedValue(commits);
 
@@ -413,9 +413,7 @@ describe('GitStore', () => {
         const name = 'origin';
         const url = 'https://github.com/user/repo.git';
         mockGitService.addRemote.mockResolvedValue(undefined);
-        mockGitService.listRemotes.mockResolvedValue([
-          { remote: name, url }
-        ]);
+        mockGitService.listRemotes.mockResolvedValue([{ remote: name, url }]);
 
         await store.addRemote(name, url);
 
@@ -588,8 +586,8 @@ describe('GitStore', () => {
         const config = {
           user: {
             name: 'New User',
-            email: 'new@example.com'
-          }
+            email: 'new@example.com',
+          },
         };
 
         store.setConfig(config);
@@ -604,8 +602,8 @@ describe('GitStore', () => {
 
         const config = {
           user: {
-            name: 'New User'
-          }
+            name: 'New User',
+          },
         };
 
         store.setConfig(config as any);
@@ -666,14 +664,14 @@ describe('GitStore', () => {
 
         const repos = [
           { id: 1, name: 'repo1', description: 'First repo' },
-          { id: 2, name: 'repo2', description: 'Second repo' }
+          { id: 2, name: 'repo2', description: 'Second repo' },
         ];
         mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
           data: repos,
           headers: {
             link: '<https://api.github.com/user/repos?page=2>; rel="next"',
-            'x-total-count': '10'
-          }
+            'x-total-count': '10',
+          },
         });
 
         await store.getGithubRepos();
@@ -699,9 +697,9 @@ describe('GitStore', () => {
         mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
           data: repos,
           headers: {
-            link: '',  // No next page
-            'x-total-count': '3'
-          }
+            link: '', // No next page
+            'x-total-count': '3',
+          },
         });
 
         await store.getGithubRepos({ page: 2, perPage: 2 });
@@ -729,14 +727,14 @@ describe('GitStore', () => {
           data: repos,
           headers: {
             link: '',
-            'x-total-count': '1'
-          }
+            'x-total-count': '1',
+          },
         });
 
         await store.getGithubRepos({ resetPagination: true });
 
         expect(mockOctokit.rest.repos.listForAuthenticatedUser).toHaveBeenCalledWith({
-          page: 1,  // Should be reset to 1
+          page: 1, // Should be reset to 1
           per_page: 30,
           sort: 'updated',
           direction: 'desc',
@@ -772,7 +770,7 @@ describe('GitStore', () => {
           page: 1,
           perPage: 1,
           hasNextPage: true,
-          totalCount: 2
+          totalCount: 2,
         };
 
         const moreRepos = [{ id: 2, name: 'repo2', description: 'Second repo' }];
@@ -780,8 +778,8 @@ describe('GitStore', () => {
           data: moreRepos,
           headers: {
             link: '',
-            'x-total-count': '2'
-          }
+            'x-total-count': '2',
+          },
         });
 
         await store.loadMoreGithubRepos();
@@ -794,7 +792,7 @@ describe('GitStore', () => {
         });
         expect(store.githubRepos).toEqual([
           { id: 1, name: 'repo1', description: 'First repo' },
-          { id: 2, name: 'repo2', description: 'Second repo' }
+          { id: 2, name: 'repo2', description: 'Second repo' },
         ]);
         expect(store.githubRepoPagination.page).toBe(2);
       });
@@ -807,7 +805,7 @@ describe('GitStore', () => {
           page: 1,
           perPage: 10,
           hasNextPage: false,
-          totalCount: 1
+          totalCount: 1,
         };
 
         await store.loadMoreGithubRepos();
@@ -831,7 +829,7 @@ describe('GitStore', () => {
         expect(mockOctokit.rest.repos.createForAuthenticatedUser).toHaveBeenCalledWith({
           name,
           description,
-          private: false
+          private: false,
         });
         expect(result).toEqual(repo);
         expect(store.githubRepos).toEqual([repo]);
@@ -849,7 +847,7 @@ describe('GitStore', () => {
         expect(mockOctokit.rest.repos.createForAuthenticatedUser).toHaveBeenCalledWith({
           name,
           description: undefined,
-          private: true
+          private: true,
         });
       });
 
@@ -866,7 +864,9 @@ describe('GitStore', () => {
         const error = new Error('Repository name already exists');
         mockOctokit.rest.repos.createForAuthenticatedUser.mockRejectedValue(error);
 
-        await expect(store.createGithubRepo(name)).rejects.toThrow('Repository name already exists');
+        await expect(store.createGithubRepo(name)).rejects.toThrow(
+          'Repository name already exists',
+        );
         expect(store.error).toBe('Repository name already exists');
       });
     });

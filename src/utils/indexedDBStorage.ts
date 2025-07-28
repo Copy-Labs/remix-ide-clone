@@ -45,7 +45,7 @@ export const createIndexedDBStorage = (storeName: string): StateStorage => {
           id: fileId,
           content: value,
           lastModified: Date.now(),
-          type: 'store-state'
+          type: 'store-state',
         });
 
         debug('IndexedDBStorage', `Saved state for ${fileId}`);
@@ -69,6 +69,6 @@ export const createIndexedDBStorage = (storeName: string): StateStorage => {
       } catch (err) {
         error('IndexedDBStorage', `Failed to remove state for ${key}`, err);
       }
-    }
+    },
   };
 };

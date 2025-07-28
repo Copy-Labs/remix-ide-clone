@@ -11,6 +11,13 @@ import { corePlugins } from './plugins';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
 import { Button } from '@/components/ui/button.tsx';
+import { gitFileSystemIntegration } from './services/gitFileSystemIntegration';
+import { gitHooksService } from './services/gitHooksService';
+import { gitCompilerIntegration } from './services/gitCompilerIntegration';
+import { gitDeploymentIntegration } from './services/gitDeploymentIntegration';
+import { gitTestingIntegration } from './services/gitTestingIntegration';
+import { gitCollaborationIntegration } from './services/gitCollaborationIntegration';
+import { gitDebuggerIntegration } from './services/gitDebuggerIntegration';
 import {
   Card,
   CardHeader,
@@ -44,9 +51,13 @@ function App() {
   // Initialize sample files on first load
   React.useEffect(() => {
     // Check if specific files exist
-    const contractExists = Array.from(files.keys()).some(path => path === '/contracts/SimpleStorage.sol');
-    const scriptExists = Array.from(files.keys()).some(path => path === '/scripts/example.js');
-    const testExists = Array.from(files.keys()).some(path => path === '/tests/SimpleStorage.test.js');
+    const contractExists = Array.from(files.keys()).some(
+      (path) => path === '/contracts/SimpleStorage.sol',
+    );
+    const scriptExists = Array.from(files.keys()).some((path) => path === '/scripts/example.js');
+    const testExists = Array.from(files.keys()).some(
+      (path) => path === '/tests/SimpleStorage.test.js',
+    );
 
     // Create sample Solidity contract if it doesn't exist
     if (!contractExists) {
@@ -81,7 +92,7 @@ contract SimpleStorage {
 }`;
 
       // Create directory first if it doesn't exist
-      if (!Array.from(files.keys()).some(path => path === '/contracts')) {
+      if (!Array.from(files.keys()).some((path) => path === '/contracts')) {
         createFolder('/contracts');
       }
 
@@ -104,7 +115,7 @@ const result = calculateSum(5, 3);
 console.log("Result:", result);`;
 
       // Create directory first if it doesn't exist
-      if (!Array.from(files.keys()).some(path => path === '/scripts')) {
+      if (!Array.from(files.keys()).some((path) => path === '/scripts')) {
         createFolder('/scripts');
       }
 
@@ -150,7 +161,7 @@ describe("SimpleStorage Contract", function() {
 });`;
 
       // Create directory first if it doesn't exist
-      if (!Array.from(files.keys()).some(path => path === '/tests')) {
+      if (!Array.from(files.keys()).some((path) => path === '/tests')) {
         createFolder('/tests');
       }
 
@@ -187,6 +198,34 @@ describe("SimpleStorage Contract", function() {
     setTimeout(() => {
       loadPlugins();
       console.log('Plugin states loaded from localStorage');
+
+      // Initialize Git file system integration
+      gitFileSystemIntegration.initialize();
+      console.log('Git file system integration initialized');
+
+      // Initialize Git hooks service
+      gitHooksService.initialize();
+      console.log('Git hooks service initialized');
+
+      // Initialize Git compiler integration
+      gitCompilerIntegration.initialize();
+      console.log('Git compiler integration initialized');
+
+      // Initialize Git deployment integration
+      gitDeploymentIntegration.initialize();
+      console.log('Git deployment integration initialized');
+
+      // Initialize Git testing integration
+      gitTestingIntegration.initialize();
+      console.log('Git testing integration initialized');
+
+      // Initialize Git collaboration integration
+      gitCollaborationIntegration.initialize();
+      console.log('Git collaboration integration initialized');
+
+      // Initialize Git debugger integration
+      gitDebuggerIntegration.initialize();
+      console.log('Git debugger integration initialized');
     }, 50); // Small delay to ensure plugin registration completes first
   }, [registerPlugin]);
 
@@ -315,9 +354,12 @@ describe("SimpleStorage Contract", function() {
                           <h1 className="text-3xl font-bold tracking-tight mb-2">
                             Welcome to Solide
                           </h1>
-                          <div className="font-bold text-muted-foreground text-lg">A Modern Remix IDE alternative</div>
+                          <div className="font-bold text-muted-foreground text-lg">
+                            A Modern Remix IDE alternative
+                          </div>
                           <p className="text-muted-foreground max-w-2xl mx-auto">
-                            A modern Solidity development environment with powerful features for smart contract development
+                            A modern Solidity development environment with powerful features for
+                            smart contract development
                           </p>
                         </div>
 
@@ -407,7 +449,9 @@ describe("SimpleStorage Contract", function() {
                                 </li>
                                 <li className="flex items-center">
                                   <div className="mr-2 h-4 w-4 text-primary">✓</div>
-                                  <span>Interact with multiple instances of deployed contracts.</span>
+                                  <span>
+                                    Interact with multiple instances of deployed contracts.
+                                  </span>
                                 </li>
                               </ul>
                             </CardContent>

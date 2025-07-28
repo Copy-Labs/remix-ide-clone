@@ -1,4 +1,5 @@
 import type { Plugin, PluginConfig } from '@/types';
+import { useGitStore } from '@/stores/gitStore';
 
 /**
  * Git integration plugin for Remix IDE Clone
@@ -19,7 +20,7 @@ export const gitPlugin: Omit<Plugin, 'api'> = {
     username: '',
     email: '',
     authToken: '',
-  }
+  },
 };
 
 /**
@@ -37,18 +38,18 @@ export class GitPluginImplementation {
    * Initialize a Git repository
    */
   async initRepository(): Promise<boolean> {
-      try {
-        console.log('Initializing Git repository with default branch:', this.config.defaultBranch);
+    try {
+      console.log('Initializing Git repository with default branch:', this.config.defaultBranch);
 
-        // Use the gitService to initialize the repository
-        const gitStore = useGitStore.getState();
-        await gitStore.initRepository(this.config.defaultBranch);
+      // Use the gitService to initialize the repository
+      const gitStore = useGitStore.getState();
+      await gitStore.initRepository(this.config.defaultBranch);
 
-        return true;
-      } catch (error) {
-        console.error('Failed to initialize repository:', error);
-        return false;
-      }
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize repository:', error);
+      return false;
+    }
   }
 
   /**
@@ -56,9 +57,19 @@ export class GitPluginImplementation {
    * @param files Array of file paths to add
    */
   async addFiles(files: string[]): Promise<boolean> {
-    console.log('Adding files to Git staging:', files);
-    // In a real implementation, this would use a Git library to add files
-    return true;
+    try {
+      console.log('Adding files to Git staging:', files);
+      const gitStore = useGitStore.getState();
+
+      for (const file of files) {
+        await gitStore.addFile(file);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to add files:', error);
+      return false;
+    }
   }
 
   /**
@@ -66,9 +77,15 @@ export class GitPluginImplementation {
    * @param message Commit message
    */
   async commit(message: string): Promise<boolean> {
-    console.log('Committing changes with message:', message);
-    // In a real implementation, this would use a Git library to commit changes
-    return true;
+    try {
+      console.log('Committing changes with message:', message);
+      const gitStore = useGitStore.getState();
+      await gitStore.commit(message);
+      return true;
+    } catch (error) {
+      console.error('Failed to commit changes:', error);
+      return false;
+    }
   }
 
   /**
@@ -77,10 +94,17 @@ export class GitPluginImplementation {
    * @param branch Branch name (default: from config)
    */
   async push(remote: string = 'origin', branch?: string): Promise<boolean> {
-    const targetBranch = branch || this.config.defaultBranch;
-    console.log(`Pushing changes to ${remote}/${targetBranch}`);
-    // In a real implementation, this would use a Git library to push changes
-    return true;
+    try {
+      const targetBranch = branch || this.config.defaultBranch;
+      console.log(`Pushing changes to ${remote}/${targetBranch}`);
+
+      // Use the gitStore to push changes
+      const gitStore = useGitStore.getState();
+      return await gitStore.push(remote, targetBranch);
+    } catch (error) {
+      console.error('Failed to push changes:', error);
+      return false;
+    }
   }
 
   /**
@@ -89,10 +113,17 @@ export class GitPluginImplementation {
    * @param branch Branch name (default: from config)
    */
   async pull(remote: string = 'origin', branch?: string): Promise<boolean> {
-    const targetBranch = branch || this.config.defaultBranch;
-    console.log(`Pulling changes from ${remote}/${targetBranch}`);
-    // In a real implementation, this would use a Git library to pull changes
-    return true;
+    try {
+      const targetBranch = branch || this.config.defaultBranch;
+      console.log(`Pulling changes from ${remote}/${targetBranch}`);
+
+      // Use the gitStore to pull changes
+      const gitStore = useGitStore.getState();
+      return await gitStore.pull(remote, targetBranch);
+    } catch (error) {
+      console.error('Failed to pull changes:', error);
+      return false;
+    }
   }
 
   /**
@@ -100,9 +131,15 @@ export class GitPluginImplementation {
    * @param name Branch name
    */
   async createBranch(name: string): Promise<boolean> {
-    console.log('Creating new branch:', name);
-    // In a real implementation, this would use a Git library to create a branch
-    return true;
+    try {
+      console.log('Creating new branch:', name);
+      const gitStore = useGitStore.getState();
+      await gitStore.createBranch(name);
+      return true;
+    } catch (error) {
+      console.error('Failed to create branch:', error);
+      return false;
+    }
   }
 
   /**
@@ -110,31 +147,54 @@ export class GitPluginImplementation {
    * @param name Branch name
    */
   async switchBranch(name: string): Promise<boolean> {
-    console.log('Switching to branch:', name);
-    // In a real implementation, this would use a Git library to switch branches
-    return true;
+    try {
+      console.log('Switching to branch:', name);
+      const gitStore = useGitStore.getState();
+      await gitStore.switchBranch(name);
+      return true;
+    } catch (error) {
+      console.error('Failed to switch branch:', error);
+      return false;
+    }
   }
 
   /**
    * Get the current branch name
    */
   async getCurrentBranch(): Promise<string> {
-    // In a real implementation, this would use a Git library to get the current branch
-    return this.config.defaultBranch;
+    try {
+      const gitStore = useGitStore.getState();
+      return gitStore.currentBranch || this.config.defaultBranch;
+    } catch (error) {
+      console.error('Failed to get current branch:', error);
+      return this.config.defaultBranch;
+    }
   }
 
   /**
    * Get the repository status (modified files, etc.)
    */
   async getStatus(): Promise<any> {
-    console.log('Getting repository status');
-    // In a real implementation, this would use a Git library to get the status
-    return {
-      branch: this.config.defaultBranch,
-      modified: [],
-      staged: [],
-      untracked: []
-    };
+    try {
+      console.log('Getting repository status');
+      const gitStore = useGitStore.getState();
+      await gitStore.getStatus();
+
+      return {
+        branch: gitStore.currentBranch,
+        modified: gitStore.status.filter((item) => item.status === 'modified'),
+        staged: gitStore.status.filter((item) => item.status === 'staged'),
+        untracked: gitStore.status.filter((item) => item.status === 'untracked'),
+      };
+    } catch (error) {
+      console.error('Failed to get status:', error);
+      return {
+        branch: this.config.defaultBranch,
+        modified: [],
+        staged: [],
+        untracked: [],
+      };
+    }
   }
 
   /**
@@ -143,11 +203,23 @@ export class GitPluginImplementation {
    * @param email Git email
    */
   async configureUser(username: string, email: string): Promise<boolean> {
-    console.log(`Configuring Git user: ${username} <${email}>`);
-    this.config.username = username;
-    this.config.email = email;
-    // In a real implementation, this would use a Git library to configure the user
-    return true;
+    try {
+      console.log(`Configuring Git user: ${username} <${email}>`);
+      const gitStore = useGitStore.getState();
+
+      gitStore.setConfig({
+        ...gitStore.config,
+        username,
+        email,
+      });
+
+      this.config.username = username;
+      this.config.email = email;
+      return true;
+    } catch (error) {
+      console.error('Failed to configure user:', error);
+      return false;
+    }
   }
 
   /**
@@ -156,9 +228,21 @@ export class GitPluginImplementation {
    * @param name Remote name (default: origin)
    */
   async configureRemote(url: string, name: string = 'origin'): Promise<boolean> {
-    console.log(`Configuring remote ${name}: ${url}`);
-    this.config.remoteUrl = url;
-    // In a real implementation, this would use a Git library to configure the remote
-    return true;
+    try {
+      console.log(`Configuring remote ${name}: ${url}`);
+      const gitStore = useGitStore.getState();
+
+      gitStore.setConfig({
+        ...gitStore.config,
+        remoteUrl: url,
+        remoteName: name,
+      });
+
+      this.config.remoteUrl = url;
+      return true;
+    } catch (error) {
+      console.error('Failed to configure remote:', error);
+      return false;
+    }
   }
 }

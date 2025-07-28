@@ -71,7 +71,7 @@ export const useCompilerStore = create<CompilerStore>()(
             // Pass optimizer settings to the compiler service
             const result = await compilerService.compile(sources, {
               enabled: optimizationEnabled,
-              runs: optimizationRuns
+              runs: optimizationRuns,
             });
 
             set((state) => {
@@ -93,7 +93,7 @@ export const useCompilerStore = create<CompilerStore>()(
             } else {
               const errorCount = result.errors.length;
               toast.error(`Compilation failed with ${errorCount} error(s).`);
-              console.log("COMPILER STORE::COMPILE ERROR", result.errors);
+              console.log('COMPILER STORE::COMPILE ERROR', result.errors);
             }
 
             // Show warnings if any
@@ -103,23 +103,24 @@ export const useCompilerStore = create<CompilerStore>()(
                 duration: 3000,
               });
             }
-
           } catch (error) {
             set((state) => {
               state.isCompiling = false;
               state.compilationResult = {
                 success: false,
-                errors: [{
-                  severity: 'error',
-                  message: error instanceof Error ? error.message : 'Unknown compilation error',
-                  sourceLocation: { file: '', start: 0, end: 0 },
-                  type: 'CompilerError',
-                  component: 'general',
-                  errorCode: '0000'
-                }],
+                errors: [
+                  {
+                    severity: 'error',
+                    message: error instanceof Error ? error.message : 'Unknown compilation error',
+                    sourceLocation: { file: '', start: 0, end: 0 },
+                    type: 'CompilerError',
+                    component: 'general',
+                    errorCode: '0000',
+                  },
+                ],
                 warnings: [],
                 contracts: {},
-                sources: {}
+                sources: {},
               };
             });
 
@@ -136,7 +137,7 @@ export const useCompilerStore = create<CompilerStore>()(
           // Get active file from file store (would need to import useFileStore)
           // For now, we'll use a placeholder
           const sources = {
-            'contract.sol': '// Placeholder - would get from active file'
+            'contract.sol': '// Placeholder - would get from active file',
           };
 
           await compile(sources);
@@ -159,7 +160,9 @@ export const useCompilerStore = create<CompilerStore>()(
 
             toast.success(`Compiler version set to ${version}`);
           } catch (error) {
-            toast.error(`Failed to set compiler version: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            toast.error(
+              `Failed to set compiler version: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
             console.error('Failed to set compiler version:', error);
           }
         },
@@ -176,8 +179,17 @@ export const useCompilerStore = create<CompilerStore>()(
             // Use fallback versions
             set((state) => {
               state.availableVersions = [
-                '0.8.30', '0.8.29', '0.8.28', '0.8.27', '0.8.26',
-                '0.8.25', '0.8.24', '0.8.23', '0.8.22', '0.8.21', '0.8.20'
+                '0.8.30',
+                '0.8.29',
+                '0.8.28',
+                '0.8.27',
+                '0.8.26',
+                '0.8.25',
+                '0.8.24',
+                '0.8.23',
+                '0.8.22',
+                '0.8.21',
+                '0.8.20',
               ];
             });
           }
@@ -290,12 +302,12 @@ export const useCompilerStore = create<CompilerStore>()(
           // Log when state is rehydrated from storage
           console.log('Compiler store state rehydrated from localStorage');
         },
-      }
+      },
     ),
     {
       name: 'compiler-store',
-    }
-  )
+    },
+  ),
 );
 
 // Initialize versions and load the default compiler when the store is created

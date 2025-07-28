@@ -23,8 +23,8 @@ export const analysisPlugin: Omit<Plugin, 'api'> = {
       error: true,
       warning: true,
       info: true,
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -184,7 +184,7 @@ export class AnalysisPluginImplementation {
 
     // Add custom rules
     if (this.config.customRules && Array.isArray(this.config.customRules)) {
-      this.config.customRules.forEach(rule => {
+      this.config.customRules.forEach((rule) => {
         if (rule.id && rule.name) {
           this.rules.set(rule.id, {
             ...rule,
@@ -227,7 +227,10 @@ export class AnalysisPluginImplementation {
             fileResults.push({
               ...rule,
               line: i + 1,
-              column: line.indexOf('transfer(') !== -1 ? line.indexOf('transfer(') : line.indexOf('send('),
+              column:
+                line.indexOf('transfer(') !== -1
+                  ? line.indexOf('transfer(')
+                  : line.indexOf('send('),
               file: filePath,
               ruleId: rule.id,
             });
@@ -272,7 +275,13 @@ export class AnalysisPluginImplementation {
 
       // Check for style issues
       if (this.config.styleRules) {
-        if (line.includes('function') && !line.includes('public') && !line.includes('private') && !line.includes('internal') && !line.includes('external')) {
+        if (
+          line.includes('function') &&
+          !line.includes('public') &&
+          !line.includes('private') &&
+          !line.includes('internal') &&
+          !line.includes('external')
+        ) {
           const rule = this.rules.get('STY002');
           if (rule && this.config.severityLevels.warning) {
             fileResults.push({
@@ -288,7 +297,11 @@ export class AnalysisPluginImplementation {
 
       // Check for best practice issues
       if (this.config.bestPracticeRules) {
-        if (line.includes('function') && !lines[i-1]?.includes('/**') && !lines[i-2]?.includes('/**')) {
+        if (
+          line.includes('function') &&
+          !lines[i - 1]?.includes('/**') &&
+          !lines[i - 2]?.includes('/**')
+        ) {
           const rule = this.rules.get('BP002');
           if (rule && this.config.severityLevels.info) {
             fileResults.push({
@@ -323,9 +336,9 @@ export class AnalysisPluginImplementation {
     }
 
     // Count results by severity
-    const errors = results.filter(r => r.severity === AnalysisSeverity.ERROR).length;
-    const warnings = results.filter(r => r.severity === AnalysisSeverity.WARNING).length;
-    const infos = results.filter(r => r.severity === AnalysisSeverity.INFO).length;
+    const errors = results.filter((r) => r.severity === AnalysisSeverity.ERROR).length;
+    const warnings = results.filter((r) => r.severity === AnalysisSeverity.WARNING).length;
+    const infos = results.filter((r) => r.severity === AnalysisSeverity.INFO).length;
 
     const summary: AnalysisSummary = {
       errors,
@@ -394,7 +407,7 @@ export class AnalysisPluginImplementation {
   removeCustomRule(ruleId: string): boolean {
     // Remove from custom rules in config
     if (this.config.customRules) {
-      const index = this.config.customRules.findIndex(r => r.id === ruleId);
+      const index = this.config.customRules.findIndex((r) => r.id === ruleId);
       if (index !== -1) {
         this.config.customRules.splice(index, 1);
       }

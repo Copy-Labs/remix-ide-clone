@@ -3,11 +3,41 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import MonacoEditor from '../MonacoEditor';
 
+// Mock fetch and AbortController for tests
+global.fetch = vi.fn(() =>
+  Promise.resolve({
+    ok: true,
+    text: () => Promise.resolve('// Mock React types'),
+  }) as unknown as Promise<Response>
+);
+
+// Mock AbortController
+global.AbortController = vi.fn().mockImplementation(() => ({
+  signal: {},
+  abort: vi.fn(),
+}));
+
 // Mock the stores
 vi.mock('@/stores/editorStore.ts', () => ({
   useEditorStore: () => ({
     registerEditor: vi.fn(),
     unregisterEditor: vi.fn(),
+    getEditor: vi.fn(() => ({
+      deltaDecorations: vi.fn(() => []),
+      focus: vi.fn(),
+      getModel: vi.fn(() => ({
+        uri: { toString: () => 'test.sol' },
+        dispose: vi.fn(),
+        onDidChangeContent: vi.fn(() => ({ dispose: vi.fn() })),
+        getFullModelRange: vi.fn(),
+      })),
+      updateOptions: vi.fn(),
+      addCommand: vi.fn(),
+      onDidDispose: vi.fn(),
+      getAction: vi.fn(() => ({ run: vi.fn() })),
+      getOption: vi.fn(() => 18),
+      onDidScrollChange: vi.fn(() => ({ dispose: vi.fn() })),
+    })),
     theme: 'light',
     fontSize: 14,
     fontFamily: 'Monaco',
@@ -30,6 +60,12 @@ vi.mock('@/stores/fileStore.ts', () => ({
 vi.mock('@/stores/historyStore', () => ({
   useHistoryStore: () => ({
     executeCommand: vi.fn(),
+    canUndo: vi.fn(() => false),
+    canRedo: vi.fn(() => false),
+    undo: vi.fn(),
+    redo: vi.fn(),
+    getUndoDescription: vi.fn(() => ''),
+    getRedoDescription: vi.fn(() => ''),
   }),
   createDeleteTextCommand: vi.fn(),
   createInsertTextCommand: vi.fn(),
@@ -38,6 +74,9 @@ vi.mock('@/stores/historyStore', () => ({
 
 vi.mock('@/services/loggerService', () => ({
   debug: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
 }));
 
 vi.mock('@/utils/editorUtils', () => ({
@@ -62,10 +101,15 @@ vi.mock('@monaco-editor/react', () => ({
           addCommand: vi.fn(),
           onDidDispose: vi.fn(),
           getAction: vi.fn(() => ({ run: vi.fn() })),
+          getOption: vi.fn(() => 18), // Mock lineHeight value
+          onDidScrollChange: vi.fn(() => ({ dispose: vi.fn() })),
         };
         const mockMonaco = {
           editor: {
             EditorOptions: {},
+            EditorOption: {
+              lineHeight: 'lineHeight',
+            },
           },
           languages: {
             getLanguages: vi.fn(() => []),
@@ -142,13 +186,7 @@ describe('MonacoEditor', () => {
 
     const TestComponent = () => {
       renderSpy();
-      return (
-        <MonacoEditor
-          filePath="test.sol"
-          language="solidity"
-          height="400px"
-        />
-      );
+      return <MonacoEditor filePath="test.sol" language="solidity" height="400px" />;
     };
 
     render(<TestComponent />);
@@ -159,7 +197,7 @@ describe('MonacoEditor', () => {
     });
 
     // Wait a bit more to ensure no additional re-renders occur
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // The component should render a minimal number of times (1-3 times is normal)
     // This confirms the infinite re-render issue has been fixed
@@ -169,12 +207,7 @@ describe('MonacoEditor', () => {
 
   it('renders with correct props', async () => {
     render(
-      <MonacoEditor
-        filePath="test.js"
-        language="javascript"
-        height="500px"
-        readOnly={true}
-      />
+      <MonacoEditor filePath="test.js" language="javascript" height="500px" readOnly={true} />,
     );
 
     await waitFor(() => {
@@ -187,12 +220,7 @@ describe('MonacoEditor', () => {
   });
 
   it('shows loading state initially', async () => {
-    render(
-      <MonacoEditor
-        filePath="test.sol"
-        language="solidity"
-      />
-    );
+    render(<MonacoEditor filePath="test.sol" language="solidity" />);
 
     // The loading state might be very brief with our mock, so we check that the component renders
     // In a real scenario, the loading state would be visible before Monaco loads
@@ -205,12 +233,7 @@ describe('MonacoEditor', () => {
   });
 
   it('handles theme changes correctly', async () => {
-    const { rerender } = render(
-      <MonacoEditor
-        filePath="test.sol"
-        language="solidity"
-      />
-    );
+    const { rerender } = render(<MonacoEditor filePath="test.sol" language="solidity" />);
 
     await waitFor(() => {
       expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
@@ -221,12 +244,7 @@ describe('MonacoEditor', () => {
     expect(editor).toHaveTextContent('Theme: vs-light');
 
     // Re-render with same props should not cause issues
-    rerender(
-      <MonacoEditor
-        filePath="test.sol"
-        language="solidity"
-      />
-    );
+    rerender(<MonacoEditor filePath="test.sol" language="solidity" />);
 
     // Should still work fine
     expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
@@ -237,13 +255,7 @@ describe('MonacoEditor', () => {
 
     const FileOpeningTest = ({ activeFile }: { activeFile: string }) => {
       renderSpy();
-      return (
-        <MonacoEditor
-          filePath={activeFile}
-          language="solidity"
-          height="400px"
-        />
-      );
+      return <MonacoEditor filePath={activeFile} language="solidity" height="400px" />;
     };
 
     const { rerender } = render(<FileOpeningTest activeFile="/contracts/Example.sol" />);
@@ -264,7 +276,7 @@ describe('MonacoEditor', () => {
     });
 
     // Wait a bit to ensure no additional re-renders occur
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Should have minimal re-renders when switching files
     expect(renderSpy.mock.calls.length).toBeGreaterThan(0);
@@ -279,7 +291,7 @@ describe('MonacoEditor', () => {
     });
 
     // Wait a bit more
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Should still have minimal re-renders
     expect(renderSpy.mock.calls.length).toBeGreaterThan(0);
@@ -287,13 +299,7 @@ describe('MonacoEditor', () => {
   });
 
   it('handles async file content loading correctly', async () => {
-    render(
-      <MonacoEditor
-        filePath="/contracts/Example.sol"
-        language="solidity"
-        height="400px"
-      />
-    );
+    render(<MonacoEditor filePath="/contracts/Example.sol" language="solidity" height="400px" />);
 
     // Should show loading initially
     expect(screen.getByText('Loading file...')).toBeInTheDocument();
@@ -316,7 +322,7 @@ describe('MonacoEditor', () => {
         language="solidity"
         height="400px"
         onContentChange={onContentChangeSpy}
-      />
+      />,
     );
 
     // Wait for editor to load
@@ -329,7 +335,7 @@ describe('MonacoEditor', () => {
     // For testing, we verify that the component can handle content changes without issues
 
     // Wait a bit to ensure no recursive calls occur
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // The component should still be stable
     expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
@@ -339,13 +345,7 @@ describe('MonacoEditor', () => {
     // This test ensures that the getFullModelRange error is fixed
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    render(
-      <MonacoEditor
-        filePath="/contracts/NewFile.sol"
-        language="solidity"
-        height="400px"
-      />
-    );
+    render(<MonacoEditor filePath="/contracts/NewFile.sol" language="solidity" height="400px" />);
 
     // Wait for editor to load
     await waitFor(() => {
@@ -353,11 +353,11 @@ describe('MonacoEditor', () => {
     });
 
     // Wait a bit more to ensure no errors occur during initialization
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Should not have thrown any errors related to getFullModelRange
-    const errors = consoleSpy.mock.calls.filter(call =>
-      call[0] && call[0].toString().includes('getFullModelRange')
+    const errors = consoleSpy.mock.calls.filter(
+      (call) => call[0] && call[0].toString().includes('getFullModelRange'),
     );
     expect(errors.length).toBe(0);
 
@@ -373,7 +373,7 @@ describe('MonacoEditor', () => {
         language="solidity"
         height="400px"
         onContentChange={onContentChangeSpy}
-      />
+      />,
     );
 
     // Wait for editor to load
@@ -387,7 +387,7 @@ describe('MonacoEditor', () => {
     expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
 
     // Wait a bit to ensure debouncing works without issues
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 400));
 
     // Component should still be stable after debounce timeout
     expect(screen.getByTestId('monaco-editor')).toBeInTheDocument();
@@ -398,11 +398,7 @@ describe('MonacoEditor', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const { rerender } = render(
-      <MonacoEditor
-        filePath="/contracts/NewContract1.sol"
-        language="solidity"
-        height="400px"
-      />
+      <MonacoEditor filePath="/contracts/NewContract1.sol" language="solidity" height="400px" />,
     );
 
     // Wait for editor to load
@@ -412,11 +408,7 @@ describe('MonacoEditor', () => {
 
     // Switch to another new file (simulating creating multiple new files)
     rerender(
-      <MonacoEditor
-        filePath="/contracts/NewContract2.sol"
-        language="solidity"
-        height="400px"
-      />
+      <MonacoEditor filePath="/contracts/NewContract2.sol" language="solidity" height="400px" />,
     );
 
     await waitFor(() => {
@@ -425,11 +417,7 @@ describe('MonacoEditor', () => {
 
     // Switch to yet another new file
     rerender(
-      <MonacoEditor
-        filePath="/contracts/NewContract3.sol"
-        language="solidity"
-        height="400px"
-      />
+      <MonacoEditor filePath="/contracts/NewContract3.sol" language="solidity" height="400px" />,
     );
 
     await waitFor(() => {
@@ -437,17 +425,17 @@ describe('MonacoEditor', () => {
     });
 
     // Wait a bit more to ensure no errors occur during file switching
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Should not have thrown any errors related to getFullModelRange
-    const errors = consoleSpy.mock.calls.filter(call =>
-      call[0] && call[0].toString().includes('getFullModelRange')
+    const errors = consoleSpy.mock.calls.filter(
+      (call) => call[0] && call[0].toString().includes('getFullModelRange'),
     );
     expect(errors.length).toBe(0);
 
     // Should also not have any TypeError related to null
-    const nullErrors = consoleSpy.mock.calls.filter(call =>
-      call[0] && call[0].toString().includes('Cannot read properties of null')
+    const nullErrors = consoleSpy.mock.calls.filter(
+      (call) => call[0] && call[0].toString().includes('Cannot read properties of null'),
     );
     expect(nullErrors.length).toBe(0);
 

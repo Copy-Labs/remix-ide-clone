@@ -8,7 +8,8 @@ This directory contains the Zustand store for managing the Solidity compiler sta
 
 ## Compiler Initialization
 
-The compiler store is responsible for initializing the Solidity compiler when the application starts. This is done in two steps:
+The compiler store is responsible for initializing the Solidity compiler when the application
+starts. This is done in two steps:
 
 1. Loading the list of available compiler versions
 2. Loading the default compiler version

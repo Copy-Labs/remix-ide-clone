@@ -6,14 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Palette, Layout, Settings, Code, Sparkles, ChevronDown, ChevronUp, Eye, Save, RefreshCw } from 'lucide-react';
+import {
+  Palette,
+  Layout,
+  Settings,
+  Code,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Save,
+  RefreshCw,
+} from 'lucide-react';
 
 interface CustomThemePluginUIProps {
   pluginId: string;
@@ -31,9 +48,7 @@ const ColorInput: React.FC<ColorInputProps> = ({ label, value, onChange, descrip
     <Label htmlFor={`color-${label.toLowerCase()}`} className="text-sm font-medium">
       {label}
     </Label>
-    {description && (
-      <p className="text-xs text-muted-foreground">{description}</p>
-    )}
+    {description && <p className="text-xs text-muted-foreground">{description}</p>}
     <div className="flex gap-2">
       <div className="relative">
         <input
@@ -169,13 +184,27 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
       // Load layout settings
       setSidebarPosition(plugin.config.layout?.sidebarPosition || 'left');
       setSidebarWidth(plugin.config.layout?.sidebarWidth || 280);
-      setShowTabs(plugin.config.layout?.showTabs !== undefined ? plugin.config.layout.showTabs : true);
-      setShowStatusBar(plugin.config.layout?.showStatusBar !== undefined ? plugin.config.layout.showStatusBar : true);
-      setShowBreadcrumbs(plugin.config.layout?.showBreadcrumbs !== undefined ? plugin.config.layout.showBreadcrumbs : true);
-      setCompactMode(plugin.config.layout?.compactMode !== undefined ? plugin.config.layout.compactMode : false);
+      setShowTabs(
+        plugin.config.layout?.showTabs !== undefined ? plugin.config.layout.showTabs : true,
+      );
+      setShowStatusBar(
+        plugin.config.layout?.showStatusBar !== undefined
+          ? plugin.config.layout.showStatusBar
+          : true,
+      );
+      setShowBreadcrumbs(
+        plugin.config.layout?.showBreadcrumbs !== undefined
+          ? plugin.config.layout.showBreadcrumbs
+          : true,
+      );
+      setCompactMode(
+        plugin.config.layout?.compactMode !== undefined ? plugin.config.layout.compactMode : false,
+      );
 
       // Load animation settings
-      setAnimationsEnabled(plugin.config.animations?.enabled !== undefined ? plugin.config.animations.enabled : true);
+      setAnimationsEnabled(
+        plugin.config.animations?.enabled !== undefined ? plugin.config.animations.enabled : true,
+      );
       setAnimationSpeed(plugin.config.animations?.speed || 'normal');
 
       // Load custom CSS
@@ -394,15 +423,50 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
   };
 
   const colorInputs = [
-    { label: 'Primary', value: primaryColor, onChange: setPrimaryColor, description: 'Main brand color' },
-    { label: 'Secondary', value: secondaryColor, onChange: setSecondaryColor, description: 'Accent color' },
-    { label: 'Background', value: backgroundColor, onChange: setBackgroundColor, description: 'Main background' },
-    { label: 'Surface', value: surfaceColor, onChange: setSurfaceColor, description: 'Card backgrounds' },
+    {
+      label: 'Primary',
+      value: primaryColor,
+      onChange: setPrimaryColor,
+      description: 'Main brand color',
+    },
+    {
+      label: 'Secondary',
+      value: secondaryColor,
+      onChange: setSecondaryColor,
+      description: 'Accent color',
+    },
+    {
+      label: 'Background',
+      value: backgroundColor,
+      onChange: setBackgroundColor,
+      description: 'Main background',
+    },
+    {
+      label: 'Surface',
+      value: surfaceColor,
+      onChange: setSurfaceColor,
+      description: 'Card backgrounds',
+    },
     { label: 'Text', value: textColor, onChange: setTextColor, description: 'Primary text color' },
-    { label: 'Border', value: borderColor, onChange: setBorderColor, description: 'Border and dividers' },
+    {
+      label: 'Border',
+      value: borderColor,
+      onChange: setBorderColor,
+      description: 'Border and dividers',
+    },
     { label: 'Error', value: errorColor, onChange: setErrorColor, description: 'Error states' },
-    { label: 'Warning', value: warningColor, onChange: setWarningColor, description: 'Warning states' },
-    { label: 'Success', value: successColor, onChange: setSuccessColor, description: 'Success states' },
+    {
+      label: 'Warning',
+      value: warningColor,
+      onChange: setWarningColor,
+      description: 'Warning states',
+    },
+    {
+      label: 'Success',
+      value: successColor,
+      onChange: setSuccessColor,
+      description: 'Success states',
+    },
     { label: 'Info', value: infoColor, onChange: setInfoColor, description: 'Information states' },
   ];
 
@@ -415,7 +479,9 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
           </div>
           <div>
             <h1 className="text-2xl font-bold">Theme Customization</h1>
-            <p className="text-sm text-muted-foreground">Customize your IDE's appearance and layout</p>
+            <p className="text-sm text-muted-foreground">
+              Customize your IDE's appearance and layout
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -478,12 +544,12 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {themes.map(theme => (
+                    {themes.map((theme) => (
                       <Card
                         key={theme.id}
                         className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedThemeId === theme.id 
-                            ? 'ring-2 ring-primary shadow-md' 
+                          selectedThemeId === theme.id
+                            ? 'ring-2 ring-primary shadow-md'
                             : 'hover:shadow-sm'
                         }`}
                         onClick={() => handleApplyTheme(theme.id)}
@@ -497,14 +563,16 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">{theme.description}</p>
                           <div className="flex gap-1">
-                            {Object.entries(theme.colors).slice(0, 4).map(([key, color]) => (
-                              <div
-                                key={key}
-                                className="w-6 h-6 rounded-full border-2 border-background shadow-sm"
-                                style={{ backgroundColor: color as string }}
-                                title={`${key}: ${color}`}
-                              />
-                            ))}
+                            {Object.entries(theme.colors)
+                              .slice(0, 4)
+                              .map(([key, color]) => (
+                                <div
+                                  key={key}
+                                  className="w-6 h-6 rounded-full border-2 border-background shadow-sm"
+                                  style={{ backgroundColor: color as string }}
+                                  title={`${key}: ${color}`}
+                                />
+                              ))}
                           </div>
                         </CardContent>
                       </Card>
@@ -535,7 +603,11 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="w-full justify-between p-0 h-auto">
                         <h4 className="text-lg font-semibold">Colors</h4>
-                        {isColorsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isColorsOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 mt-4">
@@ -554,7 +626,11 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="w-full justify-between p-0 h-auto">
                         <h4 className="text-lg font-semibold">Typography</h4>
-                        {isFontsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isFontsOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 mt-4">
@@ -599,7 +675,11 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="w-full justify-between p-0 h-auto">
                         <h4 className="text-lg font-semibold">Spacing</h4>
-                        {isSpacingOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isSpacingOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 mt-4">
@@ -655,7 +735,11 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="w-full justify-between p-0 h-auto">
                         <h4 className="text-lg font-semibold">Border Radius</h4>
-                        {isBorderRadiusOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {isBorderRadiusOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 mt-4">
@@ -713,12 +797,12 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {layouts.map(layout => (
+                    {layouts.map((layout) => (
                       <Card
                         key={layout.id}
                         className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedLayoutId === layout.id 
-                            ? 'ring-2 ring-primary shadow-md' 
+                          selectedLayoutId === layout.id
+                            ? 'ring-2 ring-primary shadow-md'
                             : 'hover:shadow-sm'
                         }`}
                         onClick={() => handleApplyLayout(layout.id)}
@@ -732,11 +816,25 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                           </div>
                           <p className="text-sm text-muted-foreground mb-3">{layout.description}</p>
                           <div className="text-xs text-muted-foreground space-y-1">
-                            <div>Sidebar: {layout.sidebarPosition}, {layout.sidebarWidth}px</div>
+                            <div>
+                              Sidebar: {layout.sidebarPosition}, {layout.sidebarWidth}px
+                            </div>
                             <div className="flex gap-2">
-                              {layout.showTabs && <Badge variant="secondary" className="text-xs">Tabs</Badge>}
-                              {layout.showStatusBar && <Badge variant="secondary" className="text-xs">Status Bar</Badge>}
-                              {layout.compactMode && <Badge variant="secondary" className="text-xs">Compact</Badge>}
+                              {layout.showTabs && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Tabs
+                                </Badge>
+                              )}
+                              {layout.showStatusBar && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Status Bar
+                                </Badge>
+                              )}
+                              {layout.compactMode && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Compact
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </CardContent>
@@ -757,7 +855,10 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <div className="space-y-4">
                       <div className="space-y-3">
                         <Label>Sidebar Position</Label>
-                        <Select value={sidebarPosition} onValueChange={(value: 'left' | 'right') => setSidebarPosition(value)}>
+                        <Select
+                          value={sidebarPosition}
+                          onValueChange={(value: 'left' | 'right') => setSidebarPosition(value)}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -784,11 +885,7 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="show-tabs">Show Tabs</Label>
-                        <Switch
-                          id="show-tabs"
-                          checked={showTabs}
-                          onCheckedChange={setShowTabs}
-                        />
+                        <Switch id="show-tabs" checked={showTabs} onCheckedChange={setShowTabs} />
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -840,7 +937,9 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <Label htmlFor="animations-enabled">Enable Animations</Label>
-                      <p className="text-sm text-muted-foreground">Turn on/off all animations and transitions</p>
+                      <p className="text-sm text-muted-foreground">
+                        Turn on/off all animations and transitions
+                      </p>
                     </div>
                     <Switch
                       id="animations-enabled"
@@ -852,7 +951,12 @@ const CustomThemePluginUI: React.FC<CustomThemePluginUIProps> = ({ pluginId }) =
                   {animationsEnabled && (
                     <div className="space-y-3">
                       <Label>Animation Speed</Label>
-                      <Select value={animationSpeed} onValueChange={(value: 'slow' | 'normal' | 'fast') => setAnimationSpeed(value)}>
+                      <Select
+                        value={animationSpeed}
+                        onValueChange={(value: 'slow' | 'normal' | 'fast') =>
+                          setAnimationSpeed(value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
