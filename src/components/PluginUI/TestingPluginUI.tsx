@@ -117,6 +117,9 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
     setIsLoading(true);
     setError(null);
 
+    // Reset selected test path when running all tests
+    setSelectedTestPath('');
+
     try {
       await implementation.runAllTests();
       await loadTestResults();
@@ -152,7 +155,7 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
     setError(null);
 
     try {
-      const testPath = await implementation.createTestFile(`${testName}.test.js`, selectedContract);
+      const testPath = await implementation.createTestFile(`${testName}`, selectedContract);
 
       setTestName('');
       setSelectedContract('');
@@ -193,14 +196,24 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
+  // State for selected test
+  const [selectedTestPath, setSelectedTestPath] = useState<string>('');
+
   // Keyboard shortcuts for better IDE integration
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) {
         switch (event.key) {
           case 'Enter':
-            event.preventDefault();
-            handleRunAllTests();
+            if (event.shiftKey && selectedTestPath) {
+              // Run selected test with Ctrl+Shift+Enter
+              event.preventDefault();
+              handleRunTest(selectedTestPath);
+            } else {
+              // Run all tests with Ctrl+Enter
+              event.preventDefault();
+              handleRunAllTests();
+            }
             break;
           case 't':
             event.preventDefault();
@@ -216,102 +229,231 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [selectedTestPath]);
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="flex items-center gap-2">
-        <TestTube className="h-6 w-6" />
-        <h2 className="text-xl font-bold">Testing Framework</h2>
-        <Badge variant="secondary" className="ml-auto">
+    <div className="p-1 space-y-3 overflow-hidden">
+
+      {/* Create Test */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between bg-muted/50 p-2 rounded-md cursor-pointer hover:bg-muted">
+            <div className="flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              <span className="text-xs font-medium">Create Test</span>
+            </div>
+            <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Card className="py-0 shadow-none mt-2">
+            <CardContent className="p-3 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="contract-select" className="text-xs">Contract</Label>
+                <Select value={selectedContract} onValueChange={setSelectedContract}>
+                  <SelectTrigger id="contract-select" className="h-7 text-xs">
+                    <SelectValue placeholder="Select contract" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getSolidityContracts().map(({ path, contractName }) => (
+                      <SelectItem key={path} value={contractName} className="text-xs">
+                        {contractName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="test-name" className="text-xs">Test Name</Label>
+                <Input
+                  id="test-name"
+                  type="text"
+                  value={testName}
+                  onChange={(e) => setTestName(e.target.value)}
+                  placeholder="Enter test name"
+                  disabled={isLoading}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <Button
+                onClick={handleCreateTestFile}
+                disabled={isLoading || !selectedContract || !testName}
+                className="w-full h-7 text-xs gap-1"
+                size="sm"
+              >
+                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                {isLoading ? 'Creating...' : 'Create Test'}
+              </Button>
+              <p className="text-[10px] text-muted-foreground">Use Ctrl+T to focus on test name</p>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Separator />
+
+      <div className={'flex flex-col gap-1 px-1'}>
+        <Button onClick={handleRunAllTests} disabled={isLoading} size="lg" className="w-full text-xs gap-1">
+          {isLoading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <PlayCircle className="h-3 w-3" />
+          )}
+          {isLoading ? 'Running...' : 'Run All'}
+        </Button>
+      </div>
+      <Separator className={'my-4'} />
+      <div className={'px-1'}>Run Single Test</div>
+      <div className="flex items-center justify-between gap-1">
+        {/*<TestTube className="h-4 w-4" />*/}
+        {/*<h2 className="text-base font-bold">Testing Framework</h2>*/}
+        <div className="flex items-center gap-2">
+          <Select
+            disabled={isLoading}
+            value={selectedTestPath}
+            onValueChange={(value) => {
+              // Only update if the value has changed
+              if (value !== selectedTestPath) {
+                setSelectedTestPath(value);
+                handleRunTest(value);
+              }
+            }}
+          >
+            <SelectTrigger className="!h-8 text-xs min-w-[120px]">
+              <SelectValue placeholder="Select Single Test" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from(files.entries())
+                .filter(([path, file]) =>
+                  file.type === 'file' &&
+                  path.startsWith(testFolder) &&
+                  path.endsWith('.test.js')
+                )
+                .map(([path]) => (
+                  <SelectItem key={path} value={path} className="text-xs">
+                    {path.split('/').pop()?.replace('.test.js', '')}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Badge variant="secondary" className="text-xs">
           {testResults.size} suites
         </Badge>
       </div>
 
       {error && (
-        <Card className="border-destructive">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-destructive">
-              <XCircle className="h-4 w-4" />
-              <p className="text-sm">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="text-sm p-2 bg-red-50 border border-red-200 rounded-md text-red-600 flex items-center gap-1">
+          <XCircle className="h-3 w-3 flex-shrink-0" />
+          <p className="text-xs">{error}</p>
+        </div>
       )}
 
       {/* Test Controls */}
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-none p-0">
+        {/*<CardHeader className="hidden p-0 pb-0">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Play className="h-5 w-5" />
-              <CardTitle>Test Controls</CardTitle>
+            <div className="flex items-center gap-1">
+              <Play className="h-4 w-4" />
+              <CardTitle className="text-sm">Test Controls</CardTitle>
             </div>
-            <Button onClick={handleRunAllTests} disabled={isLoading} className="gap-2">
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <PlayCircle className="h-4 w-4" />
-              )}
-              {isLoading ? 'Running...' : 'Run All Tests'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select
+                disabled={isLoading}
+                value={selectedTestPath}
+                onValueChange={(value) => {
+                  // Only update if the value has changed
+                  if (value !== selectedTestPath) {
+                    setSelectedTestPath(value);
+                    handleRunTest(value);
+                  }
+                }}
+              >
+                <SelectTrigger className="h-7 text-xs w-[120px]">
+                  <SelectValue placeholder="Run Single Test" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(files.entries())
+                    .filter(([path, file]) =>
+                      file.type === 'file' &&
+                      path.startsWith(testFolder) &&
+                      path.endsWith('.test.js')
+                    )
+                    .map(([path]) => (
+                      <SelectItem key={path} value={path} className="text-xs">
+                        {path.split('/').pop()?.replace('.test.js', '')}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleRunAllTests} disabled={isLoading} size="sm" className="h-7 text-xs gap-1">
+                {isLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <PlayCircle className="h-3 w-3" />
+                )}
+                {isLoading ? 'Running...' : 'Run All'}
+              </Button>
+            </div>
           </div>
-          <CardDescription>
-            Execute tests for your smart contracts. Use Ctrl+Enter to run all tests.
+          <CardDescription className="text-xs">
+            Ctrl+Enter to run all tests, Ctrl+Shift+Enter to run selected test
           </CardDescription>
-        </CardHeader>
+        </CardHeader>*/}
 
         {/* Test Results Summary */}
         {testResults.size > 0 && (
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart3 className="h-4 w-4" />
-                <h4 className="font-medium">Test Results Summary</h4>
+          <CardContent className="p-3 pt-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1 mb-1">
+                <BarChart3 className="h-3 w-3" />
+                <h4 className="text-xs font-medium">Results Summary</h4>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="p-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <div>
-                      <div className="text-lg font-bold">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-card border rounded-md">
+                  <div className="relative flex items-start gap-1.5">
+                    <CheckCircle size={16} className="text-green-600" />
+                    <div className={''}>
+                      <div className="text-xl font-bold">
                         {Array.from(testResults.values()).reduce(
                           (sum, result) => sum + result.passed,
                           0,
                         )}
                       </div>
-                      <div className="text-xs text-green-600">Tests Passed</div>
+                      <div className="text-xs text-green-600">Passed</div>
                     </div>
                   </div>
-                </Card>
-                <Card className="p-3">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <div>
-                      <div className="text-lg font-bold">
+                </div>
+                <div className="p-2 bg-card border rounded-md">
+                  <div className="relative flex items-start gap-1.5">
+                    <XCircle size={16} className="text-red-600" />
+                    <div className={''}>
+                      <div className="text-xl font-bold">
                         {Array.from(testResults.values()).reduce(
                           (sum, result) => sum + result.failed,
                           0,
                         )}
                       </div>
-                      <div className="text-xs text-red-600">Tests Failed</div>
+                      <div className="text-xs text-red-600">Failed</div>
                     </div>
                   </div>
-                </Card>
-                <Card className="p-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <div className="text-lg font-bold">{testResults.size}</div>
-                      <div className="text-xs text-muted-foreground">Test Suites</div>
+                </div>
+                <div className="p-2 bg-card border rounded-md">
+                  <div className="relative flex items-start gap-1.5">
+                    <FileText size={16} className="text-blue-600" />
+                    <div className={''}>
+                      <div className="text-xl font-bold">{testResults.size}</div>
+                      <div className="text-xs text-muted-foreground">Suites</div>
                     </div>
                   </div>
-                </Card>
-                <Card className="p-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-purple-600" />
-                    <div>
-                      <div className="text-lg font-bold">
+                </div>
+                <div className="p-2 bg-card border rounded-md">
+                  <div className="relative flex items-start gap-1.5">
+                    <Clock size={16} className="text-purple-600" />
+                    <div className={''}>
+                      <div className="text-xl font-bold">
                         {formatDuration(
                           Array.from(testResults.values()).reduce(
                             (sum, result) => sum + result.duration,
@@ -319,390 +461,349 @@ const TestingPluginUI: React.FC<TestingPluginUIProps> = ({ pluginId }) => {
                           ),
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">Total Duration</div>
+                      <div className="text-xs text-muted-foreground">Duration</div>
                     </div>
                   </div>
-                </Card>
+                </div>
               </div>
             </div>
           </CardContent>
         )}
       </Card>
 
-      {/* Create Test */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            <CardTitle>Create Test</CardTitle>
-          </div>
-          <CardDescription>
-            Generate a new test file for your smart contracts. Use Ctrl+T to focus on test name.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="contract-select">Contract to Test</Label>
-            <Select value={selectedContract} onValueChange={setSelectedContract}>
-              <SelectTrigger id="contract-select">
-                <SelectValue placeholder="Select a contract" />
-              </SelectTrigger>
-              <SelectContent>
-                {getSolidityContracts().map(({ path, contractName }) => (
-                  <SelectItem key={path} value={contractName}>
-                    {contractName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="test-name">Test Name</Label>
-            <Input
-              id="test-name"
-              type="text"
-              value={testName}
-              onChange={(e) => setTestName(e.target.value)}
-              placeholder="Enter test name"
-              disabled={isLoading}
-            />
-          </div>
-
-          <Button
-            onClick={handleCreateTestFile}
-            disabled={isLoading || !selectedContract || !testName}
-            className="w-full gap-2"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-            {isLoading ? 'Creating...' : 'Create Test File'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Test Results */}
-      {testResults.size > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <TestTube className="h-5 w-5" />
-              <CardTitle>Test Results</CardTitle>
-              <Badge variant="outline" className="ml-auto">
-                {Array.from(testResults.values()).reduce(
-                  (sum, result) => sum + result.tests.length,
-                  0,
-                )}{' '}
-                tests
-              </Badge>
-            </div>
-            <CardDescription>Detailed results from your test executions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Array.from(testResults.entries()).map(([testPath, result]) => (
-              <Collapsible key={testPath} defaultOpen>
-                <Card>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
-                          <div>
-                            <CardTitle className="text-base">{result.name}</CardTitle>
-                            <CardDescription className="text-xs">{testPath}</CardDescription>
+      <div className={'space-y-4'}>
+        {/* Test Results */}
+        {testResults.size > 0 && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between bg-muted/50 p-2 rounded-md cursor-pointer hover:bg-muted">
+                <div className="flex items-center gap-1">
+                  <TestTube className="h-3 w-3" />
+                  <span className="text-xs font-medium">Test Results</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                    {Array.from(testResults.values()).reduce(
+                      (sum, result) => sum + result.tests.length,
+                      0,
+                    )} tests
+                  </Badge>
+                  <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 space-y-2">
+                {Array.from(testResults.entries()).map(([testPath, result]) => (
+                  <Collapsible key={testPath}>
+                    <CollapsibleTrigger asChild>
+                      <div className="border rounded-md p-2 cursor-pointer hover:bg-muted/30 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1">
+                            <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
+                            <div className="truncate max-w-[150px]">
+                              <div className="text-xs font-medium">{result.name}</div>
+                              <div className="text-[10px] text-muted-foreground truncate">{testPath}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant={result.failed > 0 ? 'destructive' : 'default'}
+                              className="gap-1 text-[10px] px-1 py-0 h-4"
+                            >
+                              {result.failed > 0 ? (
+                                <XCircle className="h-2 w-2" />
+                              ) : (
+                                <CheckCircle className="h-2 w-2" />
+                              )}
+                              {result.passed}/{result.passed + result.failed}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Only update if the value has changed
+                                if (testPath !== selectedTestPath) {
+                                  setSelectedTestPath(testPath);
+                                  handleRunTest(testPath);
+                                }
+                              }}
+                              disabled={isLoading}
+                              className="h-5 w-5 p-0"
+                            >
+                              {isLoading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Play className="h-3 w-3" />
+                              )}
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            variant={result.failed > 0 ? 'destructive' : 'default'}
-                            className="gap-1"
-                          >
-                            {result.failed > 0 ? (
-                              <XCircle className="h-3 w-3" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3" />
-                            )}
-                            {result.passed}/{result.passed + result.failed}
-                          </Badge>
-                          <Badge variant="outline" className="gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDuration(result.duration)}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRunTest(testPath);
-                            }}
-                            disabled={isLoading}
-                            className="gap-1"
-                          >
-                            {isLoading ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Play className="h-3 w-3" />
-                            )}
-                            Run
-                          </Button>
-                        </div>
                       </div>
-                    </CardHeader>
-                  </CollapsibleTrigger>
+                    </CollapsibleTrigger>
 
-                  <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2">
+                    <CollapsibleContent>
+                      <div className="pl-3 pr-1 py-1 space-y-1 border-l border-l-muted ml-2 mt-1">
                         {result.tests.map((test: any, index: number) => (
-                          <Card
+                          <div
                             key={index}
-                            className={`p-3 ${test.passed ? 'border-green-200 bg-green-50 dark:bg-green-950' : 'border-red-200 bg-red-50 dark:bg-red-950'}`}
+                            className={`p-1.5 rounded-sm text-xs ${
+                              test.passed 
+                                ? 'bg-green-50 border-l-2 border-l-green-500 dark:bg-green-950/30' 
+                                : 'bg-red-50 border-l-2 border-l-red-500 dark:bg-red-950/30'
+                            }`}
                           >
                             <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-start gap-1">
                                 {test.passed ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <CheckCircle className="h-3 w-3 text-green-600 mt-0.5" />
                                 ) : (
-                                  <XCircle className="h-4 w-4 text-red-600" />
+                                  <XCircle className="h-3 w-3 text-red-600 mt-0.5" />
                                 )}
-                                <div>
-                                  <div className="font-medium text-sm">{test.name}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-[11px] truncate">{test.name}</div>
                                   {!test.passed && test.error && (
-                                    <div className="mt-1 text-xs text-red-600 font-mono bg-red-100 dark:bg-red-900 p-1 rounded">
+                                    <div className="mt-1 text-[10px] text-red-600 font-mono bg-red-100/50 dark:bg-red-900/50 p-1 rounded overflow-x-auto whitespace-pre-wrap">
                                       {test.error}
                                     </div>
                                   )}
                                 </div>
                               </div>
-                              <Badge variant="outline" className="text-xs gap-1">
-                                <Clock className="h-3 w-3" />
+                              <div className="text-[10px] text-muted-foreground whitespace-nowrap ml-1">
                                 {formatDuration(test.duration)}
-                              </Badge>
+                              </div>
                             </div>
-                          </Card>
+                          </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </CollapsibleContent>
-                </Card>
-              </Collapsible>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
-      {/* Coverage Data */}
-      {showCoverage && coverageData.size > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              <CardTitle>Coverage Report</CardTitle>
-              <Badge variant="outline" className="ml-auto">
-                {coverageData.size} contracts
-              </Badge>
-            </div>
-            <CardDescription>Code coverage analysis for your smart contracts</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {Array.from(coverageData.entries()).map(([contractName, data]) => (
-              <Card key={contractName}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{contractName}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                          Lines
-                        </span>
-                        <span className="font-medium">{data.lines.percentage}%</span>
-                      </div>
-                      <Progress value={data.lines.percentage} className="h-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {data.lines.covered}/{data.lines.total} lines covered
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          Functions
-                        </span>
-                        <span className="font-medium">{data.functions.percentage}%</span>
-                      </div>
-                      <Progress value={data.functions.percentage} className="h-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {data.functions.covered}/{data.functions.total} functions covered
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                          Branches
-                        </span>
-                        <span className="font-medium">{data.branches.percentage}%</span>
-                      </div>
-                      <Progress value={data.branches.percentage} className="h-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {data.branches.covered}/{data.branches.total} branches covered
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                          Statements
-                        </span>
-                        <span className="font-medium">{data.statements.percentage}%</span>
-                      </div>
-                      <Progress value={data.statements.percentage} className="h-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {data.statements.covered}/{data.statements.total} statements covered
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Configuration */}
-      <Collapsible open={showConfig} onOpenChange={setShowConfig}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  <CardTitle>Configuration</CardTitle>
+        {/* Coverage Data */}
+        {showCoverage && coverageData.size > 0 && (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between bg-muted/50 p-2 rounded-md cursor-pointer hover:bg-muted">
+                <div className="flex items-center gap-1">
+                  <BarChart3 className="h-3 w-3" />
+                  <span className="text-xs font-medium">Coverage Report</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">Settings</Badge>
-                  <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                    {coverageData.size} contracts
+                  </Badge>
+                  <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
                 </div>
               </div>
-              <CardDescription>Customize testing framework settings and behavior</CardDescription>
-            </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 space-y-2">
+                {Array.from(coverageData.entries()).map(([contractName, data]) => (
+                  <Collapsible key={contractName}>
+                    <CollapsibleTrigger asChild>
+                      <div className="border rounded-md p-2 cursor-pointer hover:bg-muted/30 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs font-medium truncate">{contractName}</div>
+                          <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-2 space-y-2 border-x border-b rounded-b-md">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-[11px]">Lines</span>
+                            </span>
+                            <span className="text-[11px] font-medium">{data.lines.percentage}%</span>
+                          </div>
+                          <Progress value={data.lines.percentage} className="h-1.5" />
+                          <div className="text-[10px] text-muted-foreground">
+                            {data.lines.covered}/{data.lines.total} lines
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-[11px]">Functions</span>
+                            </span>
+                            <span className="text-[11px] font-medium">{data.functions.percentage}%</span>
+                          </div>
+                          <Progress value={data.functions.percentage} className="h-1.5" />
+                          <div className="text-[10px] text-muted-foreground">
+                            {data.functions.covered}/{data.functions.total} functions
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                              <span className="text-[11px]">Branches</span>
+                            </span>
+                            <span className="text-[11px] font-medium">{data.branches.percentage}%</span>
+                          </div>
+                          <Progress value={data.branches.percentage} className="h-1.5" />
+                          <div className="text-[10px] text-muted-foreground">
+                            {data.branches.covered}/{data.branches.total} branches
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-[11px]">Statements</span>
+                            </span>
+                            <span className="text-[11px] font-medium">{data.statements.percentage}%</span>
+                          </div>
+                          <Progress value={data.statements.percentage} className="h-1.5" />
+                          <div className="text-[10px] text-muted-foreground">
+                            {data.statements.covered}/{data.statements.total} statements
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Configuration */}
+        <Collapsible open={showConfig} onOpenChange={setShowConfig}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center justify-between bg-muted/50 p-2 rounded-md cursor-pointer hover:bg-muted">
+              <div className="flex items-center gap-1">
+                <Settings className="h-3 w-3" />
+                <span className="text-xs font-medium">Settings</span>
+              </div>
+              <ChevronRight className="h-3 w-3 transition-transform data-[state=open]:rotate-90" />
+            </div>
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <CardContent className="space-y-6">
+            <div className="mt-2 p-2 border rounded-md space-y-3">
               <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="general">General</TabsTrigger>
-                  <TabsTrigger value="execution">Execution</TabsTrigger>
-                  <TabsTrigger value="reporting">Reporting</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 h-8">
+                  <TabsTrigger value="general" className="text-[10px] py-1">General</TabsTrigger>
+                  <TabsTrigger value="execution" className="text-[10px] py-1">Execution</TabsTrigger>
+                  <TabsTrigger value="reporting" className="text-[10px] py-1">Reporting</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="general" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="test-folder">Test Folder</Label>
+                <TabsContent value="general" className="space-y-2 mt-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="test-folder" className="text-xs">Test Folder</Label>
                     <Input
                       id="test-folder"
                       type="text"
                       value={testFolder}
                       onChange={(e) => setTestFolder(e.target.value)}
                       placeholder="/tests"
+                      className="h-8 text-xs"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="test-framework">Test Framework</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="test-framework" className="text-xs">Framework</Label>
                     <Select value={testFramework} onValueChange={setTestFramework}>
-                      <SelectTrigger id="test-framework">
+                      <SelectTrigger id="test-framework" className="!h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mocha">Mocha</SelectItem>
-                        <SelectItem value="truffle">Truffle</SelectItem>
-                        <SelectItem value="hardhat">Hardhat</SelectItem>
+                        <SelectItem value="mocha" className="text-xs">Mocha</SelectItem>
+                        <SelectItem value="truffle" className="text-xs">Truffle</SelectItem>
+                        <SelectItem value="hardhat" className="text-xs">Hardhat</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="execution" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="gas-limit">Gas Limit</Label>
+                <TabsContent value="execution" className="space-y-2 mt-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="gas-limit" className="text-xs">Gas Limit</Label>
                     <Input
                       id="gas-limit"
                       type="number"
                       value={gasLimit}
                       onChange={(e) => setGasLimit(parseInt(e.target.value))}
                       min="1000000"
+                      className="text-xs"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="test-timeout">Test Timeout (ms)</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="test-timeout" className="text-xs">Timeout (ms)</Label>
                     <Input
                       id="test-timeout"
                       type="number"
                       value={testTimeout}
                       onChange={(e) => setTestTimeout(parseInt(e.target.value))}
                       min="1000"
+                      className="text-xs"
                     />
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1 pt-1">
                     <Checkbox
                       id="auto-run"
                       checked={autoRunOnSave}
                       onCheckedChange={setAutoRunOnSave}
+                      className="h-4 w-4"
                     />
-                    <Label htmlFor="auto-run" className="text-sm font-normal">
+                    <Label htmlFor="auto-run" className="text-xs font-normal">
                       Auto-run tests on file save
                     </Label>
                   </div>
                 </TabsContent>
 
-                <TabsContent value="reporting" className="space-y-4">
-                  <div className="flex items-center space-x-2">
+                <TabsContent value="reporting" className="space-y-2 mt-2">
+                  <div className="flex items-center space-x-1">
                     <Checkbox
                       id="show-coverage"
                       checked={showCoverage}
                       onCheckedChange={setShowCoverage}
+                      className="h-4 w-4"
                     />
-                    <Label htmlFor="show-coverage" className="text-sm font-normal">
+                    <Label htmlFor="show-coverage" className="text-xs font-normal">
                       Show coverage report
                     </Label>
                   </div>
                 </TabsContent>
               </Tabs>
 
-              <Separator />
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveConfig} className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Save Configuration
+              <div className="pt-1">
+                <Button onClick={handleSaveConfig} className="w-full h-7 text-xs gap-1" size="sm">
+                  <Settings className="h-3 w-3" />
+                  Save Settings
                 </Button>
               </div>
-            </CardContent>
+            </div>
           </CollapsibleContent>
-        </Card>
-      </Collapsible>
+        </Collapsible>
+      </div>
 
       {/* Loading indicator */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <Card className="p-6 min-w-[200px]">
-            <div className="flex items-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin" />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] flex items-center justify-center z-50">
+          <div className="bg-card border rounded-md p-2 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
               <div>
-                <p className="font-medium">Processing...</p>
-                <p className="text-sm text-muted-foreground">Running tests and analyzing results</p>
+                <p className="text-xs font-medium">Running tests...</p>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>

@@ -363,7 +363,7 @@ describe("SimpleStorage Contract", function() {
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-6 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 items-start gap-6 mb-8">
                           <Card>
                             <CardHeader>
                               <CardTitle>Create</CardTitle>
@@ -482,12 +482,12 @@ describe("SimpleStorage Contract", function() {
                             </CardContent>
                           </Card>
 
-                          <Card className="opacity-50 cursor-not-allowed">
+                          <Card>
                             <CardHeader>
                               <CardTitle className="flex items-center gap-2">
                                 Tests
-                                <span className="text-xs bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full">
-                                  In Progress
+                                <span className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded-full">
+                                  Available
                                 </span>
                               </CardTitle>
                               <CardDescription>Testing and verification tools</CardDescription>
@@ -495,23 +495,61 @@ describe("SimpleStorage Contract", function() {
                             <CardContent>
                               <ul className="space-y-2 text-sm">
                                 <li className="flex items-center">
-                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Unit testing framework integration</span>
                                 </li>
                                 <li className="flex items-center">
-                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Gas usage analysis</span>
                                 </li>
                                 <li className="flex items-center">
-                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Coverage reports</span>
                                 </li>
                                 <li className="flex items-center">
-                                  <div className="mr-2 h-4 w-4 text-muted-foreground">✓</div>
+                                  <div className="mr-2 h-4 w-4 text-primary">✓</div>
                                   <span>Test automation tools</span>
                                 </li>
                               </ul>
                             </CardContent>
+                            <CardFooter>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => {
+                                  // Ensure the testing plugin is enabled
+                                  const pluginStore = usePluginStore.getState();
+                                  const testingPlugin = pluginStore.plugins.find(p => p.id === 'testing-framework');
+                                  if (testingPlugin) {
+                                    // Enable and activate the plugin if needed
+                                    if (!testingPlugin.enabled) {
+                                      pluginStore.enablePlugin('testing-framework');
+                                    }
+                                    pluginStore.activatePlugin('testing-framework');
+
+                                    // Open the file explorer sidebar
+                                    document.querySelector('[data-sidebar="trigger"]')?.dispatchEvent(
+                                      new MouseEvent('click', { bubbles: true })
+                                    );
+
+                                    // Find and click the testing framework sidebar item
+                                    setTimeout(() => {
+                                      const testingButton = Array.from(
+                                        document.querySelectorAll('[data-sidebar="menu-button"]')
+                                      ).find(el => el.textContent?.includes('Testing Framework'));
+
+                                      if (testingButton) {
+                                        testingButton.dispatchEvent(
+                                          new MouseEvent('click', { bubbles: true })
+                                        );
+                                      }
+                                    }, 100);
+                                  }
+                                }}
+                              >
+                                Open Testing Framework
+                              </Button>
+                            </CardFooter>
                           </Card>
 
                           <Card className="opacity-50 cursor-not-allowed">
