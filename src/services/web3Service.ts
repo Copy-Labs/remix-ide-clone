@@ -21,8 +21,9 @@ export class Web3Service {
   private isConnecting: boolean = false;
   private listeners: Map<string, Function[]> = new Map();
 
-  // Predefined networks for easy access
+  // Predefined networks for easy access - aligned with verification service support
   private networks: Network[] = [
+    // Ethereum networks
     {
       id: 'ethereum',
       name: 'Ethereum Mainnet',
@@ -31,15 +32,6 @@ export class Web3Service {
       symbol: 'ETH',
       blockExplorer: 'https://etherscan.io',
       isTestnet: false,
-    },
-    {
-      id: 'goerli',
-      name: 'Goerli Testnet',
-      rpcUrl: 'https://goerli.infura.io/v3/your-infura-key',
-      chainId: 5,
-      symbol: 'ETH',
-      blockExplorer: 'https://goerli.etherscan.io',
-      isTestnet: true,
     },
     {
       id: 'sepolia',
@@ -51,6 +43,86 @@ export class Web3Service {
       isTestnet: true,
     },
     {
+      id: 'holesky',
+      name: 'Holesky Testnet',
+      rpcUrl: 'https://holesky.infura.io/v3/your-infura-key',
+      chainId: 17000,
+      symbol: 'ETH',
+      blockExplorer: 'https://holesky.etherscan.io',
+      isTestnet: true,
+    },
+
+    // Arbitrum networks
+    {
+      id: 'arbitrum',
+      name: 'Arbitrum One',
+      rpcUrl: 'https://arb1.arbitrum.io/rpc',
+      chainId: 42161,
+      symbol: 'ETH',
+      blockExplorer: 'https://arbiscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'arbitrum-nova',
+      name: 'Arbitrum Nova',
+      rpcUrl: 'https://nova.arbitrum.io/rpc',
+      chainId: 42170,
+      symbol: 'ETH',
+      blockExplorer: 'https://nova.arbiscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'arbitrum-sepolia',
+      name: 'Arbitrum Sepolia',
+      rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+      chainId: 421614,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.arbiscan.io',
+      isTestnet: true,
+    },
+
+    // Optimism networks
+    {
+      id: 'optimism',
+      name: 'OP Mainnet',
+      rpcUrl: 'https://mainnet.optimism.io',
+      chainId: 10,
+      symbol: 'ETH',
+      blockExplorer: 'https://optimistic.etherscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'optimism-sepolia',
+      name: 'OP Sepolia',
+      rpcUrl: 'https://sepolia.optimism.io',
+      chainId: 11155420,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia-optimistic.etherscan.io',
+      isTestnet: true,
+    },
+
+    // Base networks
+    {
+      id: 'base',
+      name: 'Base Mainnet',
+      rpcUrl: 'https://mainnet.base.org',
+      chainId: 8453,
+      symbol: 'ETH',
+      blockExplorer: 'https://basescan.org',
+      isTestnet: false,
+    },
+    {
+      id: 'base-sepolia',
+      name: 'Base Sepolia',
+      rpcUrl: 'https://sepolia.base.org',
+      chainId: 84532,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.basescan.org',
+      isTestnet: true,
+    },
+
+    // Polygon networks
+    {
       id: 'polygon',
       name: 'Polygon Mainnet',
       rpcUrl: 'https://polygon-rpc.com',
@@ -60,14 +132,589 @@ export class Web3Service {
       isTestnet: false,
     },
     {
-      id: 'mumbai',
-      name: 'Mumbai Testnet',
-      rpcUrl: 'https://rpc-mumbai.maticvigil.com',
-      chainId: 80001,
+      id: 'polygon-amoy',
+      name: 'Polygon Amoy',
+      rpcUrl: 'https://rpc-amoy.polygon.technology',
+      chainId: 80002,
       symbol: 'MATIC',
-      blockExplorer: 'https://mumbai.polygonscan.com',
+      blockExplorer: 'https://amoy.polygonscan.com',
       isTestnet: true,
     },
+
+    // Blast networks
+    {
+      id: 'blast',
+      name: 'Blast Mainnet',
+      rpcUrl: 'https://rpc.blast.io',
+      chainId: 81457,
+      symbol: 'ETH',
+      blockExplorer: 'https://blastscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'blast-sepolia',
+      name: 'Blast Sepolia',
+      rpcUrl: 'https://sepolia.blast.io',
+      chainId: 168587773,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.blastscan.io',
+      isTestnet: true,
+    },
+
+    // Linea networks
+    {
+      id: 'linea',
+      name: 'Linea Mainnet',
+      rpcUrl: 'https://rpc.linea.build',
+      chainId: 59144,
+      symbol: 'ETH',
+      blockExplorer: 'https://lineascan.build',
+      isTestnet: false,
+    },
+    {
+      id: 'linea-sepolia',
+      name: 'Linea Sepolia',
+      rpcUrl: 'https://rpc.sepolia.linea.build',
+      chainId: 59141,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.lineascan.build',
+      isTestnet: true,
+    },
+
+    // Mantle networks
+    {
+      id: 'mantle',
+      name: 'Mantle Mainnet',
+      rpcUrl: 'https://rpc.mantle.xyz',
+      chainId: 5000,
+      symbol: 'MNT',
+      blockExplorer: 'https://mantlescan.xyz',
+      isTestnet: false,
+    },
+    {
+      id: 'mantle-sepolia',
+      name: 'Mantle Sepolia',
+      rpcUrl: 'https://rpc.sepolia.mantle.xyz',
+      chainId: 5003,
+      symbol: 'MNT',
+      blockExplorer: 'https://sepolia.mantlescan.xyz',
+      isTestnet: true,
+    },
+
+    // Scroll networks
+    {
+      id: 'scroll',
+      name: 'Scroll Mainnet',
+      rpcUrl: 'https://rpc.scroll.io',
+      chainId: 534352,
+      symbol: 'ETH',
+      blockExplorer: 'https://scrollscan.com',
+      isTestnet: false,
+    },
+    {
+      id: 'scroll-sepolia',
+      name: 'Scroll Sepolia',
+      rpcUrl: 'https://sepolia-rpc.scroll.io',
+      chainId: 534351,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.scrollscan.com',
+      isTestnet: true,
+    },
+
+    // zkSync networks
+    {
+      id: 'zksync',
+      name: 'zkSync Era Mainnet',
+      rpcUrl: 'https://mainnet.era.zksync.io',
+      chainId: 324,
+      symbol: 'ETH',
+      blockExplorer: 'https://explorer.zksync.io',
+      isTestnet: false,
+    },
+    {
+      id: 'zksync-sepolia',
+      name: 'zkSync Era Sepolia',
+      rpcUrl: 'https://sepolia.era.zksync.dev',
+      chainId: 300,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.explorer.zksync.io',
+      isTestnet: true,
+    },
+
+    // BNB Smart Chain networks
+    {
+      id: 'bsc',
+      name: 'BNB Smart Chain',
+      rpcUrl: 'https://bsc-dataseed1.binance.org',
+      chainId: 56,
+      symbol: 'BNB',
+      blockExplorer: 'https://bscscan.com',
+      isTestnet: false,
+    },
+    {
+      id: 'bsc-testnet',
+      name: 'BNB Smart Chain Testnet',
+      rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
+      chainId: 97,
+      symbol: 'BNB',
+      blockExplorer: 'https://testnet.bscscan.com',
+      isTestnet: true,
+    },
+
+    // Avalanche networks
+    {
+      id: 'avalanche',
+      name: 'Avalanche C-Chain',
+      rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+      chainId: 43114,
+      symbol: 'AVAX',
+      blockExplorer: 'https://snowtrace.io',
+      isTestnet: false,
+    },
+    {
+      id: 'avalanche-fuji',
+      name: 'Avalanche Fuji',
+      rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
+      chainId: 43113,
+      symbol: 'AVAX',
+      blockExplorer: 'https://testnet.snowtrace.io',
+      isTestnet: true,
+    },
+
+    // Celo networks
+    {
+      id: 'celo',
+      name: 'Celo Mainnet',
+      rpcUrl: 'https://forno.celo.org',
+      chainId: 42220,
+      symbol: 'CELO',
+      blockExplorer: 'https://celoscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'celo-alfajores',
+      name: 'Celo Alfajores',
+      rpcUrl: 'https://alfajores-forno.celo-testnet.org',
+      chainId: 44787,
+      symbol: 'CELO',
+      blockExplorer: 'https://alfajores.celoscan.io',
+      isTestnet: true,
+    },
+
+    // Gnosis networks
+    {
+      id: 'gnosis',
+      name: 'Gnosis Chain',
+      rpcUrl: 'https://rpc.gnosischain.com',
+      chainId: 100,
+      symbol: 'xDAI',
+      blockExplorer: 'https://gnosisscan.io',
+      isTestnet: false,
+    },
+
+    // Hoodi Testnet
+    {
+      id: 'hoodi-testnet',
+      name: 'Hoodi Testnet',
+      rpcUrl: 'https://rpc-testnet.hoodi.io',
+      chainId: 560048,
+      symbol: 'ETH',
+      blockExplorer: 'https://testnet.hoodiscan.com',
+      isTestnet: true,
+    },
+
+    // Abstract networks
+    {
+      id: 'abstract',
+      name: 'Abstract Mainnet',
+      rpcUrl: 'https://api.mainnet.abstract.xyz',
+      chainId: 2741,
+      symbol: 'ETH',
+      blockExplorer: 'https://explorer.abstract.xyz',
+      isTestnet: false,
+    },
+    {
+      id: 'abstract-sepolia',
+      name: 'Abstract Sepolia Testnet',
+      rpcUrl: 'https://api.sepolia.abstract.xyz',
+      chainId: 11124,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.explorer.abstract.xyz',
+      isTestnet: true,
+    },
+
+    // ApeChain networks
+    {
+      id: 'apechain-curtis',
+      name: 'ApeChain Curtis Testnet',
+      rpcUrl: 'https://curtis.rpc.caldera.xyz/http',
+      chainId: 33111,
+      symbol: 'APE',
+      blockExplorer: 'https://curtis.explorer.caldera.xyz',
+      isTestnet: true,
+    },
+    {
+      id: 'apechain',
+      name: 'ApeChain Mainnet',
+      rpcUrl: 'https://apechain.caldera.xyz/http',
+      chainId: 33139,
+      symbol: 'APE',
+      blockExplorer: 'https://apechain.caldera.xyz',
+      isTestnet: false,
+    },
+
+    // Berachain networks
+    {
+      id: 'berachain',
+      name: 'Berachain Mainnet',
+      rpcUrl: 'https://rpc.berachain.com',
+      chainId: 80094,
+      symbol: 'BERA',
+      blockExplorer: 'https://beratrail.io',
+      isTestnet: false,
+    },
+    {
+      id: 'berachain-bepolia',
+      name: 'Berachain Bepolia Testnet',
+      rpcUrl: 'https://rpc.bepolia.berachain.com',
+      chainId: 80069,
+      symbol: 'BERA',
+      blockExplorer: 'https://bepolia.beratrail.io',
+      isTestnet: true,
+    },
+
+    // BitTorrent Chain networks
+    {
+      id: 'bittorrent',
+      name: 'BitTorrent Chain Mainnet',
+      rpcUrl: 'https://rpc.bittorrentchain.io',
+      chainId: 199,
+      symbol: 'BTT',
+      blockExplorer: 'https://bttcscan.com',
+      isTestnet: false,
+    },
+    {
+      id: 'bittorrent-testnet',
+      name: 'BitTorrent Chain Testnet',
+      rpcUrl: 'https://testrpc.bittorrentchain.io',
+      chainId: 1028,
+      symbol: 'BTT',
+      blockExplorer: 'https://testnet.bttcscan.com',
+      isTestnet: true,
+    },
+
+    // Cronos networks
+    {
+      id: 'cronos',
+      name: 'Cronos Mainnet',
+      rpcUrl: 'https://evm.cronos.org',
+      chainId: 25,
+      symbol: 'CRO',
+      blockExplorer: 'https://cronoscan.com',
+      isTestnet: false,
+    },
+
+    // Fraxtal networks
+    {
+      id: 'fraxtal',
+      name: 'Fraxtal Mainnet',
+      rpcUrl: 'https://rpc.frax.com',
+      chainId: 252,
+      symbol: 'frxETH',
+      blockExplorer: 'https://fraxscan.com',
+      isTestnet: false,
+    },
+    {
+      id: 'fraxtal-testnet',
+      name: 'Fraxtal Testnet',
+      rpcUrl: 'https://rpc.testnet.frax.com',
+      chainId: 2522,
+      symbol: 'frxETH',
+      blockExplorer: 'https://testnet.fraxscan.com',
+      isTestnet: true,
+    },
+
+    // HyperEVM
+    {
+      id: 'hyperevm',
+      name: 'HyperEVM',
+      rpcUrl: 'https://rpc.hyperevm.com',
+      chainId: 999,
+      symbol: 'ETH',
+      blockExplorer: 'https://explorer.hyperevm.com',
+      isTestnet: false,
+    },
+
+    // Memecore networks
+    {
+      id: 'memecore',
+      name: 'Memecore Mainnet',
+      rpcUrl: 'https://rpc.memecore.com',
+      chainId: 4352,
+      symbol: 'MEME',
+      blockExplorer: 'https://scan.memecore.com',
+      isTestnet: false,
+    },
+    {
+      id: 'memecore-testnet',
+      name: 'Memecore Testnet',
+      rpcUrl: 'https://rpc-testnet.memecore.com',
+      chainId: 43521,
+      symbol: 'MEME',
+      blockExplorer: 'https://testnet.scan.memecore.com',
+      isTestnet: true,
+    },
+
+    // Moonbeam networks
+    {
+      id: 'moonbase-alpha',
+      name: 'Moonbase Alpha Testnet',
+      rpcUrl: 'https://rpc.api.moonbase.moonbeam.network',
+      chainId: 1287,
+      symbol: 'DEV',
+      blockExplorer: 'https://moonbase.moonscan.io',
+      isTestnet: true,
+    },
+    {
+      id: 'monad-testnet',
+      name: 'Monad Testnet',
+      rpcUrl: 'https://rpc.monad.xyz',
+      chainId: 10143,
+      symbol: 'MON',
+      blockExplorer: 'https://explorer.monad.xyz',
+      isTestnet: true,
+    },
+    {
+      id: 'moonbeam',
+      name: 'Moonbeam Mainnet',
+      rpcUrl: 'https://rpc.api.moonbeam.network',
+      chainId: 1284,
+      symbol: 'GLMR',
+      blockExplorer: 'https://moonbeam.moonscan.io',
+      isTestnet: false,
+    },
+    {
+      id: 'moonriver',
+      name: 'Moonriver Mainnet',
+      rpcUrl: 'https://rpc.api.moonriver.moonbeam.network',
+      chainId: 1285,
+      symbol: 'MOVR',
+      blockExplorer: 'https://moonriver.moonscan.io',
+      isTestnet: false,
+    },
+
+    // Katana (replacing Polygon zkEVM)
+    {
+      id: 'katana',
+      name: 'Katana Mainnet',
+      rpcUrl: 'https://rpc.katana.so',
+      chainId: 747474,
+      symbol: 'ETH',
+      blockExplorer: 'https://explorer.katana.so',
+      isTestnet: false,
+    },
+
+    // Sei networks
+    {
+      id: 'sei',
+      name: 'Sei Mainnet',
+      rpcUrl: 'https://evm-rpc.sei-apis.com',
+      chainId: 1329,
+      symbol: 'SEI',
+      blockExplorer: 'https://seitrace.com',
+      isTestnet: false,
+    },
+    {
+      id: 'sei-testnet',
+      name: 'Sei Testnet',
+      rpcUrl: 'https://evm-rpc-testnet.sei-apis.com',
+      chainId: 1328,
+      symbol: 'SEI',
+      blockExplorer: 'https://testnet.seitrace.com',
+      isTestnet: true,
+    },
+
+    // Sonic networks
+    {
+      id: 'sonic-blaze',
+      name: 'Sonic Blaze Testnet',
+      rpcUrl: 'https://rpc.blaze.soniclabs.com',
+      chainId: 57054,
+      symbol: 'S',
+      blockExplorer: 'https://blaze.soniclabs.com',
+      isTestnet: true,
+    },
+    {
+      id: 'sonic',
+      name: 'Sonic Mainnet',
+      rpcUrl: 'https://rpc.soniclabs.com',
+      chainId: 146,
+      symbol: 'S',
+      blockExplorer: 'https://explorer.soniclabs.com',
+      isTestnet: false,
+    },
+
+    // Sophon networks
+    {
+      id: 'sophon',
+      name: 'Sophon Mainnet',
+      rpcUrl: 'https://rpc.sophon.xyz',
+      chainId: 50104,
+      symbol: 'SOPH',
+      blockExplorer: 'https://explorer.sophon.xyz',
+      isTestnet: false,
+    },
+    {
+      id: 'sophon-sepolia',
+      name: 'Sophon Sepolia Testnet',
+      rpcUrl: 'https://rpc.sepolia.sophon.xyz',
+      chainId: 531050104,
+      symbol: 'SOPH',
+      blockExplorer: 'https://sepolia.explorer.sophon.xyz',
+      isTestnet: true,
+    },
+
+    // Swellchain networks
+    {
+      id: 'swellchain',
+      name: 'Swellchain Mainnet',
+      rpcUrl: 'https://rpc.swellnetwork.io',
+      chainId: 1923,
+      symbol: 'ETH',
+      blockExplorer: 'https://explorer.swellnetwork.io',
+      isTestnet: false,
+    },
+    {
+      id: 'swellchain-testnet',
+      name: 'Swellchain Testnet',
+      rpcUrl: 'https://rpc-testnet.swellnetwork.io',
+      chainId: 1924,
+      symbol: 'ETH',
+      blockExplorer: 'https://testnet.explorer.swellnetwork.io',
+      isTestnet: true,
+    },
+
+    // Taiko networks
+    {
+      id: 'taiko-hekla',
+      name: 'Taiko Hekla L2 Testnet',
+      rpcUrl: 'https://rpc.hekla.taiko.xyz',
+      chainId: 167009,
+      symbol: 'ETH',
+      blockExplorer: 'https://hekla.taikoscan.network',
+      isTestnet: true,
+    },
+    {
+      id: 'taiko',
+      name: 'Taiko Mainnet',
+      rpcUrl: 'https://rpc.taiko.xyz',
+      chainId: 167000,
+      symbol: 'ETH',
+      blockExplorer: 'https://taikoscan.network',
+      isTestnet: false,
+    },
+
+    // Unichain networks
+    {
+      id: 'unichain',
+      name: 'Unichain Mainnet',
+      rpcUrl: 'https://rpc.unichain.org',
+      chainId: 130,
+      symbol: 'ETH',
+      blockExplorer: 'https://uniscan.xyz',
+      isTestnet: false,
+    },
+    {
+      id: 'unichain-sepolia',
+      name: 'Unichain Sepolia Testnet',
+      rpcUrl: 'https://rpc.sepolia.unichain.org',
+      chainId: 1301,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.uniscan.xyz',
+      isTestnet: true,
+    },
+
+    // World networks
+    {
+      id: 'world',
+      name: 'World Mainnet',
+      rpcUrl: 'https://rpc.worldchain.org',
+      chainId: 480,
+      symbol: 'ETH',
+      blockExplorer: 'https://worldscan.org',
+      isTestnet: false,
+    },
+    {
+      id: 'world-sepolia',
+      name: 'World Sepolia Testnet',
+      rpcUrl: 'https://rpc.sepolia.worldchain.org',
+      chainId: 4801,
+      symbol: 'ETH',
+      blockExplorer: 'https://sepolia.worldscan.org',
+      isTestnet: true,
+    },
+
+    // Xai networks
+    {
+      id: 'xai',
+      name: 'Xai Mainnet',
+      rpcUrl: 'https://xai-chain.net/rpc',
+      chainId: 660279,
+      symbol: 'XAI',
+      blockExplorer: 'https://explorer.xai-chain.net',
+      isTestnet: false,
+    },
+    {
+      id: 'xai-sepolia',
+      name: 'Xai Sepolia Testnet',
+      rpcUrl: 'https://testnet-v2.xai-chain.net/rpc',
+      chainId: 37714555429,
+      symbol: 'XAI',
+      blockExplorer: 'https://testnet-explorer-v2.xai-chain.net',
+      isTestnet: true,
+    },
+
+    // XDC networks
+    {
+      id: 'xdc-apothem',
+      name: 'XDC Apothem Testnet',
+      rpcUrl: 'https://rpc.apothem.network',
+      chainId: 51,
+      symbol: 'TXDC',
+      blockExplorer: 'https://explorer.apothem.network',
+      isTestnet: true,
+    },
+    {
+      id: 'xdc',
+      name: 'XDC Mainnet',
+      rpcUrl: 'https://rpc.xinfin.network',
+      chainId: 50,
+      symbol: 'XDC',
+      blockExplorer: 'https://explorer.xinfin.network',
+      isTestnet: false,
+    },
+
+    // opBNB networks
+    {
+      id: 'opbnb',
+      name: 'opBNB Mainnet',
+      rpcUrl: 'https://opbnb-mainnet-rpc.bnbchain.org',
+      chainId: 204,
+      symbol: 'BNB',
+      blockExplorer: 'https://opbnbscan.com',
+      isTestnet: false,
+    },
+    {
+      id: 'opbnb-testnet',
+      name: 'opBNB Testnet',
+      rpcUrl: 'https://opbnb-testnet-rpc.bnbchain.org',
+      chainId: 5611,
+      symbol: 'BNB',
+      blockExplorer: 'https://testnet.opbnbscan.com',
+      isTestnet: true,
+    },
+
+    // Development
     {
       id: 'localhost',
       name: 'Localhost',

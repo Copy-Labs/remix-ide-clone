@@ -75,6 +75,9 @@ const DeploymentPanel: React.FC = () => {
   // Get deployed contracts for the current network
   const deployedContractsForNetwork = getDeployedContractsByNetwork(selectedNetwork);
 
+  // Get the selected network object
+  const selectedNetworkData = availableNetworks.find((n) => n.id === selectedNetwork);
+
   // Get the selected deployed contract
   const selectedDeployedContractData = selectedDeployedContract
     ? Array.from(deployedContracts.values()).find((c) => c.address === selectedDeployedContract)
@@ -417,7 +420,7 @@ const DeploymentPanel: React.FC = () => {
                   <div className="text-sm font-normal text-foreground break-all">{account}</div>
                   <div className="font-medium text-xs text-muted-foreground">
                     Balance: {formatBalance(balance)}{' '}
-                    {availableNetworks.find((n) => n.id === selectedNetwork)?.symbol || 'ETH'}
+                    {selectedNetworkData?.symbol || 'ETH'}
                   </div>
                 </div>
 
@@ -426,31 +429,16 @@ const DeploymentPanel: React.FC = () => {
                   <label className="block text-xs font-medium text-muted-foreground mb-1">
                     Network
                   </label>
-                  {/*<select
-                defaultValue={
-                  availableNetworks.find((n) => n.id === selectedNetwork)?.chainId.toString() ||
-                  ''
-                }
-                onChange={handleNetworkChange}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {availableNetworks.map((network) => (
-                  <option key={network.id} value={network.chainId.toString()}>
-                    {network.name} {network.isTestnet ? '(Testnet)' : ''}
-                  </option>
-                ))}
-              </select>*/}
-                  {/* Because selectedNetwork is in this form: ChainId-${chainId}, we use the split to retrieve the chainId */}
                   <Select
-                    defaultValue={
-                      availableNetworks
-                        .find((n) => n.id === selectedNetwork.split('-')[1])
-                        ?.chainId.toString() || ''
-                    }
+                    value={selectedNetworkData?.chainId.toString() || ''}
                     onValueChange={handleNetworkValueChange}
                   >
                     <SelectTrigger className="w-full text-xs">
-                      <SelectValue placeholder="Select Network" />
+                      <SelectValue placeholder="Select Network">
+                        {selectedNetworkData
+                          ? `${selectedNetworkData.name} ${selectedNetworkData.isTestnet ? '(Testnet)' : ''}`
+                          : 'Select Network'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
@@ -490,7 +478,7 @@ const DeploymentPanel: React.FC = () => {
 
         <AccordionItem value="item-2" disabled={!account}>
           <AccordionTrigger>Verification Settings</AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-4 text-balance">
+          <AccordionContent className="flex flex-col gap-4 text-pretty">
             {/* Auto-verify Setting */}
             <div className="mb-4">
               <label className="flex items-center">
@@ -543,16 +531,19 @@ const DeploymentPanel: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  No API keys configured. Add API keys below to enable contract verification.
-                </p>
+                <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
+                  You are using Sol-IDE's default API Key. Add an API key below to use your own API Key.
+                </div>
               )}
 
               {/* Add New API Key */}
               <div className="space-y-3 pt-2">
                 <h5 className="text-xs font-medium text-foreground">Add New API Key</h5>
 
-                <div>
+                {/* There's no need to use the network selection, we are now using etherscan's
+                multi-chain verification API
+                */}
+                <div className={'hidden'}>
                   <label className="block text-xs text-muted-foreground mb-1">Block Explorer</label>
                   <Select value={selectedExplorer} onValueChange={handleExplorerChange}>
                     <SelectTrigger className="w-full text-xs">
@@ -562,19 +553,78 @@ const DeploymentPanel: React.FC = () => {
                       <SelectGroup>
                         <SelectLabel>Ethereum</SelectLabel>
                         <SelectItem value="etherscan">Etherscan (Mainnet)</SelectItem>
-                        <SelectItem value="goerli.etherscan">Etherscan (Goerli)</SelectItem>
                         <SelectItem value="sepolia.etherscan">Etherscan (Sepolia)</SelectItem>
+                        <SelectItem value="holesky.etherscan">Etherscan (Holesky)</SelectItem>
                       </SelectGroup>
                       <SelectGroup>
-                        <SelectLabel>Polygon</SelectLabel>
+                        <SelectLabel>Layer 2 - Arbitrum</SelectLabel>
+                        <SelectItem value="arbiscan">Arbiscan (Arbitrum One)</SelectItem>
+                        <SelectItem value="nova.arbiscan">Arbiscan (Nova)</SelectItem>
+                        <SelectItem value="sepolia.arbiscan">Arbiscan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Optimism</SelectLabel>
+                        <SelectItem value="optimistic.etherscan">Optimistic Etherscan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.optimistic.etherscan">Optimistic Etherscan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Base</SelectLabel>
+                        <SelectItem value="basescan">Basescan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.basescan">Basescan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Polygon</SelectLabel>
                         <SelectItem value="polygonscan">Polygonscan (Mainnet)</SelectItem>
-                        <SelectItem value="mumbai.polygonscan">Polygonscan (Mumbai)</SelectItem>
+                        <SelectItem value="amoy.polygonscan">Polygonscan (Amoy)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Blast</SelectLabel>
+                        <SelectItem value="blastscan">Blastscan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.blastscan">Blastscan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Linea</SelectLabel>
+                        <SelectItem value="lineascan">Lineascan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.lineascan">Lineascan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Mantle</SelectLabel>
+                        <SelectItem value="mantlescan">Mantlescan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.mantlescan">Mantlescan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - Scroll</SelectLabel>
+                        <SelectItem value="scrollscan">Scrollscan (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.scrollscan">Scrollscan (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Layer 2 - zkSync</SelectLabel>
+                        <SelectItem value="zksync">zkSync Era (Mainnet)</SelectItem>
+                        <SelectItem value="sepolia.zksync">zkSync Era (Sepolia)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>BNB Chain</SelectLabel>
+                        <SelectItem value="bscscan">BSCScan (Mainnet)</SelectItem>
+                        <SelectItem value="testnet.bscscan">BSCScan (Testnet)</SelectItem>
+                        <SelectItem value="opbnbscan">opBNB (Mainnet)</SelectItem>
+                        <SelectItem value="testnet.opbnbscan">opBNB (Testnet)</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>Avalanche</SelectLabel>
+                        <SelectItem value="snowtrace">Snowtrace (C-Chain)</SelectItem>
+                        <SelectItem value="testnet.snowtrace">Snowtrace (Fuji)</SelectItem>
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel>Other Networks</SelectLabel>
-                        <SelectItem value="bscscan">BSCScan (BNB Chain)</SelectItem>
-                        <SelectItem value="arbiscan">Arbiscan (Arbitrum)</SelectItem>
-                        <SelectItem value="optimistic.etherscan">Optimistic Etherscan</SelectItem>
+                        <SelectItem value="gnosisscan">Gnosisscan (Gnosis)</SelectItem>
+                        <SelectItem value="celoscan">Celoscan (Celo)</SelectItem>
+                        <SelectItem value="alfajores.celoscan">Celoscan (Alfajores)</SelectItem>
+                        <SelectItem value="cronoscan">Cronoscan (Cronos)</SelectItem>
+                        <SelectItem value="fraxscan">Fraxscan (Fraxtal)</SelectItem>
+                        <SelectItem value="testnet.fraxscan">Fraxscan (Testnet)</SelectItem>
+                        <SelectItem value="moonbeamscan">Moonbeamscan (Moonbeam)</SelectItem>
+                        <SelectItem value="moonriverscan">Moonriverscan (Moonriver)</SelectItem>
+                        <SelectItem value="testnet.moonbeamscan">Moonbeamscan (Moonbase Alpha)</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
