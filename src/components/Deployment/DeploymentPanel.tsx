@@ -45,6 +45,10 @@ const DeploymentPanel: React.FC = () => {
     getDeployedContractsByNetwork,
     setAutoVerify,
     verifyContract,
+    getTestAccounts,
+    isUsingTestWallet,
+    getSelectedTestAccountIndex,
+    switchVMAccount,
   } = useDeploymentStore();
 
   const {
@@ -62,6 +66,11 @@ const DeploymentPanel: React.FC = () => {
   const [customGasLimit, setCustomGasLimit] = useState<string>(gasLimit);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
+  // Test accounts state
+  const [testAccounts, setTestAccounts] = useState<Array<{address: string, balance: string}>>([]);
+  const [selectedTestAccount, setSelectedTestAccount] = useState<number>(-1);
+  const [isUsingTest, setIsUsingTest] = useState<boolean>(false);
 
   // Verification settings state
   const [apiKeys, setApiKeys] = useState<Map<string, string>>(new Map());
@@ -135,13 +144,65 @@ const DeploymentPanel: React.FC = () => {
   }, [methodName, selectedDeployedContract]);
 
   // Handle wallet connection
-  const handleConnectWallet = async () => {
+  const handleConnectWallet = async (type: 'metamask' | 'walletconnect' | 'vm' = 'metamask') => {
     setIsConnecting(true);
     try {
-      await connectWallet();
+      const success = await connectWallet(type);
+
+      if (success && type === 'vm') {
+        // If using VM, we need to refresh the test accounts
+        const accounts = getTestAccounts();
+        setTestAccounts(accounts);
+
+        // Get selected test account index
+        const selectedIndex = getSelectedTestAccountIndex();
+        setSelectedTestAccount(selectedIndex);
+
+        // Set isUsingTest to true for VM
+        setIsUsingTest(true);
+      }
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
-      toast.error('Failed to connect wallet');
+      console.error(`Failed to connect to ${type}:`, error);
+      toast.error(`Failed to connect to ${type}`);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Handle test account connection
+  const handleConnectTestAccount = async (index: number) => {
+    setIsConnecting(true);
+    try {
+      const success = await connectWallet('test', index);
+
+      if (success) {
+        setIsUsingTest(true);
+        setSelectedTestAccount(index);
+      } else {
+        toast.error('Failed to connect to test account');
+      }
+    } catch (error) {
+      console.error('Failed to connect to test account:', error);
+      toast.error('Failed to connect to test account');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Handle VM account switching
+  const handleSwitchVMAccount = async (index: number) => {
+    setIsConnecting(true);
+    try {
+      const success = await switchVMAccount(index);
+
+      if (success) {
+        setSelectedTestAccount(index);
+      } else {
+        toast.error('Failed to switch VM account');
+      }
+    } catch (error) {
+      console.error('Failed to switch VM account:', error);
+      toast.error('Failed to switch VM account');
     } finally {
       setIsConnecting(false);
     }
@@ -150,6 +211,8 @@ const DeploymentPanel: React.FC = () => {
   // Handle wallet disconnection
   const handleDisconnectWallet = () => {
     disconnectWallet();
+    setIsUsingTest(false);
+    setSelectedTestAccount(-1);
   };
 
   // Handle network switching
@@ -299,6 +362,18 @@ const DeploymentPanel: React.FC = () => {
     setApiKeys(keys);
   }, []);
 
+  // Load test accounts and check if using test account
+  useEffect(() => {
+    const accounts = getTestAccounts();
+    setTestAccounts(accounts);
+
+    const isUsingTestWalletValue = isUsingTestWallet();
+    setIsUsingTest(isUsingTestWalletValue);
+
+    const selectedIndex = getSelectedTestAccountIndex();
+    setSelectedTestAccount(selectedIndex);
+  }, [getTestAccounts, isUsingTestWallet, getSelectedTestAccountIndex, account]);
+
   // Handle API key change
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setApiKey(e.target.value);
@@ -381,28 +456,104 @@ const DeploymentPanel: React.FC = () => {
           <AccordionTrigger>Wallet Connection</AccordionTrigger>
           <AccordionContent className="flex flex-col gap-4 text-balance">
             {!account ? (
-              <button
-                onClick={handleConnectWallet}
-                disabled={isConnecting}
-                className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isConnecting
-                    ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                }`}
-              >
-                {isConnecting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Connecting...
-                  </div>
-                ) : (
-                  'Connect Wallet'
-                )}
-              </button>
+              <div className="space-y-4">
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleConnectWallet('vm')}
+                    disabled={isConnecting}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isConnecting
+                        ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
+                    }`}
+                  >
+                    {isConnecting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Connecting...
+                      </div>
+                    ) : (
+                      'JavaScript VM'
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleConnectWallet('metamask')}
+                    disabled={isConnecting}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isConnecting
+                        ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                    }`}
+                  >
+                    {isConnecting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Connecting...
+                      </div>
+                    ) : (
+                      'Connect MetaMask'
+                    )}
+                  </button>
+                </div>
+
+                {/* Test Accounts Section */}
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-foreground mb-2">Test Accounts</h4>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Use test accounts for development and testing without connecting a real wallet.
+                  </p>
+
+                  {testAccounts.length > 0 ? (
+                    <div className="border rounded-md overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                              Address
+                            </th>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                              Balance
+                            </th>
+                            <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                          {testAccounts.map((account, index) => (
+                            <tr key={index}>
+                              <td className="px-3 py-2 whitespace-nowrap text-xs font-mono text-gray-900 dark:text-gray-300">
+                                {formatAddress(account.address)}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900 dark:text-gray-300">
+                                {account.balance} ETH
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-right text-xs">
+                                <button
+                                  onClick={() => handleConnectTestAccount(index)}
+                                  disabled={isConnecting}
+                                  className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                  {isConnecting ? 'Connecting...' : 'Use'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">No test accounts available.</div>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Connected Account</div>
+                  <div className="text-xs text-muted-foreground">
+                    {isUsingTest ? 'Connected Test Account' : 'Connected Account'}
+                  </div>
                   <Button
                     onClick={handleDisconnectWallet}
                     className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
@@ -418,8 +569,43 @@ const DeploymentPanel: React.FC = () => {
                   <div className="font-medium text-xs text-muted-foreground">
                     Balance: {formatBalance(balance)}{' '}
                     {availableNetworks.find((n) => n.id === selectedNetwork)?.symbol || 'ETH'}
+                    {isUsingTest && <span className="ml-2 text-green-500">(Test Account)</span>}
                   </div>
                 </div>
+
+                {/* Test Account Selector - Only show when using VM/test accounts */}
+                {isUsingTest && testAccounts.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      Select Test Account
+                    </label>
+                    <Select
+                      value={selectedTestAccount >= 0 ? selectedTestAccount.toString() : "0"}
+                      onValueChange={(value) => handleSwitchVMAccount(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-full text-xs">
+                        <SelectValue placeholder="Select Test Account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Available Test Accounts</SelectLabel>
+                          {testAccounts.map((testAccount, index) => (
+                            <SelectItem key={index} value={index.toString()}>
+                              <div className="flex flex-col">
+                                <span className="font-mono text-xs">
+                                  {formatAddress(testAccount.address)}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {testAccount.balance} ETH
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Network Selection */}
                 <div>
@@ -444,7 +630,7 @@ const DeploymentPanel: React.FC = () => {
                   <Select
                     defaultValue={
                       availableNetworks
-                        .find((n) => n.id === selectedNetwork.split('-')[1])
+                        .find((n) => n.id === selectedNetwork?.split('-')[1])
                         ?.chainId.toString() || ''
                     }
                     onValueChange={handleNetworkValueChange}

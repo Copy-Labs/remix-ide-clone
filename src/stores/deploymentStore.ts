@@ -10,8 +10,12 @@ import { toast } from 'sonner';
 
 interface DeploymentStoreActions {
   // Connection actions
-  connectWallet: (providerType?: 'metamask' | 'walletconnect') => Promise<boolean>;
+  connectWallet: (providerType?: 'metamask' | 'walletconnect' | 'test', testAccountIndex?: number) => Promise<boolean>;
+  switchVMAccount: (accountIndex: number) => Promise<boolean>;
   disconnectWallet: () => void;
+  getTestAccounts: () => Array<{address: string, balance: string}>;
+  isUsingTestWallet: () => boolean;
+  getSelectedTestAccountIndex: () => number;
 
   // Network actions
   switchNetwork: (chainId: number) => Promise<boolean>;
@@ -43,6 +47,31 @@ interface DeploymentStoreActions {
   updateAccountInfo: () => Promise<void>;
   estimateGas: (tx: any) => Promise<number>;
 
+  // Gas estimation and monitoring
+  getGasPricing: () => Promise<{
+    baseFeePerGas: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+    gasPrice: string;
+  } | null>;
+  estimateDeploymentGas: (
+    contract: CompiledContract,
+    args: any[]
+  ) => Promise<{
+    gasLimit: string;
+    estimatedCost: string;
+    gasPricing: any;
+  } | null>;
+  estimateMethodGas: (
+    contractAddress: string,
+    method: string,
+    args: any[]
+  ) => Promise<{
+    gasLimit: string;
+    estimatedCost: string;
+    gasPricing: any;
+  } | null>;
+
   // Auto-verify settings
   setAutoVerify: (autoVerify: boolean) => void;
 
@@ -70,21 +99,64 @@ export const useDeploymentStore = create<DeploymentStore>()(
       immer((set, get) => ({
         ...initialState,
 
-        connectWallet: async (providerType = 'metamask') => {
+        connectWallet: async (providerType = 'metamask', testAccountIndex?: number) => {
           try {
-            const connected = await web3Service.connect(providerType);
+            const connected = await web3Service.connect(providerType, testAccountIndex);
 
             if (connected) {
               await get().syncWithWallet();
-              toast.success('Wallet connected successfully');
+              if (providerType === 'test') {
+                toast.success('Connected to test account');
+              } else {
+                toast.success('Wallet connected successfully');
+              }
               return true;
             } else {
-              toast.error('Failed to connect wallet');
+              if (providerType === 'test') {
+                toast.error('Failed to connect to test account');
+              } else {
+                toast.error('Failed to connect wallet');
+              }
               return false;
             }
           } catch (err) {
             error('DeploymentStore', 'Failed to connect wallet', err);
-            toast.error('Failed to connect wallet');
+            if (providerType === 'test') {
+              toast.error('Failed to connect to test account');
+            } else {
+              toast.error('Failed to connect wallet');
+            }
+            return false;
+          }
+        },
+
+        getTestAccounts: () => {
+          return web3Service.getTestAccounts();
+        },
+
+        isUsingTestWallet: () => {
+          return web3Service.isUsingTestWallet();
+        },
+
+        getSelectedTestAccountIndex: () => {
+          return web3Service.getSelectedTestAccountIndex();
+        },
+
+        switchVMAccount: async (accountIndex: number) => {
+          try {
+            const success = await web3Service.switchVMAccount(accountIndex);
+
+            if (success) {
+              await get().syncWithWallet();
+              toast.success(`Switched to VM account ${accountIndex + 1}`);
+              return true;
+            } else {
+              toast.error('Failed to switch VM account');
+              return false;
+            }
+          } catch (err) {
+            error('DeploymentStore', 'Failed to switch VM account', err);
+            toast.error('Failed to switch VM account');
             return false;
           }
         },
@@ -441,6 +513,40 @@ export const useDeploymentStore = create<DeploymentStore>()(
           });
 
           debug('DeploymentStore', 'Auto-verify setting updated', { autoVerify });
+        },
+
+        getGasPricing: async () => {
+          try {
+            return await web3Service.getGasPricing();
+          } catch (err) {
+            error('DeploymentStore', 'Failed to get gas pricing', err);
+            return null;
+          }
+        },
+
+        estimateDeploymentGas: async (contract: CompiledContract, args: any[]) => {
+          try {
+            return await web3Service.estimateDeploymentGas(contract.bytecode, contract.abi, args);
+          } catch (err) {
+            error('DeploymentStore', 'Failed to estimate deployment gas', err);
+            return null;
+          }
+        },
+
+        estimateMethodGas: async (contractAddress: string, method: string, args: any[]) => {
+          try {
+            // Get the deployed contract to access its ABI
+            const deployedContract = get().getDeployedContract(contractAddress);
+            if (!deployedContract) {
+              error('DeploymentStore', `Contract not found: ${contractAddress}`);
+              return null;
+            }
+
+            return await web3Service.estimateMethodGas(contractAddress, deployedContract.abi, method, args);
+          } catch (err) {
+            error('DeploymentStore', 'Failed to estimate method gas', err);
+            return null;
+          }
         },
 
         verifyContract: async (contractAddress: string, skipExistenceCheck = false) => {

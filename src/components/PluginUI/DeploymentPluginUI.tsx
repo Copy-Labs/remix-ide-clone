@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePluginStore } from '@/stores/pluginStore';
 import { useFileStore } from '@/stores/fileStore';
+import { useDeploymentStore } from '@/stores/deploymentStore';
 import { DeploymentPluginImplementation } from '@/plugins/deploymentPlugin';
 
 interface DeploymentPluginUIProps {
@@ -10,6 +11,13 @@ interface DeploymentPluginUIProps {
 const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => {
   const { getPlugin, updatePluginConfig } = usePluginStore();
   const { files } = useFileStore();
+  const {
+    connectWallet,
+    disconnectWallet,
+    getTestAccounts,
+    isUsingTestWallet,
+    getSelectedTestAccountIndex
+  } = useDeploymentStore();
 
   const [implementation, setImplementation] = useState<DeploymentPluginImplementation | null>(null);
   const [networks, setNetworks] = useState<any[]>([]);
@@ -23,6 +31,11 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+
+  // Test accounts state
+  const [testAccounts, setTestAccounts] = useState<Array<{address: string, balance: string}>>([]);
+  const [selectedTestAccount, setSelectedTestAccount] = useState<number>(-1);
+  const [isUsingTest, setIsUsingTest] = useState<boolean>(false);
 
   // Network form
   const [newNetworkName, setNewNetworkName] = useState('');
@@ -79,8 +92,77 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
       } else if (networks.length > 0) {
         setSelectedNetwork(networks[0].id);
       }
+
+      // Load test accounts
+      const accounts = getTestAccounts();
+      setTestAccounts(accounts);
+
+      // Check if using test account
+      const isUsingTest = isUsingTestWallet();
+      setIsUsingTest(isUsingTest);
+
+      // Get selected test account index
+      const selectedIndex = getSelectedTestAccountIndex();
+      setSelectedTestAccount(selectedIndex);
     }
-  }, [pluginId, getPlugin]);
+  }, [pluginId, getPlugin, getTestAccounts, isUsingTestWallet, getSelectedTestAccountIndex]);
+
+  // Handle test account selection
+  const handleConnectTestAccount = async (index: number) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const success = await connectWallet('test', index);
+
+      if (success) {
+        setIsUsingTest(true);
+        setSelectedTestAccount(index);
+      } else {
+        setError('Failed to connect to test account');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect to test account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle wallet connection
+  const handleConnectWallet = async (type: 'metamask' | 'walletconnect' | 'vm') => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const success = await connectWallet(type);
+
+      if (success) {
+        setIsUsingTest(type === 'vm'); // VM uses test accounts
+        if (type === 'vm') {
+          // If using VM, we need to refresh the test accounts
+          const accounts = getTestAccounts();
+          setTestAccounts(accounts);
+
+          // Get selected test account index
+          const selectedIndex = getSelectedTestAccountIndex();
+          setSelectedTestAccount(selectedIndex);
+        }
+      } else {
+        setError(`Failed to connect to ${type}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to connect to ${type}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle wallet disconnection
+  const handleDisconnectWallet = () => {
+    disconnectWallet();
+    setIsUsingTest(false);
+    setSelectedTestAccount(-1);
+  };
 
   // Get Solidity contracts from files
   const getSolidityContracts = () => {
@@ -449,6 +531,104 @@ const DeploymentPluginUI: React.FC<DeploymentPluginUIProps> = ({ pluginId }) => 
             >
               Add Network
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Accounts */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Wallet Connection</h3>
+        <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded">
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Connect Wallet</h4>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => handleConnectWallet('vm')}
+                className={`px-4 py-2 rounded ${
+                  !isUsingTest && !isLoading
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-300 text-gray-700'
+                }`}
+                disabled={isLoading || isUsingTest}
+              >
+                JavaScript VM
+              </button>
+              <button
+                onClick={() => handleConnectWallet('metamask')}
+                className={`px-4 py-2 rounded ${
+                  !isUsingTest && !isLoading
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-300 text-gray-700'
+                }`}
+                disabled={isLoading || isUsingTest}
+              >
+                Connect MetaMask
+              </button>
+              <button
+                onClick={() => handleConnectWallet('walletconnect')}
+                className={`px-4 py-2 rounded ${
+                  !isUsingTest && !isLoading
+                    ? 'bg-purple-500 text-white hover:bg-purple-600'
+                    : 'bg-gray-300 text-gray-700'
+                }`}
+                disabled={isLoading || isUsingTest}
+              >
+                Connect WalletConnect
+              </button>
+              <button
+                onClick={handleDisconnectWallet}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                disabled={isLoading}
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Test Accounts</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Use test accounts for development and testing without connecting a real wallet.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-600">
+                    <th className="border px-4 py-2 text-left">Address</th>
+                    <th className="border px-4 py-2 text-left">Balance</th>
+                    <th className="border px-4 py-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testAccounts.map((account, index) => (
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="border px-4 py-2 font-mono text-sm">
+                        {account.address}
+                        {selectedTestAccount === index && (
+                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                            Selected
+                          </span>
+                        )}
+                      </td>
+                      <td className="border px-4 py-2">{account.balance} ETH</td>
+                      <td className="border px-4 py-2">
+                        <button
+                          onClick={() => handleConnectTestAccount(index)}
+                          className={`px-2 py-1 text-xs rounded ${
+                            selectedTestAccount === index
+                              ? 'bg-green-500 text-white'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                          disabled={isLoading || selectedTestAccount === index}
+                        >
+                          {selectedTestAccount === index ? 'Selected' : 'Use Account'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
