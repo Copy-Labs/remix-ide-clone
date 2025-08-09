@@ -19,28 +19,202 @@ export class VerificationService {
 
   // Block explorer API endpoints for verification
   private verificationEndpoints: Record<string, string> = {
+    // Ethereum networks
     etherscan: 'https://api.etherscan.io/api',
-    'goerli.etherscan': 'https://api-goerli.etherscan.io/api',
-    'sepolia.etherscan': 'https://api.etherscan.io/api',
+    'sepolia.etherscan': 'https://api-sepolia.etherscan.io/api',
+    'holesky.etherscan': 'https://api-holesky.etherscan.io/api',
+
+    // Polygon networks
     polygonscan: 'https://api.polygonscan.com/api',
-    'mumbai.polygonscan': 'https://api-testnet.polygonscan.com/api',
-    bscscan: 'https://api.bscscan.com/api',
+    'amoy.polygonscan': 'https://api-amoy.polygonscan.com/api',
+
+    // Arbitrum networks
     arbiscan: 'https://api.arbiscan.io/api',
+    'nova.arbiscan': 'https://api-nova.arbiscan.io/api',
+    'sepolia.arbiscan': 'https://api-sepolia.arbiscan.io/api',
+
+    // Optimism networks
     'optimistic.etherscan': 'https://api-optimistic.etherscan.io/api',
+    'sepolia.optimistic.etherscan': 'https://api-sepolia-optimistic.etherscan.io/api',
+
+    // Base networks
+    basescan: 'https://api.basescan.org/api',
+    'sepolia.basescan': 'https://api-sepolia.basescan.org/api',
+
+    // BNB Smart Chain
+    bscscan: 'https://api.bscscan.com/api',
+    'testnet.bscscan': 'https://api-testnet.bscscan.com/api',
+
+    // Avalanche
+    snowtrace: 'https://api.snowtrace.io/api',
+    'testnet.snowtrace': 'https://api-testnet.snowtrace.io/api',
+
+    // Other major networks
+    blastscan: 'https://api.blastscan.io/api',
+    'sepolia.blastscan': 'https://api-sepolia.blastscan.io/api',
+    lineascan: 'https://api.lineascan.build/api',
+    'sepolia.lineascan': 'https://api-sepolia.lineascan.build/api',
+    mantlescan: 'https://api.mantlescan.xyz/api',
+    'sepolia.mantlescan': 'https://api-sepolia.mantlescan.xyz/api',
+    scrollscan: 'https://api.scrollscan.com/api',
+    'sepolia.scrollscan': 'https://api-sepolia.scrollscan.com/api',
+    zksync: 'https://api-era.zksync.network/api',
+    'sepolia.zksync': 'https://api-sepolia-era.zksync.network/api',
+    gnosisscan: 'https://api.gnosisscan.io/api',
+    celoscan: 'https://api.celoscan.io/api',
+    'alfajores.celoscan': 'https://api-alfajores.celoscan.io/api',
+    cronoscan: 'https://api.cronoscan.com/api',
+    fraxscan: 'https://api.fraxscan.com/api',
+    'testnet.fraxscan': 'https://api-holesky.fraxscan.com/api',
+    moonbeamscan: 'https://api-moonbeam.moonscan.io/api',
+    moonriverscan: 'https://api-moonriver.moonscan.io/api',
+    'testnet.moonbeamscan': 'https://api-moonbase.moonscan.io/api',
+    opbnbscan: 'https://api-opbnb.bscscan.com/api',
+    'testnet.opbnbscan': 'https://api-opbnb-testnet.bscscan.com/api',
+
+    // Development
     localhost: 'http://localhost:8545/api',
   };
 
   // Map chain IDs to explorer types
   private chainToExplorer: Record<number, string> = {
-    1: 'etherscan',
-    5: 'goerli.etherscan',
-    11155111: 'sepolia.etherscan',
-    137: 'polygonscan',
-    80001: 'mumbai.polygonscan',
-    56: 'bscscan',
-    42161: 'arbiscan',
-    10: 'optimistic.etherscan',
-    1337: 'localhost',
+    // Ethereum networks
+    1: 'etherscan',                    // Ethereum Mainnet
+    11155111: 'sepolia.etherscan',     // Sepolia Testnet
+    17000: 'holesky.etherscan',        // Holesky Testnet
+    560048: 'etherscan',               // Hoodi Testnet (use etherscan API)
+
+    // Abstract networks
+    2741: 'etherscan',                 // Abstract Mainnet (use etherscan API)
+    11124: 'etherscan',                // Abstract Sepolia Testnet (use etherscan API)
+
+    // ApeChain networks
+    33111: 'etherscan',                // ApeChain Curtis Testnet (use etherscan API)
+    33139: 'etherscan',                // ApeChain Mainnet (use etherscan API)
+
+    // Arbitrum networks
+    42170: 'nova.arbiscan',            // Arbitrum Nova Mainnet
+    42161: 'arbiscan',                 // Arbitrum One Mainnet
+    421614: 'sepolia.arbiscan',        // Arbitrum Sepolia Testnet
+
+    // Avalanche networks
+    43114: 'snowtrace',                // Avalanche C-Chain
+    43113: 'testnet.snowtrace',        // Avalanche Fuji Testnet
+
+    // Base networks
+    8453: 'basescan',                  // Base Mainnet
+    84532: 'sepolia.basescan',         // Base Sepolia Testnet
+
+    // Berachain networks
+    80094: 'etherscan',                // Berachain Mainnet (use etherscan API)
+    80069: 'etherscan',                // Berachain Bepolia Testnet (use etherscan API)
+
+    // BitTorrent Chain networks
+    199: 'etherscan',                  // BitTorrent Chain Mainnet (use etherscan API)
+    1028: 'etherscan',                 // BitTorrent Chain Testnet (use etherscan API)
+
+    // Blast networks
+    81457: 'blastscan',                // Blast Mainnet
+    168587773: 'sepolia.blastscan',    // Blast Sepolia Testnet
+
+    // BNB Smart Chain networks
+    56: 'bscscan',                     // BNB Smart Chain Mainnet
+    97: 'testnet.bscscan',             // BNB Smart Chain Testnet
+
+    // Celo networks
+    44787: 'alfajores.celoscan',       // Celo Alfajores Testnet
+    42220: 'celoscan',                 // Celo Mainnet
+
+    // Cronos networks
+    25: 'cronoscan',                   // Cronos Mainnet
+
+    // Fraxtal networks
+    252: 'fraxscan',                   // Fraxtal Mainnet
+    2522: 'testnet.fraxscan',          // Fraxtal Testnet
+
+    // Gnosis networks
+    100: 'gnosisscan',                 // Gnosis
+
+    // HyperEVM networks
+    999: 'etherscan',                  // HyperEVM (use etherscan API)
+
+    // Linea networks
+    59144: 'lineascan',                // Linea Mainnet
+    59141: 'sepolia.lineascan',        // Linea Sepolia Testnet
+
+    // Mantle networks
+    5000: 'mantlescan',                // Mantle Mainnet
+    5003: 'sepolia.mantlescan',        // Mantle Sepolia Testnet
+
+    // Memecore networks
+    4352: 'etherscan',                 // Memecore Mainnet (use etherscan API)
+    43521: 'etherscan',                // Memecore Testnet (use etherscan API)
+
+    // Moonbeam networks
+    1287: 'testnet.moonbeamscan',      // Moonbase Alpha Testnet
+    10143: 'etherscan',                // Monad Testnet (use etherscan API)
+    1284: 'moonbeamscan',              // Moonbeam Mainnet
+    1285: 'moonriverscan',             // Moonriver Mainnet
+
+    // Optimism networks
+    10: 'optimistic.etherscan',        // OP Mainnet
+    11155420: 'sepolia.optimistic.etherscan', // OP Sepolia Testnet
+
+    // Polygon networks
+    80002: 'amoy.polygonscan',         // Polygon Amoy Testnet
+    137: 'polygonscan',                // Polygon Mainnet
+    747474: 'etherscan',               // Katana Mainnet (use etherscan API)
+
+    // Sei networks
+    1329: 'etherscan',                 // Sei Mainnet (use etherscan API)
+    1328: 'etherscan',                 // Sei Testnet (use etherscan API)
+
+    // Scroll networks
+    534352: 'scrollscan',              // Scroll Mainnet
+    534351: 'sepolia.scrollscan',      // Scroll Sepolia Testnet
+
+    // Sonic networks
+    57054: 'etherscan',                // Sonic Blaze Testnet (use etherscan API)
+    146: 'etherscan',                  // Sonic Mainnet (use etherscan API)
+
+    // Sophon networks
+    50104: 'etherscan',                // Sophon Mainnet (use etherscan API)
+    531050104: 'etherscan',            // Sophon Sepolia Testnet (use etherscan API)
+
+    // Swellchain networks
+    1923: 'etherscan',                 // Swellchain Mainnet (use etherscan API)
+    1924: 'etherscan',                 // Swellchain Testnet (use etherscan API)
+
+    // Taiko networks
+    167009: 'etherscan',               // Taiko Hekla L2 Testnet (use etherscan API)
+    167000: 'etherscan',               // Taiko Mainnet (use etherscan API)
+
+    // Unichain networks
+    130: 'etherscan',                  // Unichain Mainnet (use etherscan API)
+    1301: 'etherscan',                 // Unichain Sepolia Testnet (use etherscan API)
+
+    // World networks
+    480: 'etherscan',                  // World Mainnet (use etherscan API)
+    4801: 'etherscan',                 // World Sepolia Testnet (use etherscan API)
+
+    // Xai networks
+    660279: 'etherscan',               // Xai Mainnet (use etherscan API)
+    37714555429: 'etherscan',          // Xai Sepolia Testnet (use etherscan API)
+
+    // XDC networks
+    51: 'etherscan',                   // XDC Apothem Testnet (use etherscan API)
+    50: 'etherscan',                   // XDC Mainnet (use etherscan API)
+
+    // zkSync networks
+    324: 'zksync',                     // zkSync Mainnet
+    300: 'sepolia.zksync',             // zkSync Sepolia Testnet
+
+    // opBNB networks
+    204: 'opbnbscan',                  // opBNB Mainnet
+    5611: 'testnet.opbnbscan',         // opBNB Testnet
+
+    // Development
+    1337: 'localhost',                 // Localhost
   };
 
   private constructor() {
@@ -98,9 +272,14 @@ export class VerificationService {
    * @param apiKey The API key
    */
   public setApiKey(explorer: string, apiKey: string): void {
-    this.apiKeys.set(explorer, apiKey);
+    if (apiKey && apiKey.trim() !== '') {
+      this.apiKeys.set(explorer, apiKey);
+      debug('VerificationService', `Set API key for ${explorer}`);
+    } else {
+      this.apiKeys.delete(explorer);
+      debug('VerificationService', `Removed API key for ${explorer}`);
+    }
     this.saveApiKeys();
-    debug('VerificationService', `Set API key for ${explorer}`);
   }
 
   /**
@@ -109,15 +288,77 @@ export class VerificationService {
    * @returns The API key or null if not found
    */
   public getApiKey(explorer: string): string | null {
-    return this.apiKeys.get(explorer) || null;
+    // First check if user has provided their own API key
+    const userApiKey = this.apiKeys.get(explorer);
+    if (userApiKey) {
+      return userApiKey;
+    }
+
+    // Use the default Etherscan API key as fallback for compatible explorers
+    if (this.isEtherscanCompatibleExplorer(explorer)) {
+      const defaultEtherscanKey = import.meta.env.VITE_PUBLIC_ETHERSCAN_API_KEY;
+      if (defaultEtherscanKey) {
+        return defaultEtherscanKey;
+      }
+    }
+
+    return null;
   }
 
   /**
    * Get all API keys
-   * @returns A map of explorer names to API keys
+   * @returns A map of explorer names to API keys (only non-empty custom keys)
    */
   public getAllApiKeys(): Map<string, string> {
-    return new Map(this.apiKeys);
+    const filteredKeys = new Map<string, string>();
+    for (const [explorer, key] of this.apiKeys.entries()) {
+      if (key && key.trim() !== '') {
+        filteredKeys.set(explorer, key);
+      }
+    }
+    return filteredKeys;
+  }
+
+  /**
+   * Check if the explorer is an Etherscan-related explorer
+   * @param explorer The block explorer type
+   * @returns Whether the explorer is Etherscan-related
+   */
+  private isEtherscanExplorer(explorer: string): boolean {
+    return explorer === 'etherscan' || explorer.endsWith('.etherscan');
+  }
+
+  /**
+   * Check if the explorer is compatible with Etherscan API keys
+   * @param explorer The block explorer type
+   * @returns Whether the explorer can use Etherscan API keys as fallback
+   */
+  private isEtherscanCompatibleExplorer(explorer: string): boolean {
+    // Etherscan-related explorers
+    if (this.isEtherscanExplorer(explorer)) {
+      return true;
+    }
+
+    // Other explorers that can use Etherscan API keys as fallback
+    const compatibleExplorers = [
+      'scrollscan',
+      'sepolia.scrollscan',
+      'arbiscan',
+      'nova.arbiscan',
+      'sepolia.arbiscan',
+      'optimistic.etherscan',
+      'sepolia.optimistic.etherscan',
+      'basescan',
+      'sepolia.basescan',
+      'blastscan',
+      'sepolia.blastscan',
+      'lineascan',
+      'sepolia.lineascan',
+      'mantlescan',
+      'sepolia.mantlescan'
+    ];
+
+    return compatibleExplorers.includes(explorer);
   }
 
   /**
@@ -177,7 +418,8 @@ export class VerificationService {
     const explorerType = this.getExplorerType(network);
     if (!explorerType) return false;
 
-    return this.apiKeys.has(explorerType);
+    // Use the getApiKey method which includes fallback logic for default keys
+    return this.getApiKey(explorerType) !== null;
   }
 
   /**
@@ -204,12 +446,15 @@ export class VerificationService {
 
       // Check if we have an API key
       const explorerType = this.getExplorerType(network);
-      if (!explorerType || !this.apiKeys.has(explorerType)) {
-        return { success: false, message: `API key not found for ${network.name}` };
+      if (!explorerType) {
+        return { success: false, message: `Explorer type not found for ${network.name}` };
       }
 
       // Get API key and endpoint
-      const apiKey = this.apiKeys.get(explorerType)!;
+      const apiKey = this.getApiKey(explorerType);
+      if (!apiKey) {
+        return { success: false, message: `API key not found for ${network.name}` };
+      }
       const endpoint = this.getVerificationEndpoint(network);
       if (!endpoint) {
         return { success: false, message: `Verification endpoint not found for ${network.name}` };
@@ -305,16 +550,20 @@ export class VerificationService {
         ),
       };
 
-      console.log('VerificationService::', verificationData);
+      console.log('VerificationService::', verificationData, endpoint, network.chainId);
 
       // Submit verification request
-      const response = await this.submitVerification(endpoint, verificationData);
+      // const response = await this.submitVerification(endpoint, verificationData);
+      // Don't use the endpoint directly, use this api URL for the multichain etherscan verification
+      const multichainEndpoint = 'https://api.etherscan.io/api';
+      const response = await this.submitVerification(multichainEndpoint, verificationData);
       console.log('VerificationService::Submit Verification Response', response);
 
       if (response.status === '1') {
         // Check verification status
         const guid = response.result;
-        const verificationResult = await this.checkVerificationStatus(endpoint, guid, apiKey);
+        // const verificationResult = await this.checkVerificationStatus(endpoint, guid, apiKey);
+        const verificationResult = await this.checkVerificationStatus(multichainEndpoint, guid, apiKey);
 
         info('Verification Service', '::network::', network);
         if (verificationResult.success) {
