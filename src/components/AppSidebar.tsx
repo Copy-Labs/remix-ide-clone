@@ -44,6 +44,7 @@ import UnifiedGitPanel from '@/components/Git/UnifiedGitPanel.tsx';
 import TestingPluginUI from '@/components/PluginUI/TestingPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
 import ImprovedCustomThemePluginUI from '@/components/PluginUI/ImprovedCustomThemePluginUI.tsx';
+import posthog from 'posthog-js';
 
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
@@ -249,6 +250,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       onClick={() => {
                         setActiveItem(item);
                         setOpen(true);
+                        posthog.capture(item.key, { property: item.title });
                       }}
                       isActive={activeItem?.title === item.title}
                       className="px-2.5 md:px-2"
