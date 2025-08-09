@@ -83,6 +83,15 @@ const DeploymentPanel: React.FC = () => {
     ? Array.from(deployedContracts.values()).find((c) => c.address === selectedDeployedContract)
     : null;
 
+  // Check if the selected deployed contract has a corresponding compiled contract
+  const hasCompiledContract = selectedDeployedContractData
+    ? Boolean(compilationResult?.success &&
+      compilationResult.contracts &&
+      Object.keys(compilationResult.contracts).some(contractName =>
+        contractName === selectedDeployedContractData.name
+      ))
+    : false;
+
   // Get constructor inputs from ABI
   const getConstructorInputs = (contract: CompiledContract | null) => {
     if (!contract) return [];
@@ -656,244 +665,259 @@ const DeploymentPanel: React.FC = () => {
             </div>
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
-
-      <div className="p-3 space-y-6">
 
         {/* Contract Deployment */}
-        {account && (
-          <div className="space-y-4">
-            <Separator />
-            <h3 className="text-sm font-medium text-foreground">Contract Deployment</h3>
-
-            {!compilationResult?.success ? (
-              <div className="text-sm text-muted-foreground">
-                Compile a contract first to deploy it.
-              </div>
-            ) : !compiledContract ? (
-              <div className="text-sm text-muted-foreground">Select a contract to deploy.</div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-3 bg-secondary rounded-md">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {compiledContract.name}
+        {
+          account && (
+            <AccordionItem value="item-3">
+              <AccordionTrigger>Contract Deployment</AccordionTrigger>
+              <AccordionContent className="flex flex-col gap-4 text-pretty">
+                {!compilationResult?.success ? (
+                  <div className="text-sm text-muted-foreground">
+                    Compile a contract first to deploy it.
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Bytecode Size: {compiledContract.bytecode.length / 2} bytes
-                  </div>
-                </div>
-
-                {/* Constructor Arguments */}
-                {getConstructorInputs(compiledContract).length > 0 && (
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                      Constructor Arguments
-                    </label>
-                    {getConstructorInputs(compiledContract).map((input, index) => (
-                      <div key={index} className="space-y-1">
-                        <label className="block text-xs text-gray-600 dark:text-gray-400">
-                          {input.name} ({input.type})
-                        </label>
-                        <input
-                          type="text"
-                          value={constructorArgs[index] || ''}
-                          onChange={(e) => handleConstructorArgChange(index, e.target.value)}
-                          placeholder={`Enter ${input.type} value`}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                ) : !compiledContract ? (
+                  <div className="text-sm text-muted-foreground">Select a contract to deploy.</div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-secondary rounded-md">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {compiledContract.name}
                       </div>
-                    ))}
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Bytecode Size: {compiledContract.bytecode.length / 2} bytes
+                      </div>
+                    </div>
+
+                    {/* Constructor Arguments */}
+                    {getConstructorInputs(compiledContract).length > 0 && (
+                      <div className="space-y-2">
+                        <label className="block text-xs font-medium text-muted-foreground">
+                          Constructor Arguments
+                        </label>
+                        {getConstructorInputs(compiledContract).map((input, index) => (
+                          <div key={index} className="space-y-1">
+                            <label className="block text-xs text-muted-foreground">
+                              {input.name} ({input.type})
+                            </label>
+                            <Input
+                              type="text"
+                              value={constructorArgs[index] || ''}
+                              onChange={(e) => handleConstructorArgChange(index, e.target.value)}
+                              placeholder={`Enter ${input.type} value`}
+                              // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleDeploy}
+                      disabled={isDeploying}
+                      className={cn(
+                        'w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                        isDeploying
+                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
+                      )}
+                    >
+                      {isDeploying ? (
+                        <div className="flex items-center justify-center">
+                          {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>*/}
+                          <LucideLoader2 size={16} className="animate-spin" />
+                          Deploying...
+                        </div>
+                      ) : (
+                        'Deploy Contract'
+                      )}
+                    </button>
                   </div>
                 )}
-
-                <button
-                  onClick={handleDeploy}
-                  disabled={isDeploying}
-                  className={cn(
-                    'w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
-                    isDeploying
-                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
-                  )}
-                >
-                  {isDeploying ? (
-                    <div className="flex items-center justify-center">
-                      {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>*/}
-                      <LucideLoader2 size={16} className="animate-spin" />
-                      Deploying...
-                    </div>
-                  ) : (
-                    'Deploy Contract'
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              </AccordionContent>
+            </AccordionItem>
+          )
+        }
 
         {/* Deployed Contracts */}
         {account && deployedContractsForNetwork.length > 0 && (
-          <div className="space-y-4">
-            <Separator />
-            <h3 className="text-sm font-medium text-foreground">Deployed Contracts</h3>
+          <AccordionItem value="item-4">
+            <AccordionTrigger>Deployed Contracts</AccordionTrigger>
+            <AccordionContent className="flex flex-col gap-4 text-pretty">
+              <div className="space-y-3">
+                {/* Contract Selection */}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">
+                    Select Contract
+                  </label>
+                  <select
+                    value={selectedDeployedContract || ''}
+                    onChange={(e) => setSelectedDeployedContract(e.target.value)}
+                    className="w-full px-2 py-2 text-sm outline-none rounded-md bg-secondary text-foreground"
+                  >
+                    <option value="">Select a contract</option>
+                    {deployedContractsForNetwork.map((contract) => (
+                      <option key={contract.address} value={contract.address}>
+                        {contract.name} ({formatAddress(contract.address)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="space-y-3">
-              {/* Contract Selection */}
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Select Contract
-                </label>
-                <select
-                  value={selectedDeployedContract || ''}
-                  onChange={(e) => setSelectedDeployedContract(e.target.value)}
-                  className="w-full px-2 py-2 text-sm outline-none rounded-md bg-secondary text-foreground"
-                >
-                  <option value="">Select a contract</option>
-                  {deployedContractsForNetwork.map((contract) => (
-                    <option key={contract.address} value={contract.address}>
-                      {contract.name} ({formatAddress(contract.address)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Contract Interaction */}
-              {selectedDeployedContractData && (
-                <div className="space-y-3">
-                  <div className="p-3 bg-secondary rounded-md">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">
-                          {selectedDeployedContractData.name}
+                {/* Contract Interaction */}
+                {selectedDeployedContractData && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-secondary rounded-md">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-sm font-medium text-foreground">
+                            {selectedDeployedContractData.name}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground break-all">
+                            Address: {selectedDeployedContractData.address}
+                          </div>
+                          <div className="mt-1 text-xs text-green-600">
+                            Deployed:{' '}
+                            {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground break-all">
-                          Address: {selectedDeployedContractData.address}
-                        </div>
-                        <div className="mt-1 text-xs text-green-600">
-                          Deployed:{' '}
-                          {new Date(selectedDeployedContractData.deployedAt).toLocaleString()}
-                        </div>
+                        {selectedDeployedContractData.verified !== undefined && (
+                          <div
+                            className={`px-2 py-1 text-xs rounded ${
+                              selectedDeployedContractData.verified
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                            }`}
+                          >
+                            {selectedDeployedContractData.verified ? 'Verified' : 'Not Verified'}
+                          </div>
+                        )}
                       </div>
-                      {selectedDeployedContractData.verified !== undefined && (
-                        <div
-                          className={`px-2 py-1 text-xs rounded ${
-                            selectedDeployedContractData.verified
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                          }`}
-                        >
-                          {selectedDeployedContractData.verified ? 'Verified' : 'Not Verified'}
+                      {selectedDeployedContractData.verified &&
+                        selectedDeployedContractData.verificationUrl && (
+                          <div className="mt-2">
+                            <a
+                              href={selectedDeployedContractData.verificationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline"
+                            >
+                              View on Block Explorer
+                            </a>
+                          </div>
+                        )}
+                      {selectedDeployedContractData.verified === false && (
+                        <div className="mt-2 space-y-2">
+                          {!hasCompiledContract && (
+                            <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                              <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                  <svg className="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <div className="ml-2">
+                                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                                    Please compile the <strong>{selectedDeployedContractData.name}</strong> contract before verifying it.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => handleVerifyContract(selectedDeployedContractData.address)}
+                            size="sm"
+                            className="text-xs"
+                            disabled={isVerifying || !hasCompiledContract}
+                          >
+                            {isVerifying ? (
+                              <div className="flex items-center">
+                                <LucideLoader2 size={12} className="animate-spin mr-1" />
+                                Verifying...
+                              </div>
+                            ) : (
+                              'Verify Contract'
+                            )}
+                          </Button>
                         </div>
                       )}
                     </div>
-                    {selectedDeployedContractData.verified &&
-                      selectedDeployedContractData.verificationUrl && (
-                        <div className="mt-2">
-                          <a
-                            href={selectedDeployedContractData.verificationUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline"
-                          >
-                            View on Block Explorer
-                          </a>
+
+                    {/* Method Selection */}
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Select Method
+                      </label>
+                      <select
+                        value={methodName}
+                        onChange={(e) => setMethodName(e.target.value)}
+                        className={selectBaseClass}
+                      >
+                        <option value="">Select a method</option>
+                        {getAvailableMethods().map((method) => (
+                          <option key={method} value={method}>
+                            {method} {isReadMethod(method) ? '(read)' : '(write)'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Method Arguments */}
+                    {methodName && getMethodInputs(methodName).length > 0 && (
+                      <div className="space-y-2">
+                        <label className="block text-xs font-medium text-foreground">
+                          Method Arguments
+                        </label>
+                        {getMethodInputs(methodName).map((input, index) => (
+                          <div key={index} className="space-y-1">
+                            <label className="block text-xs text-muted-foreground">
+                              {input.name} ({input.type})
+                            </label>
+                            <Input
+                              type="text"
+                              value={methodArgs[index] || ''}
+                              onChange={(e) => handleMethodArgChange(index, e.target.value)}
+                              placeholder={`Enter ${input.type} value`}
+                              className={'text-xs'}
+                              // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Call Method Button */}
+                    {methodName && (
+                      <button
+                        onClick={handleCallMethod}
+                        className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                          isReadMethod(methodName)
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                            : 'bg-yellow-600 hover:bg-yellow-700 text-white focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
+                        }`}
+                      >
+                        {isReadMethod(methodName) ? 'Call' : 'Send'} {methodName}
+                      </button>
+                    )}
+
+                    {/* Method Result */}
+                    {methodResult !== null && (
+                      <div className="p-3 bg-secondary rounded-md">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Result:</div>
+                        <div className="text-sm text-foreground break-all">
+                          {typeof methodResult === 'object'
+                            ? JSON.stringify(methodResult, null, 2)
+                            : String(methodResult)}
                         </div>
-                      )}
-                    {selectedDeployedContractData.verified === false && (
-                      <div className="mt-2">
-                        <Button
-                          onClick={() => handleVerifyContract(selectedDeployedContractData.address)}
-                          size="sm"
-                          className="text-xs"
-                          disabled={isVerifying}
-                        >
-                          {isVerifying ? (
-                            <div className="flex items-center">
-                              <LucideLoader2 size={12} className="animate-spin mr-1" />
-                              Verifying...
-                            </div>
-                          ) : (
-                            'Verify Contract'
-                          )}
-                        </Button>
                       </div>
                     )}
                   </div>
-
-                  {/* Method Selection */}
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      Select Method
-                    </label>
-                    <select
-                      value={methodName}
-                      onChange={(e) => setMethodName(e.target.value)}
-                      className={selectBaseClass}
-                    >
-                      <option value="">Select a method</option>
-                      {getAvailableMethods().map((method) => (
-                        <option key={method} value={method}>
-                          {method} {isReadMethod(method) ? '(read)' : '(write)'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Method Arguments */}
-                  {methodName && getMethodInputs(methodName).length > 0 && (
-                    <div className="space-y-2">
-                      <label className="block text-xs font-medium text-foreground">
-                        Method Arguments
-                      </label>
-                      {getMethodInputs(methodName).map((input, index) => (
-                        <div key={index} className="space-y-1">
-                          <label className="block text-xs text-muted-foreground">
-                            {input.name} ({input.type})
-                          </label>
-                          <Input
-                            type="text"
-                            value={methodArgs[index] || ''}
-                            onChange={(e) => handleMethodArgChange(index, e.target.value)}
-                            placeholder={`Enter ${input.type} value`}
-                            className={'text-xs'}
-                            // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Call Method Button */}
-                  {methodName && (
-                    <button
-                      onClick={handleCallMethod}
-                      className={`w-full px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isReadMethod(methodName)
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                          : 'bg-yellow-600 hover:bg-yellow-700 text-white focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
-                      }`}
-                    >
-                      {isReadMethod(methodName) ? 'Call' : 'Send'} {methodName}
-                    </button>
-                  )}
-
-                  {/* Method Result */}
-                  {methodResult !== null && (
-                    <div className="p-3 bg-secondary rounded-md">
-                      <div className="text-xs font-medium text-muted-foreground mb-1">Result:</div>
-                      <div className="text-sm text-foreground break-all">
-                        {typeof methodResult === 'object'
-                          ? JSON.stringify(methodResult, null, 2)
-                          : String(methodResult)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
         )}
-      </div>
+      </Accordion>
     </div>
   );
 };
