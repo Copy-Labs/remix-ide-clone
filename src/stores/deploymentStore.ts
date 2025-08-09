@@ -560,10 +560,18 @@ export const useDeploymentStore = create<DeploymentStore>()(
 
             // Update the toast based on the result
             if (result.success) {
-              toast.success(
-                `Contract ${deployedContract.name} verified successfully! The code is now publicly viewable on the block explorer.`,
-                { id: verificationToastId },
-              );
+              // Check if the contract was already verified
+              if (result.message && result.message.toLowerCase().includes('already verified')) {
+                toast.success(
+                  `Contract ${deployedContract.name} is already verified! The code is publicly viewable on the block explorer.`,
+                  { id: verificationToastId },
+                );
+              } else {
+                toast.success(
+                  `Contract ${deployedContract.name} verified successfully! The code is now publicly viewable on the block explorer.`,
+                  { id: verificationToastId },
+                );
+              }
             } else {
               toast.error(`Verification failed: ${result.message}.`, { id: verificationToastId });
             }

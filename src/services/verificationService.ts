@@ -580,6 +580,17 @@ export class VerificationService {
           };
         }
       } else {
+        // Check if the response indicates the contract is already verified
+        const responseMessage = response.result || '';
+        if (responseMessage.toLowerCase().includes('already verified')) {
+          info('VerificationService', 'Contract is already verified in submission response, treating as success');
+          const verificationUrl = `${network.blockExplorer}/address/${contract.address}#code`;
+          return {
+            success: true,
+            message: 'Contract is already verified',
+            url: verificationUrl,
+          };
+        }
         return {
           success: false,
           message: response.result || 'Failed to submit verification request',
@@ -660,6 +671,12 @@ export class VerificationService {
       if (result.status === '1') {
         return { success: true };
       } else {
+        // Check if the result indicates the contract is already verified
+        const resultMessage = result.result || '';
+        if (resultMessage.toLowerCase().includes('already verified')) {
+          info('VerificationService', 'Contract is already verified, treating as success');
+          return { success: true, message: 'Contract is already verified' };
+        }
         return { success: false, message: result.result };
       }
     } catch (err) {
