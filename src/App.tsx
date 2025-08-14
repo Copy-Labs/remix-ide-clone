@@ -37,6 +37,8 @@ import { AppSidebar } from './components/AppSidebar';
 import { ThemeProvider } from '@/components/ThemeProvider.tsx';
 import { LucidePlug, Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner.tsx';
+import StatusBar from './components/StatusBar';
+import { cn } from '@/lib/utils.ts';
 
 // Define main page views
 type MainView = 'editor' | 'plugins';
@@ -245,7 +247,7 @@ describe("SimpleStorage Contract", function() {
         <Toaster />
 
         <SidebarProvider
-          className={'h-screen overflow-hidden'}
+          className={cn('', 'h-screen overflow-hidden')}
           style={
             {
               '--sidebar-width': '400px',
@@ -253,7 +255,7 @@ describe("SimpleStorage Contract", function() {
           }
         >
           <AppSidebar />
-          <SidebarInset className={'h-screen overflow-y-auto'}>
+          <SidebarInset className={'h-[calc(100dvh-40px)]! overflow-y-auto'}>
             <div className="bg-card sticky top-0 flex shrink-0 items-center gap-2 border-b border-border px-4 py-2 overflow-x-auto z-10 max-w-[calc(100%-var(--sidebar-width-icon)+var(--sidebar-width-icon))]!">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
@@ -338,7 +340,7 @@ describe("SimpleStorage Contract", function() {
                       </div>*/}
 
                       {/* Monaco Editor */}
-                      <div className="w-full h-[calc(100%-100px)]">
+                      <div className="w-full h-[calc(100%-140px)]">
                         <ErrorBoundary>
                           <MonacoEditor filePath={activeFile} height="100%" />
                         </ErrorBoundary>
@@ -654,6 +656,9 @@ describe("SimpleStorage Contract", function() {
             </div>
           </SidebarInset>
         </SidebarProvider>
+
+        {/* Status Bar */}
+        <StatusBar />
 
         {/*<div*/}
         {/*  className={`hidden h-screen overflow-hidden dark:bg-gray-900 ${theme === 'dark' ? 'dark' : ''}`}*/}
