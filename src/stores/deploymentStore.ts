@@ -60,6 +60,7 @@ const initialState: DeploymentState = {
   account: null,
   balance: null,
   gasPrice: null,
+  ethPrice: null,
   gasLimit: '3000000',
   autoVerify: true,
 };
@@ -96,6 +97,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
             state.account = null;
             state.balance = null;
             state.gasPrice = null;
+            state.ethPrice = null;
           });
 
           toast.info('Wallet disconnected');
@@ -390,10 +392,21 @@ export const useDeploymentStore = create<DeploymentStore>()(
             // Get gas price
             const gasPrice = await web3Service.getGasPrice();
 
+            // Get ETH price in USD
+            let ethPrice = null;
+            try {
+              const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+              const data = await response.json();
+              ethPrice = data.ethereum?.usd || null;
+            } catch (ethPriceErr) {
+              debug('DeploymentStore', 'Failed to fetch ETH price', ethPriceErr);
+            }
+
             set((state) => {
               state.account = account;
               state.balance = balance;
               state.gasPrice = gasPrice;
+              state.ethPrice = ethPrice;
             });
           } catch (err) {
             error('DeploymentStore', 'Failed to update account info', err);
@@ -685,7 +698,8 @@ if (typeof window !== 'undefined') {
       ...state,
       account: null,
       balance: null,
-      gasPrice: null
+      gasPrice: null,
+      ethPrice: null,
     }));
     toast.info('Wallet disconnected');
   });
