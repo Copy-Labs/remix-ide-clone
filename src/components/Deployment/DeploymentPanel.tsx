@@ -31,6 +31,7 @@ const DeploymentPanel: React.FC = () => {
     account,
     balance,
     gasPrice,
+    ethPrice,
     gasLimit,
     isDeploying,
     selectedNetwork,
@@ -428,8 +429,7 @@ const DeploymentPanel: React.FC = () => {
                 <div className="p-3 bg-secondary rounded-lg space-y-3">
                   <div className="text-sm font-normal text-foreground break-all">{account}</div>
                   <div className="font-medium text-xs text-muted-foreground">
-                    Balance: {formatBalance(balance)}{' '}
-                    {selectedNetworkData?.symbol || 'ETH'}
+                    Balance: {formatBalance(balance)} {selectedNetworkData?.symbol || 'ETH'}
                   </div>
                 </div>
 
@@ -476,7 +476,12 @@ const DeploymentPanel: React.FC = () => {
                   />
                   {gasPrice && (
                     <div className="mt-1 text-xs text-muted-foreground">
-                      Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei
+                      <div>Current Gas Price: {parseFloat(gasPrice).toFixed(6)} Gwei</div>
+                      {ethPrice && (
+                        <div className="text-muted-foreground/80">
+                          ≈ ${(parseFloat(gasPrice) * ethPrice * 1e-9).toFixed(18)} USD
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -541,7 +546,8 @@ const DeploymentPanel: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
-                  You are using Sol-IDE's default API Key. Add an API key below to use your own API Key.
+                  You are using Sol-IDE's default API Key. Add an API key below to use your own API
+                  Key.
                 </div>
               )}
 
@@ -573,8 +579,12 @@ const DeploymentPanel: React.FC = () => {
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel>Layer 2 - Optimism</SelectLabel>
-                        <SelectItem value="optimistic.etherscan">Optimistic Etherscan (Mainnet)</SelectItem>
-                        <SelectItem value="sepolia.optimistic.etherscan">Optimistic Etherscan (Sepolia)</SelectItem>
+                        <SelectItem value="optimistic.etherscan">
+                          Optimistic Etherscan (Mainnet)
+                        </SelectItem>
+                        <SelectItem value="sepolia.optimistic.etherscan">
+                          Optimistic Etherscan (Sepolia)
+                        </SelectItem>
                       </SelectGroup>
                       <SelectGroup>
                         <SelectLabel>Layer 2 - Base</SelectLabel>
@@ -633,7 +643,9 @@ const DeploymentPanel: React.FC = () => {
                         <SelectItem value="testnet.fraxscan">Fraxscan (Testnet)</SelectItem>
                         <SelectItem value="moonbeamscan">Moonbeamscan (Moonbeam)</SelectItem>
                         <SelectItem value="moonriverscan">Moonriverscan (Moonriver)</SelectItem>
-                        <SelectItem value="testnet.moonbeamscan">Moonbeamscan (Moonbase Alpha)</SelectItem>
+                        <SelectItem value="testnet.moonbeamscan">
+                          Moonbeamscan (Moonbase Alpha)
+                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -667,77 +679,75 @@ const DeploymentPanel: React.FC = () => {
         </AccordionItem>
 
         {/* Contract Deployment */}
-        {
-          account && (
-            <AccordionItem value="item-3">
-              <AccordionTrigger>Contract Deployment</AccordionTrigger>
-              <AccordionContent className="flex flex-col gap-4 text-pretty">
-                {!compilationResult?.success ? (
-                  <div className="text-sm text-muted-foreground">
-                    Compile a contract first to deploy it.
-                  </div>
-                ) : !compiledContract ? (
-                  <div className="text-sm text-muted-foreground">Select a contract to deploy.</div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-secondary rounded-md">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {compiledContract.name}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        Bytecode Size: {compiledContract.bytecode.length / 2} bytes
-                      </div>
+        {account && (
+          <AccordionItem value="item-3">
+            <AccordionTrigger>Contract Deployment</AccordionTrigger>
+            <AccordionContent className="flex flex-col gap-4 text-pretty">
+              {!compilationResult?.success ? (
+                <div className="text-sm text-muted-foreground">
+                  Compile a contract first to deploy it.
+                </div>
+              ) : !compiledContract ? (
+                <div className="text-sm text-muted-foreground">Select a contract to deploy.</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3 bg-secondary rounded-md">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {compiledContract.name}
                     </div>
-
-                    {/* Constructor Arguments */}
-                    {getConstructorInputs(compiledContract).length > 0 && (
-                      <div className="space-y-2">
-                        <label className="block text-xs font-medium text-muted-foreground">
-                          Constructor Arguments
-                        </label>
-                        {getConstructorInputs(compiledContract).map((input, index) => (
-                          <div key={index} className="space-y-1">
-                            <label className="block text-xs text-muted-foreground">
-                              {input.name} ({input.type})
-                            </label>
-                            <Input
-                              type="text"
-                              value={constructorArgs[index] || ''}
-                              onChange={(e) => handleConstructorArgChange(index, e.target.value)}
-                              placeholder={`Enter ${input.type} value`}
-                              // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleDeploy}
-                      disabled={isDeploying}
-                      className={cn(
-                        'w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
-                        isDeploying
-                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
-                      )}
-                    >
-                      {isDeploying ? (
-                        <div className="flex items-center justify-center">
-                          {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>*/}
-                          <LucideLoader2 size={16} className="animate-spin" />
-                          Deploying...
-                        </div>
-                      ) : (
-                        'Deploy Contract'
-                      )}
-                    </button>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Bytecode Size: {compiledContract.bytecode.length / 2} bytes
+                    </div>
                   </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          )
-        }
+
+                  {/* Constructor Arguments */}
+                  {getConstructorInputs(compiledContract).length > 0 && (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-muted-foreground">
+                        Constructor Arguments
+                      </label>
+                      {getConstructorInputs(compiledContract).map((input, index) => (
+                        <div key={index} className="space-y-1">
+                          <label className="block text-xs text-muted-foreground">
+                            {input.name} ({input.type})
+                          </label>
+                          <Input
+                            type="text"
+                            value={constructorArgs[index] || ''}
+                            onChange={(e) => handleConstructorArgChange(index, e.target.value)}
+                            placeholder={`Enter ${input.type} value`}
+                            // className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDeploy}
+                    disabled={isDeploying}
+                    className={cn(
+                      'w-full px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                      isDeploying
+                        ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
+                    )}
+                  >
+                    {isDeploying ? (
+                      <div className="flex items-center justify-center">
+                        {/*<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>*/}
+                        <LucideLoader2 size={16} className="animate-spin" />
+                        Deploying...
+                      </div>
+                    ) : (
+                      'Deploy Contract'
+                    )}
+                  </button>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Deployed Contracts */}
         {account && deployedContractsForNetwork.length > 0 && (
@@ -812,20 +822,32 @@ const DeploymentPanel: React.FC = () => {
                             <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                               <div className="flex items-start">
                                 <div className="flex-shrink-0">
-                                  <svg className="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  <svg
+                                    className="h-4 w-4 text-yellow-400"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                      clipRule="evenodd"
+                                    />
                                   </svg>
                                 </div>
                                 <div className="ml-2">
                                   <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                                    Please compile the <strong>{selectedDeployedContractData.name}</strong> contract before verifying it.
+                                    Please compile the{' '}
+                                    <strong>{selectedDeployedContractData.name}</strong> contract
+                                    before verifying it.
                                   </p>
                                 </div>
                               </div>
                             </div>
                           )}
                           <Button
-                            onClick={() => handleVerifyContract(selectedDeployedContractData.address)}
+                            onClick={() =>
+                              handleVerifyContract(selectedDeployedContractData.address)
+                            }
                             size="sm"
                             className="text-xs"
                             disabled={isVerifying || !hasCompiledContract}
@@ -903,7 +925,9 @@ const DeploymentPanel: React.FC = () => {
                     {/* Method Result */}
                     {methodResult !== null && (
                       <div className="p-3 bg-secondary rounded-md">
-                        <div className="text-xs font-medium text-muted-foreground mb-1">Result:</div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Result:
+                        </div>
                         <div className="text-sm text-foreground break-all">
                           {typeof methodResult === 'object'
                             ? JSON.stringify(methodResult, null, 2)

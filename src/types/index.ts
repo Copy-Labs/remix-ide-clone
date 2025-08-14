@@ -124,6 +124,7 @@ export interface DeploymentState {
   account: string | null;
   balance: string | null;
   gasPrice: string | null;
+  ethPrice: number | null;
   gasLimit: string;
   autoVerify: boolean;
 }
