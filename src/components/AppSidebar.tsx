@@ -5,6 +5,7 @@ import {
   Command,
   GitBranch,
   Github,
+  LucideCoins,
   LucideFile,
   LucidePlay,
   LucideRefreshCw,
@@ -45,6 +46,7 @@ import TestingPluginUI from '@/components/PluginUI/TestingPluginUI.tsx';
 import { usePluginStore } from '@/stores/pluginStore';
 import ImprovedCustomThemePluginUI from '@/components/PluginUI/ImprovedCustomThemePluginUI.tsx';
 import posthog from 'posthog-js';
+import TokenCreatorPluginUI from '@/components/PluginUI/TokenCreatorPluginUI.tsx';
 
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
@@ -121,6 +123,18 @@ const data = {
       ),
     },
     /*{
+      key: 'token_creator',
+      title: 'Token Creator',
+      url: '#',
+      icon: LucideCoins,
+      isActive: false,
+      component: (
+        <ErrorBoundary>
+          <TokenCreatorPluginUI />
+        </ErrorBoundary>
+      ),
+    },*/
+    /*{
       key: 'git',
       title: 'Git',
       url: '#',
@@ -159,9 +173,9 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ mainView, setMainView, ...props }: React.ComponentProps<typeof Sidebar> & { mainView: string; setMainView: (view: string) => void }) {
   // Note: I'm using state to show active item.
-  // IRL you should use the url/router.
+  // IRL we'd should use the url/router.
   const { plugins } = usePluginStore();
   const { setOpen } = useSidebar();
 
@@ -212,7 +226,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
       collapsible="icon"
-      className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
+      className="h-[calc(100dvh-40px)]! overflow-hidden *:data-[sidebar=sidebar]:flex-row"
       {...props}
     >
       {/* This is the first sidebar */}
@@ -264,7 +278,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>{/*<NavUser user={data.user} />*/}</SidebarFooter>
+        <SidebarFooter>{/*<NavUser user={data.user} />*/}
+          <SidebarMenuButton
+            tooltip={{
+              children: 'Token Creator',
+              hidden: false,
+            }}
+            onClick={() => {
+              // setActiveItem(item);
+              if (mainView === 'token_creator') {
+                setMainView('editor');
+                // setOpen(false);
+              } else {
+                setMainView('token_creator');
+                // setOpen(true);
+              }
+              posthog.capture('token_creator', { property: 'Token Creator' });
+            }}
+            isActive={activeItem?.title === 'Token Creator'}
+            className="px-2.5 md:px-2"
+          >
+            <LucideCoins />
+            <span>Token Creator</span>
+          </SidebarMenuButton>
+        </SidebarFooter>
       </Sidebar>
 
       {/* This is the second sidebar */}

@@ -6,6 +6,7 @@ import { deploymentPlugin } from './deploymentPlugin';
 import { collaborationPlugin } from './collaborationPlugin';
 import { backupPlugin } from './backupPlugin';
 import { themePlugin } from './themePlugin';
+import { tokenCreatorPlugin } from './tokenCreatorPlugin';
 
 // Export all plugins
 export const corePlugins = [
@@ -17,6 +18,7 @@ export const corePlugins = [
   collaborationPlugin,
   backupPlugin,
   themePlugin,
+  tokenCreatorPlugin,
 ];
 
 // Export individual plugins
@@ -29,6 +31,7 @@ export {
   collaborationPlugin,
   backupPlugin,
   themePlugin,
+  tokenCreatorPlugin,
 };
 
 // Export plugin implementations
@@ -40,3 +43,4 @@ export { DeploymentPluginImplementation } from './deploymentPlugin';
 export { CollaborationPluginImplementation } from './collaborationPlugin';
 export { BackupPluginImplementation } from './backupPlugin';
 export { ThemePluginImplementation } from './themePlugin';
+export { TokenCreatorPluginImplementation } from './tokenCreatorPlugin';
