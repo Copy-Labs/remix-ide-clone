@@ -35,13 +35,14 @@ import {
 } from '@/components/ui/breadcrumb.tsx';
 import { AppSidebar } from './components/AppSidebar';
 import { ThemeProvider } from '@/components/ThemeProvider.tsx';
-import { LucidePlug, Settings } from 'lucide-react';
+import { LucidePlug, Settings, Coins } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner.tsx';
 import StatusBar from './components/StatusBar';
 import { cn } from '@/lib/utils.ts';
+import TokenCreatorPluginUI from './components/PluginUI/TokenCreatorPluginUI';
 
 // Define main page views
-type MainView = 'editor' | 'plugins';
+type MainView = 'editor' | 'plugins' | 'settings' | 'about' | 'token_creator';
 
 function App() {
   const { files, activeFile, openTabs, createFile, createFolder, openFile } = useFileStore();
@@ -254,7 +255,7 @@ describe("SimpleStorage Contract", function() {
             } as React.CSSProperties
           }
         >
-          <AppSidebar />
+          <AppSidebar mainView={mainView} setMainView={setMainView} />
           <SidebarInset className={'h-[calc(100dvh-40px)]! overflow-y-auto'}>
             <div className="bg-card sticky top-0 flex shrink-0 items-center gap-2 border-b border-border px-4 py-2 overflow-x-auto z-10 max-w-[calc(100%-var(--sidebar-width-icon)+var(--sidebar-width-icon))]!">
               <SidebarTrigger className="-ml-1" />
@@ -297,6 +298,14 @@ describe("SimpleStorage Contract", function() {
                       <LucidePlug className="h-4 w-4" />
                       Plugins
                     </Button>
+                    <Button
+                      variant={mainView === 'token_creator' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setMainView('token_creator')}
+                    >
+                      <Coins className="h-4 w-4 mr-1" />
+                      Token Creator
+                    </Button>
                   </div>*/}
 
                   {/*<Separator orientation="vertical" className="h-4" />*/}
@@ -317,6 +326,12 @@ describe("SimpleStorage Contract", function() {
                 <div className="h-full">
                   <ErrorBoundary>
                     <PluginPanel />
+                  </ErrorBoundary>
+                </div>
+              ) : mainView === 'token_creator' ? (
+                <div className="h-full">
+                  <ErrorBoundary>
+                    <TokenCreatorPluginUI />
                   </ErrorBoundary>
                 </div>
               ) : (

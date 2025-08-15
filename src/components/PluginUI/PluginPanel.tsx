@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import {
   Search,
   Settings,
@@ -24,6 +23,7 @@ import {
   Rocket,
   GitBranch,
   TestTube,
+  Coins,
 } from 'lucide-react';
 import CollaborationPluginUI from './CollaborationPluginUI';
 import BackupPluginUI from './BackupPluginUI';
@@ -33,6 +33,7 @@ import DebuggerPluginUI from './DebuggerPluginUI';
 import DeploymentPluginUI from './DeploymentPluginUI';
 import GitPluginUI from './GitPluginUI';
 import TestingPluginUI from './TestingPluginUI';
+import TokenCreatorPluginUI from './TokenCreatorPluginUI';
 
 // Plugin icon mapping
 const getPluginIcon = (pluginId: string) => {
@@ -45,6 +46,7 @@ const getPluginIcon = (pluginId: string) => {
     'deployment-automation': Rocket,
     'git-integration': GitBranch,
     'testing-framework': TestTube,
+    'Token Creator': Coins,
   };
   return iconMap[pluginId] || Settings;
 };
@@ -58,6 +60,11 @@ const PluginPanel: React.FC = () => {
   // Filter and search plugins
   const filteredPlugins = useMemo(() => {
     return plugins.filter((plugin) => {
+      // Hide Token Creator plugin from sidebar as it's now in main view
+      if (plugin.id === 'Token Creator') {
+        return false;
+      }
+
       const matchesSearch =
         plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         plugin.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -263,6 +270,9 @@ const PluginPanel: React.FC = () => {
               {activePluginId === 'git-integration' && <GitPluginUI pluginId={activePluginId} />}
               {activePluginId === 'testing-framework' && (
                 <TestingPluginUI pluginId={activePluginId} />
+              )}
+              {activePluginId === 'Token Creator' && (
+                <TokenCreatorPluginUI />
               )}
             </div>
           ) : (
