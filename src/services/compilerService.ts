@@ -1,6 +1,7 @@
 import { solidityCompiler, getCompilerVersions } from '@agnostico/browser-solidity-compiler';
 import type { CompilationResult, CompilerError, CompilerWarning, CompiledContract } from '@/types';
 import { debug } from '@/services/loggerService.ts';
+import { getRequiredOpenZeppelinContracts } from '@/services/openZeppelinContracts';
 
 /**
  * Service for Solidity compilation using @agnostico/browser-solidity-compiler
@@ -147,14 +148,87 @@ export class CompilerService {
       // Ensure compiler is loaded
       await this.ensureCompilerLoaded();
 
-      // The solidityCompiler function only accepts a single contract body
-      // We need to combine all sources into a single file for compilation
-      // This is a limitation of the current library version
-
       // Get the first source file for compilation
-      // In a real-world scenario, you might want to handle multiple files differently
       const firstSourcePath = sourceKeys[0];
-      const contractBody = sources[firstSourcePath];
+      let contractBody = sources[firstSourcePath];
+
+      // Check for OpenZeppelin imports and inline them since the compiler only accepts a single file
+      const requiredContracts = getRequiredOpenZeppelinContracts(contractBody);
+      if (Object.keys(requiredContracts).length > 0) {
+        // Define a priority so base interfaces/contracts come before implementations
+        const getImportPriority = (p: string): number => {
+          if (p.includes('/interfaces/draft-IERC6093.sol')) return 1;
+          if (p.includes('/token/ERC20/IERC20.sol')) return 2;
+          if (p.includes('/token/ERC20/extensions/IERC20Metadata.sol')) return 3;
+          if (p.includes('/utils/Context.sol')) return 4;
+          if (p.includes('/token/ERC20/ERC20.sol')) return 5;
+          // default medium priority for anything else
+          return 10;
+        };
+
+        // Sort entries so that when we insert, the final order (top-down) is bases then implementations
+        // Because each insertion happens right after the pragma and thus appears above previous inserts,
+        // we sort DESC and insert in that order so that lowest priority (implementations) ends up below.
+        const sortedEntries = Object.entries(requiredContracts).sort(
+          ([a], [b]) => getImportPriority(b) - getImportPriority(a),
+        );
+
+        // Replace OpenZeppelin imports with inline contract code in the sorted order
+        for (const [importPath, contractSource] of sortedEntries) {
+          // Remove import statements for this contract
+          const importRegex = new RegExp(`import\\s+["']${importPath.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}["'];`, 'g');
+          contractBody = contractBody.replace(importRegex, '');
+
+          // Add the contract source at the beginning (after SPDX and pragma)
+          const lines = contractBody.split('\n');
+          const pragmaIndex = lines.findIndex(line => line.trim().startsWith('pragma '));
+          if (pragmaIndex !== -1) {
+            // Insert after pragma statement
+            lines.splice(pragmaIndex + 1, 0, '', contractSource, '');
+            contractBody = lines.join('\n');
+          } else {
+            // Fallback: prepend to the beginning
+            contractBody = contractSource + '\n\n' + contractBody;
+          }
+        }
+      }
+
+      // As a safety net, strip any remaining OpenZeppelin imports that were not matched above
+      contractBody = contractBody.replace(/import\s+["']@openzeppelin\/contracts\/[^"']+["'];/g, '');
+
+      // Ensure only a single SPDX license identifier remains at the top of the file
+      try {
+        const spdxLineRegex = /^\s*\/\/\s*SPDX-License-Identifier:[^\n]*$/;
+        const lines = contractBody.split('\n');
+        let firstSpdxLine: string | null = null;
+        let firstSpdxIndex: number = -1;
+        const sanitizedLines: string[] = [];
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (spdxLineRegex.test(line)) {
+            if (firstSpdxLine === null) {
+              firstSpdxLine = line;
+              firstSpdxIndex = i;
+            }
+            // Skip all SPDX lines for now; we'll add one back at the top if needed
+            continue;
+          }
+          sanitizedLines.push(line);
+        }
+        // Reconstruct with a single SPDX at the very top if any was found
+        if (firstSpdxLine) {
+          // If the first line is already the same SPDX, avoid duplication
+          if (sanitizedLines.length === 0 || !spdxLineRegex.test(sanitizedLines[0])) {
+            sanitizedLines.unshift(firstSpdxLine);
+          } else {
+            // Replace the first line if it is an SPDX (edge case)
+            sanitizedLines[0] = firstSpdxLine;
+          }
+        }
+        contractBody = sanitizedLines.join('\n');
+      } catch (e) {
+        console.warn('SPDX sanitization failed, proceeding without modification:', e);
+      }
 
       // Validate contract body - allow empty strings but reject null/undefined
       if (contractBody == null || typeof contractBody !== 'string') {

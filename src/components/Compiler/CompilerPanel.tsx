@@ -236,7 +236,7 @@ const CompilerPanel: React.FC = () => {
                 <h4 className="text-xs font-medium text-red-600 mb-1">
                   Errors ({compilationResult.errors.length})
                 </h4>
-                <div className="space-y-1 max-h-24 overflow-y-auto">
+                <div className="space-y-1 min-h-24 overflow-y-auto">
                   {compilationResult.errors.map((error, index) => (
                     <div
                       key={index}
@@ -293,14 +293,14 @@ const CompilerPanel: React.FC = () => {
                       className={`w-full p-1.5 rounded-sm border cursor-pointer transition-colors ${
                         selectedContract === contractName
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                          : 'border-accent hover:border-border hover:bg-border'
                       }`}
                       onClick={() => selectContract(contractName)}
                     >
                       <div className="text-xs font-medium text-gray-900 dark:text-white">
                         {contractName}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 w-full break-words leading-tight">
+                      <div className="text-xs text-muted-foreground w-full break-words leading-tight">
                         {formatBytecode(compilationResult.contracts[contractName].bytecode)}
                       </div>
                     </div>
@@ -547,16 +547,16 @@ const CompilerPanel: React.FC = () => {
                                 <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                                   Constructor Parameters
                                 </h5>
-                                <div className="bg-white dark:bg-gray-700 rounded border p-2 space-y-1">
+                                <div className="bg-border rounded-md border p-2 space-y-1">
                                   {constructor.inputs.map((input: any, index: number) => (
                                     <div
                                       key={index}
                                       className="flex justify-between items-center text-xs"
                                     >
-                                      <span className="text-gray-600 dark:text-gray-400">
+                                      <span className="text-foreground">
                                         {input.name || `param${index}`}
                                       </span>
-                                      <span className="font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-600 px-1.5 py-0.5 rounded text-xs">
+                                      <span className="font-mono text-foreground bg-border px-1.5 py-0.5 rounded text-xs">
                                         {input.type}
                                       </span>
                                     </div>
