@@ -1,6 +1,8 @@
 import React from 'react';
 import { useDeploymentStore } from '@/stores/deploymentStore';
 import { Separator } from '@/components/ui/separator';
+import { Copy } from 'lucide-react';
+import { toast } from 'sonner';
 
 const StatusBar: React.FC = () => {
   const {
@@ -87,9 +89,39 @@ const StatusBar: React.FC = () => {
 
             <div className="flex items-center space-x-1">
               <span className="text-xs">Account:</span>
-              <span className="font-mono text-xs font-medium text-foreground">
+              <span
+                className="font-mono text-xs font-medium text-foreground cursor-pointer"
+                title="Click to copy address"
+                onClick={() => {
+                  void navigator.clipboard.writeText(account)
+                    .then(() => {
+                      toast.success('Address copied to clipboard');
+                    })
+                    .catch(() => {
+                      toast.error('Failed to copy address');
+                    });
+                }}
+              >
                 {`${account.slice(0, 6)}...${account.slice(-4)}`}
               </span>
+              <button
+                type="button"
+                aria-label="Copy address"
+                title="Copy address"
+                className="p-0.5 hover:text-foreground/90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void navigator.clipboard.writeText(account)
+                    .then(() => {
+                      toast.success('Address copied to clipboard');
+                    })
+                    .catch(() => {
+                      toast.error('Failed to copy address');
+                    });
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
             </div>
           </>
         )}
