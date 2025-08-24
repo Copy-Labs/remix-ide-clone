@@ -208,6 +208,8 @@ export const useDeploymentStore = create<DeploymentStore>()(
                 transactionHash: result.transactionHash,
                 deploymentCost: '0', // Will be updated when tx receipt is available
                 constructorArgs: args,
+                // Pass-through optional libraries mapping if provided in options
+                libraries: options?.libraries,
                 shouldVerify: get().autoVerify,
                 verified: false,
                 metadata: contract.metadata, // Store metadata for later verification

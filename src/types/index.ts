@@ -139,6 +139,10 @@ export interface DeployedContract {
   transactionHash: string;
   deploymentCost: string;
   constructorArgs: any[];
+  // Optional mapping of libraries used by this contract to their deployed addresses
+  // Keys can be either a plain library name (e.g., "SafeMath") or a fully qualified name
+  // in the form "path/to/File.sol:LibraryName" for precise mapping.
+  libraries?: Record<string, string>;
   shouldVerify?: boolean;
   verified?: boolean;
   verificationUrl?: string;
