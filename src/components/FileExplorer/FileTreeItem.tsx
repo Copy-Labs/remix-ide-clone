@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import type { FileNode } from '@/types';
 import { LucideFilePlus, LucideFolderPlus, LucidePencil } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
@@ -108,6 +108,7 @@ interface FileTreeItemProps {
   expandedFolders: Set<string>;
   selectedFiles: string[];
   toggleFolder: (path: string) => void;
+  triggerRename?: boolean;
 }
 
 const FileTreeItem: React.FC<FileTreeItemProps> = ({
@@ -129,9 +130,21 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   expandedFolders,
   selectedFiles,
   toggleFolder,
+  triggerRename,
 }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(file.name);
+
+  // Trigger rename mode when requested from context menu
+  useEffect(() => {
+    if (triggerRename) {
+      setIsRenaming(true);
+      setRenameValue(file.name);
+    } else {
+      // Reset rename mode when triggerRename becomes false
+      setIsRenaming(false);
+    }
+  }, [triggerRename, file.name, file.path]);
 
   const handleRenameSubmit = useCallback(
     (event: React.FormEvent) => {
@@ -152,8 +165,11 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   const handleRenameKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
       setIsRenaming(false);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      handleRenameSubmit(event as any);
     }
-  }, []);
+  }, [handleRenameSubmit]);
 
   return (
     <>
@@ -312,6 +328,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
                   selectedFiles={selectedFiles}
                   getChildren={getChildren}
                   toggleFolder={toggleFolder}
+                  triggerRename={false}
                 />
               ))}
 
