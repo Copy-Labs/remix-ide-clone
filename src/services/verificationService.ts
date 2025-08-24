@@ -2,6 +2,7 @@ import { debug, info, warn, error } from '@/services/loggerService';
 import { web3Service } from '@/services/web3Service';
 import type { Network, CompiledContract, DeployedContract } from '@/types';
 import { useCompilerStore } from '@/stores/compilerStore';
+import { getRequiredOpenZeppelinContracts } from '@/services/openZeppelinContracts';
 
 /**
  * Service for contract verification on block explorers
@@ -15,7 +16,7 @@ import { useCompilerStore } from '@/stores/compilerStore';
  */
 export class VerificationService {
   private static instance: VerificationService;
-  private apiKeys: Map<string, string> = new Map();
+  private apiKeys = new Map<string, string>();
 
   // Block explorer API endpoints for verification
   private verificationEndpoints: Record<string, string> = {
@@ -355,7 +356,7 @@ export class VerificationService {
       'lineascan',
       'sepolia.lineascan',
       'mantlescan',
-      'sepolia.mantlescan'
+      'sepolia.mantlescan',
     ];
 
     return compatibleExplorers.includes(explorer);
@@ -523,24 +524,94 @@ export class VerificationService {
         //     ]),
         //   ),
         // ),
-        sourceCode: JSON.stringify({
-          language: 'Solidity',
-          sources: Object.fromEntries(
+        sourceCode: JSON.stringify((() => {
+          // Build sources map including OpenZeppelin dependencies so block explorers can resolve imports
+          const baseSources = Object.fromEntries(
             Object.entries(compilationResult?.sources || {}).map(([key, value]) => [
               key.replace(/^\/*/, ''),
               { content: value },
             ]),
-          ),
-          settings: {
-            optimizer: {
-              enabled: this.extractOptimizationUsed(compiledContract.metadata),
-              runs: this.extractOptimizationRuns(compiledContract.metadata),
-            },
-          },
-        }),
+          );
+
+          // Collect all OZ deps referenced by any source content
+          try {
+            const ozDeps: Record<string, string> = {};
+            for (const [, value] of Object.entries(compilationResult?.sources || {})) {
+              const deps = getRequiredOpenZeppelinContracts(value as string);
+              Object.assign(ozDeps, deps);
+            }
+            // Merge OZ deps into sources map with their exact import paths as keys
+            for (const [depPath, depContent] of Object.entries(ozDeps)) {
+              baseSources[depPath] = { content: depContent };
+            }
+          } catch (e) {
+            warn('VerificationService', 'Failed to collect OpenZeppelin dependencies for verification', e);
+          }
+
+          return {
+            language: 'Solidity',
+            sources: baseSources,
+            settings: (() => {
+              const base: any = {
+                optimizer: {
+                  enabled: this.extractOptimizationUsed(compiledContract.metadata),
+                  runs: this.extractOptimizationRuns(compiledContract.metadata),
+                },
+              };
+
+              // Inject linked libraries if provided for this deployed contract
+              try {
+                const libs = (contract as any)?.libraries as Record<string, string> | undefined;
+                if (libs && Object.keys(libs).length > 0) {
+                  const libSetting: any = {};
+                  for (const [key, address] of Object.entries(libs)) {
+                    // Accept either "path.sol:Lib" or just "Lib"
+                    if (key.includes(':')) {
+                      const [filePathRaw, libNameRaw] = key.split(':');
+                      const filePath = (filePathRaw || '').replace(/^\/*/, '');
+                      const libName = (libNameRaw || '').trim();
+                      if (!filePath || !libName) continue;
+                      libSetting[filePath] = {
+                        ...(libSetting[filePath] || {}),
+                        [libName]: address,
+                      };
+                    } else {
+                      // Top-level mapping supported by solc standard-json
+                      const libName = key.trim();
+                      if (!libName) continue;
+                      libSetting[libName] = address;
+                    }
+                  }
+                  if (Object.keys(libSetting).length > 0) {
+                    base.libraries = libSetting;
+                  }
+                }
+              } catch {
+                // Non-fatal: if parsing libraries fails, continue without them
+              }
+              return base;
+            })(),
+          };
+        })()),
         codeformat: 'solidity-standard-json-input',
         // contractname: this.formatContractName(compiledContract),
-        contractname: `${Object.keys(compilationResult?.sources)[0].replace('/', '')}:${compiledContract.name}`,
+        contractname: (() => {
+          try {
+            const meta = JSON.parse(compiledContract.metadata);
+            const target = meta?.settings?.compilationTarget;
+            if (target && typeof target === 'object') {
+              const [[targetPath, targetName]] = Object.entries(target);
+              const normalizedPath = (targetPath || '').replace(/^\/*/, '');
+              const name = targetName || compiledContract.name;
+              info('Verification Service', 'contractname data', { targetPath, targetName, normalizedPath, name, compiledName: compiledContract.name });
+              return `${normalizedPath}:${name}`;
+            }
+          } catch (e) { void e; }
+          // Fallback to first source path heuristic
+          const first = Object.keys(compilationResult?.sources || {})[0] || compiledContract.name + '.sol';
+          const normalizedFirst = first.replace(/^\/*/, '');
+          return `${normalizedFirst}:${compiledContract.name}`;
+        })(),
         compilerversion: this.extractCompilerVersion(compiledContract.metadata),
         optimizationUsed: this.extractOptimizationUsed(compiledContract.metadata) ? 1 : 0,
         runs: this.extractOptimizationRuns(compiledContract.metadata),

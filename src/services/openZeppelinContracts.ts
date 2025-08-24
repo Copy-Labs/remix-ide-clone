@@ -8,6 +8,10 @@ const ERC20_CONTRACT = `// SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/ERC20.sol)
 
 pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -151,7 +155,9 @@ abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC6093 {
 }`;
 
 // IERC20 Interface
-const IERC20_INTERFACE = `
+const IERC20_INTERFACE = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
 interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -164,7 +170,10 @@ interface IERC20 {
 }`;
 
 // IERC20Metadata Interface
-const IERC20_METADATA_INTERFACE = `
+const IERC20_METADATA_INTERFACE = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 interface IERC20Metadata is IERC20 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
@@ -172,7 +181,9 @@ interface IERC20Metadata is IERC20 {
 }`;
 
 // Context Contract
-const CONTEXT_CONTRACT = `
+const CONTEXT_CONTRACT = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
@@ -188,7 +199,9 @@ abstract contract Context {
 }`;
 
 // IERC6093 Interface
-const IERC6093_INTERFACE = `
+const IERC6093_INTERFACE = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
 interface IERC6093 {
     error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
     error ERC20InvalidSender(address sender);
@@ -198,6 +211,154 @@ interface IERC6093 {
     error ERC20InvalidSpender(address spender);
 }`;
 
+// Ownable Contract
+const OWNABLE_CONTRACT = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/utils/Context.sol";
+
+abstract contract Ownable is Context {
+    address private _owner;
+
+    error OwnableUnauthorizedAccount(address account);
+    error OwnableInvalidOwner(address owner);
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    constructor(address initialOwner) {
+        if (initialOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(initialOwner);
+    }
+
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    function _checkOwner() internal view virtual {
+        if (owner() != _msgSender()) {
+            revert OwnableUnauthorizedAccount(_msgSender());
+        }
+    }
+
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(newOwner);
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}`;
+
+// ReentrancyGuard Contract
+const REENTRANCY_GUARD_CONTRACT = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+abstract contract ReentrancyGuard {
+    uint256 private constant NOT_ENTERED = 1;
+    uint256 private constant ENTERED = 2;
+
+    uint256 private _status;
+
+    error ReentrancyGuardReentrantCall();
+
+    constructor() {
+        _status = NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        _nonReentrantBefore();
+        _;
+        _nonReentrantAfter();
+    }
+
+    function _nonReentrantBefore() private {
+        if (_status == ENTERED) {
+            revert ReentrancyGuardReentrantCall();
+        }
+        _status = ENTERED;
+    }
+
+    function _nonReentrantAfter() private {
+        _status = NOT_ENTERED;
+    }
+
+    function _reentrancyGuardEntered() internal view returns (bool) {
+        return _status == ENTERED;
+    }
+}`;
+
+// Pausable Contract
+const PAUSABLE_CONTRACT = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/utils/Context.sol";
+
+abstract contract Pausable is Context {
+    bool private _paused;
+
+    error EnforcedPause();
+    error ExpectedPause();
+
+    event Paused(address account);
+    event Unpaused(address account);
+
+    constructor() {
+        _paused = false;
+    }
+
+    modifier whenNotPaused() {
+        _requireNotPaused();
+        _;
+    }
+
+    modifier whenPaused() {
+        _requirePaused();
+        _;
+    }
+
+    function paused() public view virtual returns (bool) {
+        return _paused;
+    }
+
+    function _requireNotPaused() internal view virtual {
+        if (paused()) {
+            revert EnforcedPause();
+        }
+    }
+
+    function _requirePaused() internal view virtual {
+        if (!paused()) {
+            revert ExpectedPause();
+        }
+    }
+
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+}`;
+
 // OpenZeppelin contract sources mapping
 export const OPENZEPPELIN_CONTRACTS: Record<string, string> = {
   '@openzeppelin/contracts/token/ERC20/ERC20.sol': ERC20_CONTRACT,
@@ -205,6 +366,9 @@ export const OPENZEPPELIN_CONTRACTS: Record<string, string> = {
   '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol': IERC20_METADATA_INTERFACE,
   '@openzeppelin/contracts/utils/Context.sol': CONTEXT_CONTRACT,
   '@openzeppelin/contracts/interfaces/draft-IERC6093.sol': IERC6093_INTERFACE,
+  '@openzeppelin/contracts/access/Ownable.sol': OWNABLE_CONTRACT,
+  '@openzeppelin/contracts/utils/ReentrancyGuard.sol': REENTRANCY_GUARD_CONTRACT,
+  '@openzeppelin/contracts/utils/Pausable.sol': PAUSABLE_CONTRACT,
 };
 
 /**
