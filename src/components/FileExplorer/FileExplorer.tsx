@@ -52,6 +52,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [clipboardItem, setClipboardItem] = useState<ClipboardItem | null>(null);
+  const [renamingFilePath, setRenamingFilePath] = useState<string | null>(null);
 
   // Fetch Git status when Git is initialized or files change
   useEffect(() => {
@@ -224,6 +225,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
       const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/')) || '/';
       const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
       renameFile(oldPath, newPath);
+      setRenamingFilePath(null); // Clear rename trigger after completion
     },
     [renameFile],
   );
@@ -442,6 +444,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
               expandedFolders={expandedFolders}
               selectedFiles={selectedFiles}
               toggleFolder={toggleFolder}
+              triggerRename={renamingFilePath === file.path}
             />
           ))}
         </div>
@@ -469,8 +472,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
           onCreateFolder={(parentPath) => handleCreateNew('folder', parentPath)}
           onDelete={handleDelete}
           onRename={(filePath) => {
-            // Trigger rename mode in FileTreeItem
-            // This is handled by the FileTreeItem component itself
+            setRenamingFilePath(filePath);
+            setContextMenu(null);
           }}
           onCopy={handleCopy}
           onCut={handleCut}
