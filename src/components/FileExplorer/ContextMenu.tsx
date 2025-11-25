@@ -17,6 +17,7 @@ import {
   GitCommit,
   FileText,
 } from 'lucide-react';
+import { cn } from '@/lib/utils.ts';
 
 export interface ClipboardItem {
   file: FileNode;
@@ -295,12 +296,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg py-1 min-w-[200px]"
+      className="fixed z-50 bg-background dark:bg-card border border-border rounded-md shadow-lg py-1 min-w-[200px]"
       style={{ left: x, top: y }}
     >
       {menuItems.map((item, index) => {
         if ('separator' in item) {
-          return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 mx-1 my-1" />;
+          return <div key={index} className="h-px bg-muted mx-1 my-1" />;
         }
 
         const IconComponent = item.icon;
@@ -311,9 +312,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             key={index}
             onClick={item.action}
             disabled={isDisabled}
-            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed ${
-              item.dangerous ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'
-            }`}
+            className={cn('w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+              item.dangerous ? 'text-red-600 dark:text-red-400' : 'text-card-foreground',
+            )}
           >
             <div className="flex items-center space-x-2">
               {typeof IconComponent === 'function' ? (
@@ -326,7 +327,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               <span>{item.label}</span>
             </div>
             {'shortcut' in item && item.shortcut && (
-              <span className="text-xs text-gray-400 dark:text-gray-500">{item.shortcut}</span>
+              <span className="font-bold text-xs text-muted-foreground">{item.shortcut}</span>
             )}
           </button>
         );
