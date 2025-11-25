@@ -339,58 +339,43 @@ export interface Web3State {
   isConnecting: boolean;
 }
 
-// Global App State
-export interface AppState {
-  fileSystem: FileSystemState;
-  editor: EditorState;
-  compiler: CompilerState;
-  deployment: DeploymentState;
-  ui: UIState;
-  terminal: TerminalState;
-  settings: Settings;
-  web3: Web3State;
-  plugins: Plugin[];
+// Local VM Types
+export interface VMState {
+  isEnabled: boolean;
+  vmWeb3: any;
+  vmProvider: any;
+  vmAccounts: LocalVMAccount[];
+  selectedVMAccount: string | null;
+  isConnected: boolean;
+  isConnecting: boolean;
+  vmNetwork: Network;
 }
 
-// Action Types
-export type FileSystemAction =
-  | { type: 'CREATE_FILE'; payload: { path: string; content?: string } }
-  | { type: 'DELETE_FILE'; payload: { path: string } }
-  | { type: 'RENAME_FILE'; payload: { oldPath: string; newPath: string } }
-  | { type: 'UPDATE_FILE'; payload: { path: string; content: string } }
-  | { type: 'OPEN_FILE'; payload: { path: string } }
-  | { type: 'CLOSE_FILE'; payload: { path: string } }
-  | { type: 'SET_ACTIVE_FILE'; payload: { path: string | null } }
-  | { type: 'TOGGLE_FOLDER'; payload: { path: string } };
+export interface LocalVMAccount {
+  id: string;
+  address: string;
+  privateKey: string;
+  name: string;
+  balance: string;
+  createdAt: number;
+  isFunded: boolean;
+}
 
-export type EditorAction =
-  | {
-      type: 'REGISTER_EDITOR';
-      payload: { fileId: string; editor: monaco.editor.IStandaloneCodeEditor };
-    }
-  | { type: 'UPDATE_EDITOR_SETTINGS'; payload: Partial<EditorSettings> }
-  | { type: 'SET_THEME'; payload: { theme: 'light' | 'dark' | 'auto' } };
+export interface LocalVMOperation {
+  type: 'deploy' | 'call' | 'send';
+  contractAddress?: string;
+  method?: string;
+  args?: any[];
+  value?: string;
+  from: string;
+}
 
-export type CompilerAction =
-  | { type: 'START_COMPILATION' }
-  | { type: 'COMPILATION_SUCCESS'; payload: { result: CompilationResult } }
-  | { type: 'COMPILATION_ERROR'; payload: { error: string } }
-  | { type: 'SET_COMPILER_VERSION'; payload: { version: string } };
+export type VMMode = 'vm' | 'wallet';
 
-export type DeploymentAction =
-  | { type: 'START_DEPLOYMENT'; payload: { contract: CompiledContract } }
-  | { type: 'DEPLOYMENT_SUCCESS'; payload: { contract: DeployedContract } }
-  | { type: 'DEPLOYMENT_ERROR'; payload: { error: string } }
-  | { type: 'SET_NETWORK'; payload: { network: Network } };
-
-export type UIAction =
-  | { type: 'TOGGLE_SIDEBAR' }
-  | { type: 'TOGGLE_TERMINAL' }
-  | { type: 'SET_ACTIVE_PANEL'; payload: { panel: UIState['activePanel'] } }
-  | { type: 'SHOW_NOTIFICATION'; payload: Omit<Notification, 'id' | 'createdAt'> }
-  | { type: 'HIDE_NOTIFICATION'; payload: { id: string } }
-  | { type: 'SHOW_MODAL'; payload: Omit<Modal, 'id'> }
-  | { type: 'HIDE_MODAL'; payload: { id: string } };
+export interface ExtendedDeploymentState extends DeploymentState {
+  vmMode: VMMode;
+  vmState: VMState;
+}
 
 // Logging Types
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';

@@ -1,6 +1,8 @@
 import Web3 from 'web3';
-import type { Network } from '@/types';
+import type { Network, VMMode } from '@/types';
 import { debug, info, warn, error } from '@/services/loggerService';
+import { localVMService } from '@/services/localVMService';
+import { walletConnectService } from '@/services/walletConnectService';
 
 /**
  * Service for Web3 integration and wallet connections
@@ -20,6 +22,9 @@ export class Web3Service {
   private isConnected: boolean = false;
   private isConnecting: boolean = false;
   private listeners: Map<string, Function[]> = new Map();
+
+  // Wallet provider management
+  private walletProvider: 'metamask' | 'walletconnect' | null = null;
 
   // Predefined networks for easy access - aligned with verification service support
   private networks: Network[] = [
@@ -752,13 +757,29 @@ export class Web3Service {
       this.isConnecting = true;
       this.emit('connecting');
 
+      let success = false;
+
       if (providerType === 'metamask') {
-        return await this.connectToMetaMask();
+        success = await this.connectToMetaMask();
+        if (success) {
+          this.walletProvider = 'metamask';
+        }
       } else if (providerType === 'walletconnect') {
-        return await this.connectToWalletConnect();
+        success = await this.connectToWalletConnect();
+        if (success) {
+          this.walletProvider = 'walletconnect';
+        }
       }
 
-      return false;
+      if (!success) {
+        this.isConnecting = false;
+        this.emit('error', new Error(`Failed to connect using ${providerType}`));
+        return false;
+      }
+
+      this.isConnecting = false;
+      this.emit('providerConnected', providerType);
+      return true;
     } catch (err) {
       error('Web3Service', 'Failed to connect to wallet', err);
       this.isConnecting = false;
@@ -817,10 +838,49 @@ export class Web3Service {
    */
   private async connectToWalletConnect(): Promise<boolean> {
     try {
-      // WalletConnect v2 implementation would go here
-      // For now, we'll just show a warning that it's not implemented
-      warn('Web3Service', 'WalletConnect integration is not yet implemented');
-      this.emit('error', new Error('WalletConnect integration is not yet implemented'));
+      // Connect using the WalletConnect service
+      const connected = await walletConnectService.connect();
+
+      if (connected) {
+        // Get provider and accounts from WalletConnect
+        const wcProvider = walletConnectService.getProvider();
+        const wcAccounts = walletConnectService.getAccounts();
+        const wcChainId = walletConnectService.getChainId();
+
+        if (wcProvider && wcAccounts.length > 0) {
+          this.provider = wcProvider;
+          this.web3 = new Web3(this.provider);
+          this.account = wcAccounts[0];
+
+          // Update network info
+          if (wcChainId) {
+            const network = this.getNetworkByChainId(wcChainId);
+            if (network) {
+              this.network = network;
+            } else {
+              // Create custom network if not found
+              this.network = {
+                id: `walletconnect-${wcChainId}`,
+                name: `WalletConnect Chain ${wcChainId}`,
+                rpcUrl: '',
+                chainId: wcChainId,
+                symbol: 'ETH',
+                blockExplorer: '',
+                isTestnet: wcChainId !== 1,
+              };
+            }
+          }
+
+          this.isConnected = true;
+          this.isConnecting = false;
+
+          info('Web3Service', `Connected to WalletConnect with account: ${this.account}`);
+          this.emit('connected', { account: this.account, network: this.network, provider: 'WalletConnect' });
+
+          return true;
+        }
+      }
+
       this.isConnecting = false;
       return false;
     } catch (err) {
@@ -834,12 +894,18 @@ export class Web3Service {
   /**
    * Disconnect from the current wallet
    */
-  public disconnect(): void {
+  public async disconnect(): Promise<void> {
+    // Disconnect from WalletConnect if connected
+    if (this.walletProvider === 'walletconnect' && walletConnectService.isConnected()) {
+      await walletConnectService.disconnect();
+    }
+
     this.web3 = null;
     this.provider = null;
     this.account = null;
     this.network = null;
     this.chainId = null;
+    this.walletProvider = null;
     this.isConnected = false;
 
     info('Web3Service', 'Disconnected from wallet');
@@ -900,6 +966,110 @@ export class Web3Service {
    */
   public isWalletConnecting(): boolean {
     return this.isConnecting;
+  }
+
+  /**
+   * Get the current wallet provider type
+   * @returns The wallet provider type or null if not connected
+   */
+  public getWalletProvider(): 'metamask' | 'walletconnect' | null {
+    return this.walletProvider;
+  }
+
+  /**
+   * Check if MetaMask is available
+   * @returns Whether MetaMask is available
+   */
+  public isMetaMaskAvailable(): boolean {
+    return typeof window !== 'undefined' && !!window.ethereum;
+  }
+
+  /**
+   * Check if WalletConnect is available
+   * @returns Whether WalletConnect is available
+   */
+  public isWalletConnectAvailable(): boolean {
+    return true; // WalletConnect is always available after initialization
+  }
+
+  /**
+   * Get available wallet providers
+   * @returns Array of available wallet providers
+   */
+  public getAvailableWalletProviders(): Array<{ id: 'metamask' | 'walletconnect'; name: string; icon: string }> {
+    const providers = [];
+
+    if (this.isMetaMaskAvailable()) {
+      providers.push({
+        id: 'metamask' as const,
+        name: 'MetaMask',
+        icon: '🦊'
+      });
+    }
+
+    providers.push({
+      id: 'walletconnect' as const,
+      name: 'WalletConnect',
+      icon: '🔗'
+    });
+
+    return providers;
+  }
+
+  /**
+   * Check if network is supported by the current provider
+   * @param chainId The chain ID to check
+   * @returns Whether the network is supported
+   */
+  public isNetworkSupported(chainId: number): boolean {
+    if (this.walletProvider === 'walletconnect') {
+      return walletConnectService.isNetworkSupported(chainId);
+    }
+    // MetaMask supports all EVM networks
+    return true;
+  }
+
+  /**
+   * Get the recommended wallet provider based on device and user agent
+   * @returns The recommended wallet provider
+   */
+  public getRecommendedProvider(): 'metamask' | 'walletconnect' {
+    // Check if MetaMask is available
+    if (this.isMetaMaskAvailable()) {
+      return 'metamask';
+    }
+
+    // Check if mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      return 'walletconnect'; // Better for mobile wallets
+    }
+
+    return 'walletconnect';
+  }
+
+  /**
+   * Get wallet connection status information
+   * @returns Detailed connection status
+   */
+  public getConnectionStatus(): {
+    connected: boolean;
+    provider: string;
+    account: string | null;
+    network: Network | null;
+    chainId: number | null;
+    isConnecting: boolean;
+    error: string | null;
+  } {
+    return {
+      connected: this.isConnected,
+      provider: this.walletProvider || 'none',
+      account: this.account,
+      network: this.network,
+      chainId: this.chainId,
+      isConnecting: this.isConnecting,
+      error: this.listeners.has('error') ? null : null,
+    };
   }
 
   /**

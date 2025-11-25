@@ -4,6 +4,7 @@ import { useCompilerStore } from '@/stores/compilerStore';
 import type { CompiledContract } from '@/types';
 import { toast } from 'sonner';
 import { verificationService } from '@/services/verificationService';
+import { web3Service } from '@/services/web3Service';
 import { Button } from '@/components/ui/button.tsx';
 import {
   Select,
@@ -15,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select.tsx';
 import { Input } from '@/components/ui/input.tsx';
-import { Separator } from '@/components/ui/separator.tsx';
 import { selectBaseClass } from '@/utils/constant.ts';
 import {
   Accordion,
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils.ts';
 import { LucideLoader2 } from 'lucide-react';
+import WalletSelector from '@/components/WalletSelector.tsx';
 
 const DeploymentPanel: React.FC = () => {
   const {
@@ -64,6 +65,10 @@ const DeploymentPanel: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
+  // Wallet selector state
+  const [showWalletSelector, setShowWalletSelector] = useState<boolean>(false);
+  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | null>(null);
+
   // Verification settings state
   const [apiKeys, setApiKeys] = useState<Map<string, string>>(new Map());
   const [selectedExplorer, setSelectedExplorer] = useState<string>('');
@@ -84,12 +89,24 @@ const DeploymentPanel: React.FC = () => {
     ? Array.from(deployedContracts.values()).find((c) => c.address === selectedDeployedContract)
     : null;
 
+  // Sync current provider from Web3Service
+  useEffect(() => {
+    setCurrentProvider(web3Service.getWalletProvider());
+  }, [account]);
+
+  // Get wallet provider information
+  const getWalletProviderInfo = () => {
+    const providers = web3Service.getAvailableWalletProviders();
+    const provider = providers.find(p => p.id === currentProvider);
+    return provider || null;
+  };
+
   // Check if the selected deployed contract has a corresponding compiled contract
   const hasCompiledContract = selectedDeployedContractData
     ? Boolean(compilationResult?.success &&
       compilationResult.contracts &&
-      Object.keys(compilationResult.contracts).some(contractName =>
-        contractName === selectedDeployedContractData.name
+      Object.keys(compilationResult.contracts).some((contractName) =>
+        contractName === selectedDeployedContractData.name,
       ))
     : false;
 
@@ -149,9 +166,32 @@ const DeploymentPanel: React.FC = () => {
 
   // Handle wallet connection
   const handleConnectWallet = async () => {
+    const recommendedProvider = web3Service.getRecommendedProvider();
+
+    // If only one provider is available, connect directly
+    const availableProviders = web3Service.getAvailableWalletProviders();
+    if (availableProviders.length === 1) {
+      setIsConnecting(true);
+      try {
+        await connectWallet();
+      } catch (error) {
+        console.error('Failed to connect wallet:', error);
+        toast.error('Failed to connect wallet');
+      } finally {
+        setIsConnecting(false);
+      }
+    } else {
+      // Show wallet selector for multiple providers
+      setShowWalletSelector(true);
+    }
+  };
+
+  // Handle wallet selection from the modal
+  const handleWalletSelected = async (provider: 'metamask' | 'walletconnect') => {
     setIsConnecting(true);
     try {
       await connectWallet();
+      toast.success(`Connected using ${provider === 'metamask' ? 'MetaMask' : 'WalletConnect'}!`);
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       toast.error('Failed to connect wallet');
@@ -202,7 +242,7 @@ const DeploymentPanel: React.FC = () => {
 
     const inputs = getConstructorInputs(compiledContract);
 
-    return inputs.map((input, index) => {
+    return inputs.map((input: { type: string | string[] }, index: string | number) => {
       const value = constructorArgs[index];
 
       // Parse based on type
@@ -226,7 +266,7 @@ const DeploymentPanel: React.FC = () => {
   const parseMethodArgs = () => {
     const inputs = getMethodInputs(methodName);
 
-    return inputs.map((input, index) => {
+    return inputs.map((input: { type: string | string[] }, index: string | number) => {
       const value = methodArgs[index];
 
       // Parse based on type
@@ -427,7 +467,15 @@ const DeploymentPanel: React.FC = () => {
                   </Button>
                 </div>
                 <div className="p-3 bg-secondary rounded-lg space-y-3">
-                  <div className="text-sm font-normal text-foreground break-all">{account}</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-normal text-foreground break-all">{account}</div>
+                    {getWalletProviderInfo() && (
+                      <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-full text-xs">
+                        <span>{getWalletProviderInfo()?.icon}</span>
+                        <span>{getWalletProviderInfo()?.name}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="font-medium text-xs text-muted-foreground">
                     Balance: {formatBalance(balance)} {selectedNetworkData?.symbol || 'ETH'}
                   </div>
@@ -942,6 +990,14 @@ const DeploymentPanel: React.FC = () => {
           </AccordionItem>
         )}
       </Accordion>
+
+      {/* Wallet Selector Modal */}
+      <WalletSelector
+        isOpen={showWalletSelector}
+        onClose={() => setShowWalletSelector(false)}
+        onConnect={handleWalletSelected}
+        recommendedProvider={web3Service.getRecommendedProvider()}
+      />
     </div>
   );
 };

@@ -34,6 +34,10 @@
   "dependencies": {
     "@agnostico/browser-solidity-compiler": "^0.2.0",
     "@openzeppelin/contracts": "^5.0.0",
+    "@walletconnect/ethereum-provider": "^2.23.0",
+    "@walletconnect/sign-client": "^2.23.0",
+    "@walletconnect/types": "^2.23.0",
+    "@walletconnect/utils": "^2.23.0",
     "@headlessui/react": "^2.2.4",
     "@monaco-editor/react": "4.7.0",
     "@octokit/rest": "^20.0.2",
