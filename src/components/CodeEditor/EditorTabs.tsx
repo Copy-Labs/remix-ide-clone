@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useFileStore } from '@/stores/fileStore.ts';
 import { cn } from '@/lib/utils.ts';
 import {
@@ -9,16 +9,65 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LucideEllipsisVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button.tsx';
+import { X, Copy } from 'lucide-react';
 
 interface EditorTabsProps {
   className?: string;
+  onFileModified?: (filePath: string) => void;
+  onFileSaved?: (filePath: string) => void;
 }
 
-const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
+const EditorTabs: React.FC<EditorTabsProps> = ({ className = '', onFileModified, onFileSaved }) => {
   const { files, openTabs, activeFile, setActiveFile, closeFile, closeAllTabs, closeOtherTabs } =
     useFileStore();
+
+  // Track unsaved changes for each file
+  const [unsavedChanges, setUnsavedChanges] = useState<Set<string>>(new Set());
+
+  // Functions to manage unsaved changes tracking
+  const markFileAsModified = useCallback((filePath: string) => {
+    setUnsavedChanges((prev) => new Set(prev).add(filePath));
+    onFileModified?.(filePath);
+  }, [onFileModified]);
+
+  const markFileAsSaved = useCallback((filePath: string) => {
+    setUnsavedChanges((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(filePath);
+      return newSet;
+    });
+    onFileSaved?.(filePath);
+  }, [onFileSaved]);
+
+  const clearUnsavedChanges = useCallback((filePath: string) => {
+    setUnsavedChanges((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(filePath);
+      return newSet;
+    });
+  }, []);
+
+  // Export API for use by MonacoEditor
+  const editorTabAPI = {
+    markFileAsModified,
+    markFileAsSaved,
+    clearUnsavedChanges,
+  };
+
+  // Attach to window for editor access (temporary solution)
+  useEffect(() => {
+    (window as any).editorTabAPI = editorTabAPI;
+    return () => {
+      delete (window as any).editorTabAPI;
+    };
+  }, [editorTabAPI]);
+
+  // Remove from unsaved changes when file is closed
+  useEffect(() => {
+    return () => {
+      // Cleanup function if needed
+    };
+  }, []);
 
   const handleTabClick = useCallback(
     (filePath: string) => {
@@ -46,9 +95,9 @@ const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
     [closeFile],
   );
 
-  const handleTabContextMenu = useCallback((filePath: string, event: React.MouseEvent) => {
+  const handleTabContextMenu = useCallback((_filePath: string, event: React.MouseEvent) => {
     event.preventDefault();
-    // TODO: Show context menu with options like "Close", "Close Others", "Close All"
+    // Context menu is handled by the dropdown menu in the render section
   }, []);
 
   const getFileIcon = useCallback((fileName: string) => {
@@ -133,7 +182,7 @@ const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
           if (!file) return null;
 
           const isActive = activeFile === filePath;
-          const hasUnsavedChanges = false; // TODO: Implement unsaved changes detection
+          const hasUnsavedChanges = unsavedChanges.has(filePath);
 
           return (
             <div
@@ -156,83 +205,60 @@ const EditorTabs: React.FC<EditorTabsProps> = ({ className = '' }) => {
                 <span className="w-2 h-2 bg-orange-400 rounded-full mr-2" title="Unsaved changes" />
               )}
 
-              <button
-                onClick={(event) => handleTabClose(filePath, event)}
-                className={cn(
-                  'ml-2 p-1 rounded-md hover:bg-card dark:hover:bg-card',
-                  isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-                  'transition-opacity duration-200 ease-in-out flex items-center justify-center',
-                )}
-                title="Close"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      'ml-2 p-1 rounded-md hover:bg-card dark:hover:bg-card',
+                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                      'transition-opacity duration-200 ease-in-out flex items-center justify-center',
+                    )}
+                    title="More actions"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                      />
+                    </svg>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => closeFile(filePath)}>
+                    <X className="w-4 h-4 mr-2" />
+                    Close
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => closeOtherTabs(filePath)}
+                    disabled={openTabs.length <= 1}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Close Others
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => closeAllTabs()}>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Close All
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigator.clipboard?.writeText(filePath);
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Path
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           );
         })}
-      </div>
-
-      {/* Tab Actions */}
-      <div className="flex items-center ml-auto px-2 space-x-1">
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button size={'icon'} variant={'outline'}>
-              <LucideEllipsisVertical size={16} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>File Options</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              title="Close Other Tabs"
-              disabled={!activeFile || openTabs.length <= 1}
-              onClick={() => activeFile && closeOtherTabs(activeFile)}
-            >
-              Close Other Tabs
-            </DropdownMenuItem>
-            <DropdownMenuItem title="Close All Tabs" onClick={() => closeAllTabs()}>
-              Close All Tabs
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {/*<button
-          onClick={() => activeFile && closeOtherTabs(activeFile)}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400"
-          title="Close Other Tabs"
-          disabled={!activeFile || openTabs.length <= 1}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-        </button>*/}
-        {/*<Button
-          onClick={() => closeAllTabs()}
-          // className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400"
-          size={'icon'}
-          title="Close All Tabs"
-          variant={'secondary'}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </Button>*/}
       </div>
     </div>
   );
