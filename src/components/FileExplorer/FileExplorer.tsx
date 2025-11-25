@@ -8,6 +8,7 @@ import ContextMenu, { type ClipboardItem } from './ContextMenu';
 import { FileTypeIcon } from './FileTypeIcons';
 import { Input } from '@/components/ui/input.tsx';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import InlineHunkStager from '@/components/Git/InlineHunkStager';
 import { toast } from 'sonner';
 
@@ -53,6 +54,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [clipboardItem, setClipboardItem] = useState<ClipboardItem | null>(null);
   const [renamingFilePath, setRenamingFilePath] = useState<string | null>(null);
+  const [operationProgress, setOperationProgress] = useState<{
+    isRunning: boolean;
+    message: string;
+    progress: number;
+  }>({ isRunning: false, message: '', progress: 0 });
 
   // Fetch Git status when Git is initialized or files change
   useEffect(() => {
@@ -184,7 +190,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     });
   }, []);
 
-  const handleCreateNew = useCallback((type: 'file' | 'folder', parentPath: string = '/') => {
+  const handleCreateNew = useCallback((type: 'file' | 'folder', parentPath = '/') => {
     setIsCreating({ type, parentPath });
     setContextMenu(null);
   }, []);
@@ -239,6 +245,113 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
     closeContextMenu();
   }, [clearSelection, closeContextMenu]);
 
+  // Helper functions for recursive folder operations (must be declared first)
+  const copyFolderRecursively = useCallback(
+    async (sourcePath: string, targetPath: string): Promise<void> => {
+      const sourceFile = files.get(sourcePath);
+      if (!sourceFile) {
+        throw new Error(`Source folder not found: ${sourcePath}`);
+      }
+
+      // Create the target folder
+      await createFolder(targetPath);
+
+      // Get all children of the source folder
+      const children = Array.from(files.values()).filter((file) => file.parent === sourcePath);
+
+      if (children.length === 0) {
+        return; // Empty folder, nothing to copy
+      }
+
+      let completed = 0;
+      const total = children.length;
+
+      // Process children in batches to prevent UI blocking
+      for (const child of children) {
+        const childName = child.name;
+        const childTargetPath = targetPath === '/' ? `/${childName}` : `${targetPath}/${childName}`;
+
+        try {
+          if (child.type === 'file') {
+            // Copy file
+            const content = await getFileContent(child.path);
+            await createFile(childTargetPath, content || '');
+          } else {
+            // Recursively copy folder
+            await copyFolderRecursively(child.path, childTargetPath);
+          }
+        } catch (error) {
+          console.error(`Failed to copy ${child.path} to ${childTargetPath}:`, error);
+          throw error;
+        }
+
+        completed++;
+        setOperationProgress((prev) => ({
+          ...prev,
+          progress: (completed / total) * 100,
+          message: `Copying ${childName}... (${completed}/${total})`,
+        }));
+
+        // Yield to event loop to prevent UI blocking
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    },
+    [files, createFolder, createFile, getFileContent],
+  );
+
+  const duplicateFolderRecursively = useCallback(
+    async (sourcePath: string, targetPath: string): Promise<void> => {
+      const sourceFile = files.get(sourcePath);
+      if (!sourceFile) {
+        throw new Error(`Source folder not found: ${sourcePath}`);
+      }
+
+      // Create the target folder
+      await createFolder(targetPath);
+
+      // Get all children of the source folder
+      const children = Array.from(files.values()).filter((file) => file.parent === sourcePath);
+
+      if (children.length === 0) {
+        return; // Empty folder, nothing to duplicate
+      }
+
+      let completed = 0;
+      const total = children.length;
+
+      // Process children in batches to prevent UI blocking
+      for (const child of children) {
+        const childName = child.name;
+        const childTargetPath = targetPath === '/' ? `/${childName}` : `${targetPath}/${childName}`;
+
+        try {
+          if (child.type === 'file') {
+            // Duplicate file
+            const content = await getFileContent(child.path);
+            await createFile(childTargetPath, content || '');
+          } else {
+            // Recursively duplicate folder
+            await duplicateFolderRecursively(child.path, childTargetPath);
+          }
+        } catch (error) {
+          console.error(`Failed to duplicate ${child.path} to ${childTargetPath}:`, error);
+          throw error;
+        }
+
+        completed++;
+        setOperationProgress((prev) => ({
+          ...prev,
+          progress: (completed / total) * 100,
+          message: `Duplicating ${childName}... (${completed}/${total})`,
+        }));
+
+        // Yield to event loop to prevent UI blocking
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    },
+    [files, createFolder, createFile, getFileContent],
+  );
+
   // Clipboard operations
   const handleCopy = useCallback((file: FileNode) => {
     setClipboardItem({ file, operation: 'copy' });
@@ -256,26 +369,58 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
       const fileName = file.name;
       const newPath = targetPath === '/' ? `/${fileName}` : `${targetPath}/${fileName}`;
 
+      // Show progress indicator
+      setOperationProgress({
+        isRunning: true,
+        message: `Preparing ${operation} operation...`,
+        progress: 0,
+      });
+
       try {
         if (operation === 'copy') {
-          // Copy file/folder
+          // Copy file/folder with recursive support
           if (file.type === 'file') {
             const content = await getFileContent(file.path);
             await createFile(newPath, content || '');
+            setOperationProgress({
+              isRunning: false,
+              message: 'Copy completed',
+              progress: 100,
+            });
           } else {
-            await createFolder(newPath);
-            // TODO: Recursively copy folder contents
+            // Recursively copy folder contents
+            await copyFolderRecursively(file.path, newPath);
+            toast.success(`Copied folder: ${file.name}`);
+            setOperationProgress({
+              isRunning: false,
+              message: 'Copy completed',
+              progress: 100,
+            });
           }
         } else if (operation === 'cut') {
           // Move file/folder
           await renameFile(file.path, newPath);
           setClipboardItem(null); // Clear clipboard after cut operation
+          toast.success(`Moved: ${file.name}`);
+          setOperationProgress({
+            isRunning: false,
+            message: 'Move completed',
+            progress: 100,
+          });
         }
       } catch (error) {
         console.error('Paste operation failed:', error);
+        toast.error(
+          `Paste operation failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        setOperationProgress({
+          isRunning: false,
+          message: 'Operation failed',
+          progress: 0,
+        });
       }
     },
-    [clipboardItem, createFile, createFolder, renameFile, getFileContent],
+    [clipboardItem, createFile, createFolder, renameFile, getFileContent, copyFolderRecursively],
   );
 
   const handleDuplicate = useCallback(
@@ -287,19 +432,46 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
       const parentPath = file.parent || '/';
       const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`;
 
+      // Show progress indicator
+      setOperationProgress({
+        isRunning: true,
+        message: 'Preparing duplicate operation...',
+        progress: 0,
+      });
+
       try {
         if (file.type === 'file') {
           const content = await getFileContent(file.path);
           await createFile(newPath, content || '');
+          toast.success(`Duplicated file: ${file.name}`);
+          setOperationProgress({
+            isRunning: false,
+            message: 'Duplicate completed',
+            progress: 100,
+          });
         } else {
-          await createFolder(newPath);
-          // TODO: Recursively duplicate folder contents
+          // Recursively duplicate folder contents
+          await duplicateFolderRecursively(file.path, newPath);
+          toast.success(`Duplicated folder: ${file.name}`);
+          setOperationProgress({
+            isRunning: false,
+            message: 'Duplicate completed',
+            progress: 100,
+          });
         }
       } catch (error) {
         console.error('Duplicate operation failed:', error);
+        toast.error(
+          `Duplicate operation failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        setOperationProgress({
+          isRunning: false,
+          message: 'Operation failed',
+          progress: 0,
+        });
       }
     },
-    [createFile, createFolder, getFileContent],
+    [createFile, createFolder, getFileContent, duplicateFolderRecursively],
   );
 
   // Utility functions
@@ -498,6 +670,22 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ className = '' }) => {
           {hunkStagerFile && (
             <InlineHunkStager filepath={hunkStagerFile} onClose={() => setHunkStagerFile(null)} />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Operation Progress Dialog */}
+      <Dialog open={operationProgress.isRunning} onOpenChange={(open) => !open && setOperationProgress({ isRunning: false, message: '', progress: 0 })}>
+        <DialogContent className="max-w-md">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">File Operation</h3>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{operationProgress.message}</p>
+              <Progress value={operationProgress.progress} className="w-full" />
+              <p className="text-xs text-muted-foreground">
+                {Math.round(operationProgress.progress)}% complete
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
