@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
-import type { CompiledContract, DeployedContract, DeploymentState, Network } from '@/types';
+import type { CompiledContract, DeployedContract, DeploymentState, Network, LocalVMAccount } from '@/types';
 import { web3Service } from '@/services/web3Service';
+import { javascriptVMService } from '@/services/javascriptVMService';
 import { debug, error, info } from '@/services/loggerService';
 import { verificationService } from '@/services/verificationService';
 import { useCompilerStore } from '@/stores/compilerStore';
@@ -53,6 +54,7 @@ interface DeploymentStoreActions {
 
   // State synchronization
   syncWithWallet: () => Promise<void>;
+  syncProviderAndVMAccount: () => Promise<void>;
 }
 
 type DeploymentStore = DeploymentState & DeploymentStoreActions;
@@ -68,6 +70,9 @@ const initialState: DeploymentState = {
   ethPrice: null,
   gasLimit: '3000000',
   autoVerify: true,
+  // Centralized provider and VM account state
+  currentProvider: null,
+  vmAccount: null,
 };
 
 export const useDeploymentStore = create<DeploymentStore>()(
@@ -443,6 +448,9 @@ export const useDeploymentStore = create<DeploymentStore>()(
             // Update account info
             await get().updateAccountInfo();
 
+            // Sync provider and VM account info
+            await get().syncProviderAndVMAccount();
+
             set((state) => {
               if (network) {
                 state.selectedNetwork = network.id;
@@ -454,9 +462,39 @@ export const useDeploymentStore = create<DeploymentStore>()(
               account: get().account,
               network: network?.name,
               balance: get().balance,
+              provider: get().currentProvider,
             });
           } catch (err) {
             error('DeploymentStore', 'Failed to sync with wallet', err);
+          }
+        },
+
+        syncProviderAndVMAccount: async () => {
+          try {
+            // Get current provider from Web3Service
+            const currentProvider = web3Service.getWalletProvider();
+
+            // Get VM account if provider is JavaScript VM
+            let vmAccount: LocalVMAccount | null = null;
+            if (currentProvider === 'javascriptvm') {
+              try {
+                vmAccount = javascriptVMService.getSelectedAccount();
+              } catch (err) {
+                debug('DeploymentStore', 'Failed to get VM account', err);
+              }
+            }
+
+            set((state) => {
+              state.currentProvider = currentProvider;
+              state.vmAccount = vmAccount;
+            });
+
+            debug('DeploymentStore', 'Synced provider and VM account', {
+              provider: currentProvider,
+              vmAccount: vmAccount?.name || null,
+            });
+          } catch (err) {
+            error('DeploymentStore', 'Failed to sync provider and VM account', err);
           }
         },
 
@@ -684,6 +722,9 @@ export const useDeploymentStore = create<DeploymentStore>()(
             selectedNetwork: state.selectedNetwork,
             gasLimit: state.gasLimit,
             autoVerify: state.autoVerify,
+            // Persist provider and VM account state
+            currentProvider: state.currentProvider,
+            vmAccount: state.vmAccount,
           };
         },
         // Custom merge function to handle Map reconstruction
@@ -705,6 +746,15 @@ export const useDeploymentStore = create<DeploymentStore>()(
 
           if (persistedState.autoVerify !== undefined) {
             mergedState.autoVerify = persistedState.autoVerify;
+          }
+
+          // Merge provider and VM account state
+          if (persistedState.currentProvider !== undefined) {
+            mergedState.currentProvider = persistedState.currentProvider;
+          }
+
+          if (persistedState.vmAccount !== undefined) {
+            mergedState.vmAccount = persistedState.vmAccount;
           }
 
           return mergedState;
@@ -732,7 +782,9 @@ export const useDeploymentStore = create<DeploymentStore>()(
 // Set up event listeners for wallet events
 if (typeof window !== 'undefined') {
   web3Service.on('connected', async () => {
-    await useDeploymentStore.getState().syncWithWallet();
+    const store = useDeploymentStore.getState();
+    await store.syncWithWallet();
+    await store.syncProviderAndVMAccount();
   });
 
   web3Service.on('disconnected', () => {
@@ -743,16 +795,25 @@ if (typeof window !== 'undefined') {
       balance: null,
       gasPrice: null,
       ethPrice: null,
+      currentProvider: null,
+      vmAccount: null,
     }));
     toast.info('Wallet disconnected');
   });
 
   web3Service.on('accountChanged', async () => {
-    await useDeploymentStore.getState().updateAccountInfo();
+    const store = useDeploymentStore.getState();
+    await store.updateAccountInfo();
+    await store.syncProviderAndVMAccount();
   });
 
   web3Service.on('networkChanged', async () => {
     await useDeploymentStore.getState().syncWithWallet();
+  });
+
+  // Listen for JavaScript VM account changes
+  javascriptVMService.on('accountChanged', async () => {
+    await useDeploymentStore.getState().syncProviderAndVMAccount();
   });
 }
 
@@ -803,4 +864,7 @@ await (async () => {
       // Ignore errors during initialization
     }
   }
+
+  // Sync provider and VM account state after initialization
+  await deploymentStore.syncProviderAndVMAccount();
 })();

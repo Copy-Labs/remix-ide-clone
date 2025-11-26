@@ -41,6 +41,8 @@ const DeploymentPanel: React.FC = () => {
     availableNetworks,
     deployedContracts,
     autoVerify,
+    currentProvider,
+    vmAccount,
     connectWallet,
     disconnectWallet,
     switchNetwork,
@@ -69,7 +71,6 @@ const DeploymentPanel: React.FC = () => {
 
   // Wallet selector state
   const [showWalletSelector, setShowWalletSelector] = useState<boolean>(false);
-  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | 'javascriptvm' | null>(null);
 
   // Verification settings state
   const [apiKeys, setApiKeys] = useState<Map<string, string>>(new Map());
@@ -90,11 +91,6 @@ const DeploymentPanel: React.FC = () => {
   const selectedDeployedContractData = selectedDeployedContract
     ? Array.from(deployedContracts.values()).find((c) => c.address === selectedDeployedContract)
     : null;
-
-  // Sync current provider from Web3Service
-  useEffect(() => {
-    setCurrentProvider(web3Service.getWalletProvider());
-  }, [account]);
 
   // Get wallet provider information
   const getWalletProviderInfo = () => {
@@ -471,7 +467,9 @@ const DeploymentPanel: React.FC = () => {
                 </div>
                 <div className="p-3 bg-secondary rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-normal text-foreground break-all">{account}</div>
+                    <div className="text-sm font-normal text-foreground break-all">
+                      {formatAddress(account)}
+                    </div>
                     {getWalletProviderInfo() && (
                       <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-full text-xs">
                         <span>{getWalletProviderInfo()?.icon}</span>
@@ -480,7 +478,7 @@ const DeploymentPanel: React.FC = () => {
                     )}
                   </div>
                   <div className="font-medium text-xs text-muted-foreground">
-                    Balance: {formatBalance(balance)} {selectedNetworkData?.symbol || 'ETH'}
+                    Balance: {currentProvider === 'javascriptvm' ? (vmAccount ? formatBalance(vmAccount?.balance) : formatBalance('0.0')) : formatBalance(balance)} {selectedNetworkData?.symbol || 'ETH'}
                   </div>
                 </div>
 

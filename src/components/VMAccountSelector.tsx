@@ -151,15 +151,15 @@ export const VMAccountSelector: React.FC<VMAccountSelectorProps> = ({
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-4">
+    <Card className="w-full p-0 border-0">
+      {/*<CardHeader className="">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Zap size={16} className="text-yellow-500" />
           JavaScript VM Account Manager
         </CardTitle>
-      </CardHeader>
+      </CardHeader>*/}
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-0">
         {/* Current Account Display */}
         {selectedAccount && (
           <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">

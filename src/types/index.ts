@@ -127,6 +127,9 @@ export interface DeploymentState {
   ethPrice: number | null;
   gasLimit: string;
   autoVerify: boolean;
+  // Centralized provider and VM account state
+  currentProvider: 'metamask' | 'walletconnect' | 'javascriptvm' | null;
+  vmAccount: LocalVMAccount | null;
 }
 
 export interface DeployedContract {

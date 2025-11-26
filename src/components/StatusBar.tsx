@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useDeploymentStore } from '@/stores/deploymentStore';
-import { web3Service } from '@/services/web3Service';
-import { javascriptVMService } from '@/services/javascriptVMService';
 import { Separator } from '@/components/ui/separator';
 import { Copy, Zap } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,30 +12,15 @@ const StatusBar: React.FC = () => {
     ethPrice,
     account,
     balance,
+    currentProvider,
+    vmAccount,
   } = useDeploymentStore();
-
-  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | 'javascriptvm' | null>(null);
-  const [vmAccountName, setVmAccountName] = useState<string | null>(null);
 
   // Find the current network details
   const currentNetwork = availableNetworks.find((network) => network.id === selectedNetwork);
 
-  // Update provider when account changes
-  useEffect(() => {
-    const provider = web3Service.getWalletProvider();
-    setCurrentProvider(provider);
-
-    if (provider === 'javascriptvm' && account) {
-      try {
-        const vmAccount = javascriptVMService.getSelectedAccount();
-        setVmAccountName(vmAccount?.name || null);
-      } catch (err) {
-        setVmAccountName(null);
-      }
-    } else {
-      setVmAccountName(null);
-    }
-  }, [account]);
+  // Get VM account name from the store
+  const vmAccountName = vmAccount?.name || null;
 
   // Format gas price for display
   const formatGasPrice = (price: string | null) => {
@@ -116,7 +99,7 @@ const StatusBar: React.FC = () => {
             <div className="flex items-center space-x-1">
               <span className="text-xs">Balance:</span>
               <span className="font-medium text-foreground">
-                {formatBalance(balance)}
+                {currentProvider === 'javascriptvm' ? vmAccount && formatBalance(vmAccount?.balance) : formatBalance(balance)}
               </span>
             </div>
 
