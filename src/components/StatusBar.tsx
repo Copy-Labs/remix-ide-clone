@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDeploymentStore } from '@/stores/deploymentStore';
+import { web3Service } from '@/services/web3Service';
+import { javascriptVMService } from '@/services/javascriptVMService';
 import { Separator } from '@/components/ui/separator';
-import { Copy } from 'lucide-react';
+import { Copy, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 const StatusBar: React.FC = () => {
@@ -14,8 +16,28 @@ const StatusBar: React.FC = () => {
     balance,
   } = useDeploymentStore();
 
+  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | 'javascriptvm' | null>(null);
+  const [vmAccountName, setVmAccountName] = useState<string | null>(null);
+
   // Find the current network details
   const currentNetwork = availableNetworks.find((network) => network.id === selectedNetwork);
+
+  // Update provider when account changes
+  useEffect(() => {
+    const provider = web3Service.getWalletProvider();
+    setCurrentProvider(provider);
+
+    if (provider === 'javascriptvm' && account) {
+      try {
+        const vmAccount = javascriptVMService.getSelectedAccount();
+        setVmAccountName(vmAccount?.name || null);
+      } catch (err) {
+        setVmAccountName(null);
+      }
+    } else {
+      setVmAccountName(null);
+    }
+  }, [account]);
 
   // Format gas price for display
   const formatGasPrice = (price: string | null) => {
@@ -78,6 +100,19 @@ const StatusBar: React.FC = () => {
         {/* Account Information */}
         {account && (
           <>
+            {/* VM Account Name - Show for JavaScript VM */}
+            {currentProvider === 'javascriptvm' && vmAccountName && (
+              <>
+                <div className="flex items-center space-x-1">
+                  <Zap size={12} className="text-yellow-500" />
+                  <span className="text-xs font-medium text-foreground">
+                    {vmAccountName}
+                  </span>
+                </div>
+                <Separator orientation="vertical" className="h-4" />
+              </>
+            )}
+
             <div className="flex items-center space-x-1">
               <span className="text-xs">Balance:</span>
               <span className="font-medium text-foreground">

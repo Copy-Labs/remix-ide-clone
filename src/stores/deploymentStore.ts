@@ -13,6 +13,11 @@ interface DeploymentStoreActions {
   connectWallet: (providerType?: 'metamask' | 'walletconnect' | 'javascriptvm') => Promise<boolean>;
   disconnectWallet: () => void;
 
+  // Persistence actions
+  persistConnection: (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => void;
+  getPersistedConnection: () => 'metamask' | 'walletconnect' | 'javascriptvm' | null;
+  clearPersistedConnection: () => void;
+
   // Network actions
   switchNetwork: (chainId: number) => Promise<boolean>;
   addNetwork: (network: Network) => Promise<boolean>;
@@ -76,6 +81,8 @@ export const useDeploymentStore = create<DeploymentStore>()(
             const connected = await web3Service.connect(providerType);
 
             if (connected) {
+              // Persist the connection type
+              get().persistConnection(providerType);
               await get().syncWithWallet();
               toast.success('Wallet connected successfully');
               return true;
@@ -92,6 +99,9 @@ export const useDeploymentStore = create<DeploymentStore>()(
 
         disconnectWallet: () => {
           web3Service.disconnect();
+
+          // Clear persisted connection
+          get().clearPersistedConnection();
 
           set((state) => {
             state.account = null;
@@ -458,6 +468,37 @@ export const useDeploymentStore = create<DeploymentStore>()(
           debug('DeploymentStore', 'Auto-verify setting updated', { autoVerify });
         },
 
+        persistConnection: (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => {
+          try {
+            localStorage.setItem('remix-ide-wallet-provider', provider);
+            debug('DeploymentStore', `Persisted wallet provider: ${provider}`);
+          } catch (err) {
+            error('DeploymentStore', 'Failed to persist wallet provider', err);
+          }
+        },
+
+        getPersistedConnection: () => {
+          try {
+            const persisted = localStorage.getItem('remix-ide-wallet-provider');
+            if (persisted && ['metamask', 'walletconnect', 'javascriptvm'].includes(persisted)) {
+              debug('DeploymentStore', `Retrieved persisted wallet provider: ${persisted}`);
+              return persisted as 'metamask' | 'walletconnect' | 'javascriptvm';
+            }
+          } catch (err) {
+            error('DeploymentStore', 'Failed to retrieve persisted wallet provider', err);
+          }
+          return null;
+        },
+
+        clearPersistedConnection: () => {
+          try {
+            localStorage.removeItem('remix-ide-wallet-provider');
+            debug('DeploymentStore', 'Cleared persisted wallet provider');
+          } catch (err) {
+            error('DeploymentStore', 'Failed to clear persisted wallet provider', err);
+          }
+        },
+
         verifyContract: async (contractAddress: string, skipExistenceCheck = false) => {
           try {
             // First check if the contract address is valid
@@ -717,8 +758,38 @@ if (typeof window !== 'undefined') {
 
 // Initialize the store
 await (async () => {
-  // Check if wallet is already connected (e.g., MetaMask auto-connects)
-  if (
+  // Try to restore persisted connection first
+  const deploymentStore = useDeploymentStore.getState();
+  const persistedProvider = deploymentStore.getPersistedConnection();
+
+  if (persistedProvider) {
+    debug('DeploymentStore', `Attempting to restore connection to ${persistedProvider}`);
+
+    try {
+      if (persistedProvider === 'javascriptvm') {
+        // JavaScript VM can always be restored
+        await web3Service.connect(persistedProvider);
+        debug('DeploymentStore', 'Restored JavaScript VM connection');
+      } else if (persistedProvider === 'metamask') {
+        // Only connect to MetaMask if it's actually available
+        if (typeof window !== 'undefined' && window.ethereum && window.ethereum.isConnected && window.ethereum.selectedAddress) {
+          await web3Service.connect(persistedProvider);
+          debug('DeploymentStore', 'Restored MetaMask connection');
+        }
+      } else if (persistedProvider === 'walletconnect') {
+        // WalletConnect connection requires user interaction, so we don't auto-restore
+        debug('DeploymentStore', 'Skipping WalletConnect restoration (requires user interaction)');
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      // If restoration fails, clear the persisted connection
+      debug('DeploymentStore', 'Failed to restore connection, clearing persisted data');
+      deploymentStore.clearPersistedConnection();
+    }
+  }
+
+  // Fallback: Check if wallet is already connected (e.g., MetaMask auto-connects)
+  else if (
     typeof window !== 'undefined' &&
     window.ethereum &&
     window.ethereum.isConnected &&
@@ -726,6 +797,7 @@ await (async () => {
   ) {
     try {
       await web3Service.connect();
+      debug('DeploymentStore', 'Connected via MetaMask auto-detection');
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       // Ignore errors during initialization

@@ -5,7 +5,9 @@ import type { CompiledContract } from '@/types';
 import { toast } from 'sonner';
 import { verificationService } from '@/services/verificationService';
 import { web3Service } from '@/services/web3Service';
+import { javascriptVMService } from '@/services/javascriptVMService';
 import { Button } from '@/components/ui/button.tsx';
+import { VMAccountSelector } from '@/components/VMAccountSelector.tsx';
 import {
   Select,
   SelectContent,
@@ -67,7 +69,7 @@ const DeploymentPanel: React.FC = () => {
 
   // Wallet selector state
   const [showWalletSelector, setShowWalletSelector] = useState<boolean>(false);
-  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | null>(null);
+  const [currentProvider, setCurrentProvider] = useState<'metamask' | 'walletconnect' | 'javascriptvm' | null>(null);
 
   // Verification settings state
   const [apiKeys, setApiKeys] = useState<Map<string, string>>(new Map());
@@ -187,11 +189,12 @@ const DeploymentPanel: React.FC = () => {
   };
 
   // Handle wallet selection from the modal
-  const handleWalletSelected = async (provider: 'metamask' | 'walletconnect') => {
+  const handleWalletSelected = async (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => {
     setIsConnecting(true);
     try {
-      await connectWallet();
-      toast.success(`Connected using ${provider === 'metamask' ? 'MetaMask' : 'WalletConnect'}!`);
+      await connectWallet(provider);
+      const providerName = provider === 'metamask' ? 'MetaMask' : provider === 'walletconnect' ? 'WalletConnect' : 'JavaScript VM';
+      toast.success(`Connected using ${providerName}!`);
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       toast.error('Failed to connect wallet');
@@ -482,33 +485,50 @@ const DeploymentPanel: React.FC = () => {
                 </div>
 
                 {/* Network Selection */}
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Network
-                  </label>
-                  <Select
-                    value={selectedNetworkData?.chainId.toString() || ''}
-                    onValueChange={handleNetworkValueChange}
-                  >
-                    <SelectTrigger className="w-full text-xs">
-                      <SelectValue placeholder="Select Network">
-                        {selectedNetworkData
-                          ? `${selectedNetworkData.name} ${selectedNetworkData.isTestnet ? '(Testnet)' : ''}`
-                          : 'Select Network'}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Blockchain Network</SelectLabel>
-                        {availableNetworks.map((network) => (
-                          <SelectItem key={network.id} value={network.chainId.toString()}>
-                            {network.name} {network.isTestnet ? '(Testnet)' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {
+                  currentProvider !== 'javascriptvm' &&
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      Network
+                    </label>
+                    <Select
+                      value={selectedNetworkData?.chainId.toString() || ''}
+                      onValueChange={handleNetworkValueChange}
+                    >
+                      <SelectTrigger className="w-full text-xs">
+                        <SelectValue placeholder="Select Network">
+                          {selectedNetworkData
+                            ? `${selectedNetworkData.name} ${selectedNetworkData.isTestnet ? '(Testnet)' : ''}`
+                            : 'Select Network'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Blockchain Network</SelectLabel>
+                          {availableNetworks.map((network) => (
+                            <SelectItem key={network.id} value={network.chainId.toString()}>
+                              {network.name} {network.isTestnet ? '(Testnet)' : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                }
+
+                {/* VM Account Selector - Show when JavaScript VM is connected */}
+                {currentProvider === 'javascriptvm' && (
+                  <VMAccountSelector
+                    isVisible={true}
+                    onAccountChange={(account) => {
+                      // Refresh account info when VM account changes
+                      setTimeout(() => {
+                        // Force refresh the deployment store
+                        window.location.reload();
+                      }, 500);
+                    }}
+                  />
+                )}
 
                 {/* Gas Settings */}
                 <div>
