@@ -3,6 +3,7 @@ import type { Network, VMMode } from '@/types';
 import { debug, info, warn, error } from '@/services/loggerService';
 import { localVMService } from '@/services/localVMService';
 import { walletConnectService } from '@/services/walletConnectService';
+import { javascriptVMService } from '@/services/javascriptVMService';
 
 /**
  * Service for Web3 integration and wallet connections
@@ -24,7 +25,7 @@ export class Web3Service {
   private listeners: Map<string, Function[]> = new Map();
 
   // Wallet provider management
-  private walletProvider: 'metamask' | 'walletconnect' | null = null;
+  private walletProvider: 'metamask' | 'walletconnect' | 'javascriptvm' | null = null;
 
   // Predefined networks for easy access - aligned with verification service support
   private networks: Network[] = [
@@ -749,10 +750,10 @@ export class Web3Service {
 
   /**
    * Connect to a wallet provider
-   * @param providerType The type of provider to connect to ('metamask' or 'walletconnect')
+   * @param providerType The type of provider to connect to ('metamask', 'walletconnect', or 'javascriptvm')
    * @returns Whether the connection was successful
    */
-  public async connect(providerType: 'metamask' | 'walletconnect' = 'metamask'): Promise<boolean> {
+  public async connect(providerType: 'metamask' | 'walletconnect' | 'javascriptvm' = 'metamask'): Promise<boolean> {
     try {
       this.isConnecting = true;
       this.emit('connecting');
@@ -768,6 +769,11 @@ export class Web3Service {
         success = await this.connectToWalletConnect();
         if (success) {
           this.walletProvider = 'walletconnect';
+        }
+      } else if (providerType === 'javascriptvm') {
+        success = await this.connectToJavaScriptVM();
+        if (success) {
+          this.walletProvider = 'javascriptvm';
         }
       }
 
@@ -892,12 +898,59 @@ export class Web3Service {
   }
 
   /**
+   * Connect to JavaScript VM
+   * @returns Whether the connection was successful
+   */
+  private async connectToJavaScriptVM(): Promise<boolean> {
+    try {
+      // Connect using the JavaScript VM service
+      const connected = await javascriptVMService.connect();
+
+      if (connected) {
+        // Get provider and accounts from JavaScript VM
+        const vmProvider = javascriptVMService.getWeb3();
+        const vmAccounts = javascriptVMService.getAccounts();
+        const vmNetwork = javascriptVMService.getVMNetwork();
+
+        if (vmProvider && vmAccounts.length > 0) {
+          this.provider = javascriptVMService.getWeb3();
+          this.web3 = javascriptVMService.getWeb3();
+          this.account = vmAccounts[0].address;
+          this.network = vmNetwork;
+          this.chainId = vmNetwork.chainId;
+
+          this.isConnected = true;
+          this.isConnecting = false;
+
+          info('Web3Service', `Connected to JavaScript VM with account: ${this.account}`);
+          this.emit('connected', { account: this.account, network: this.network, provider: 'JavaScript VM' });
+
+          return true;
+        }
+      }
+
+      this.isConnecting = false;
+      return false;
+    } catch (err) {
+      error('Web3Service', 'Failed to connect to JavaScript VM', err);
+      this.isConnecting = false;
+      this.emit('error', err);
+      return false;
+    }
+  }
+
+  /**
    * Disconnect from the current wallet
    */
   public async disconnect(): Promise<void> {
     // Disconnect from WalletConnect if connected
     if (this.walletProvider === 'walletconnect' && walletConnectService.isConnected()) {
       await walletConnectService.disconnect();
+    }
+
+    // Disconnect from JavaScript VM if connected
+    if (this.walletProvider === 'javascriptvm' && javascriptVMService.isVMConnected()) {
+      javascriptVMService.disconnect();
     }
 
     this.web3 = null;
@@ -972,7 +1025,7 @@ export class Web3Service {
    * Get the current wallet provider type
    * @returns The wallet provider type or null if not connected
    */
-  public getWalletProvider(): 'metamask' | 'walletconnect' | null {
+  public getWalletProvider(): 'metamask' | 'walletconnect' | 'javascriptvm' | null {
     return this.walletProvider;
   }
 
@@ -996,7 +1049,7 @@ export class Web3Service {
    * Get available wallet providers
    * @returns Array of available wallet providers
    */
-  public getAvailableWalletProviders(): Array<{ id: 'metamask' | 'walletconnect'; name: string; icon: string }> {
+  public getAvailableWalletProviders(): Array<{ id: 'metamask' | 'walletconnect' | 'javascriptvm'; name: string; icon: string }> {
     const providers = [];
 
     if (this.isMetaMaskAvailable()) {
@@ -1013,7 +1066,22 @@ export class Web3Service {
       icon: '🔗'
     });
 
+    // JavaScript VM is always available
+    providers.push({
+      id: 'javascriptvm' as const,
+      name: 'JavaScript VM',
+      icon: '⚡'
+    });
+
     return providers;
+  }
+
+  /**
+   * Check if JavaScript VM is available
+   * @returns Whether JavaScript VM is available
+   */
+  public isJavaScriptVMAvailable(): boolean {
+    return true; // JavaScript VM is always available
   }
 
   /**

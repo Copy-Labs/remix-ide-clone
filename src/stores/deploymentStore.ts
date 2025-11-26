@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 interface DeploymentStoreActions {
   // Connection actions
-  connectWallet: (providerType?: 'metamask' | 'walletconnect') => Promise<boolean>;
+  connectWallet: (providerType?: 'metamask' | 'walletconnect' | 'javascriptvm') => Promise<boolean>;
   disconnectWallet: () => void;
 
   // Network actions
@@ -71,7 +71,7 @@ export const useDeploymentStore = create<DeploymentStore>()(
       immer((set, get) => ({
         ...initialState,
 
-        connectWallet: async (providerType = 'metamask') => {
+        connectWallet: async (providerType: 'metamask' | 'walletconnect' | 'javascriptvm' = 'metamask') => {
           try {
             const connected = await web3Service.connect(providerType);
 

@@ -370,7 +370,7 @@ export interface LocalVMOperation {
   from: string;
 }
 
-export type VMMode = 'vm' | 'wallet';
+export type VMMode = 'vm' | 'wallet' | 'javascriptvm';
 
 export interface ExtendedDeploymentState extends DeploymentState {
   vmMode: VMMode;

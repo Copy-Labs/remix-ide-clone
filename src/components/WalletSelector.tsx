@@ -19,12 +19,12 @@ import {
 interface WalletSelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  onConnect: (provider: 'metamask' | 'walletconnect') => void;
-  recommendedProvider?: 'metamask' | 'walletconnect';
+  onConnect: (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => void;
+  recommendedProvider?: 'metamask' | 'walletconnect' | 'javascriptvm';
 }
 
 interface WalletOption {
-  id: 'metamask' | 'walletconnect';
+  id: 'metamask' | 'walletconnect' | 'javascriptvm';
   name: string;
   icon: string;
   description: string;
@@ -90,13 +90,29 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
         isRecommended: recommendedProvider === 'walletconnect' || isMobile,
         downloadUrl: 'https://walletconnect.com/explorer',
       },
+      {
+        id: 'javascriptvm',
+        name: 'JavaScript VM',
+        icon: '⚡',
+        description: 'Built-in JavaScript VM for instant contract testing without external wallets.',
+        features: [
+          'No external wallet required',
+          'Instant contract deployment',
+          'Pre-funded test accounts',
+          'Perfect for development',
+          'No gas fees needed'
+        ],
+        isAvailable: true,
+        isRecommended: recommendedProvider === 'javascriptvm' || !web3Service.isMetaMaskAvailable(),
+        downloadUrl: undefined,
+      },
     ];
   };
 
   const walletOptions = getWalletOptions();
 
   // Handle wallet connection
-  const handleConnect = async (provider: 'metamask' | 'walletconnect') => {
+  const handleConnect = async (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => {
     setConnecting(prev => ({ ...prev, [provider]: true }));
     setConnectionStatus(prev => ({ ...prev, [provider]: 'connecting' }));
 
@@ -105,24 +121,33 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
 
       if (success) {
         setConnectionStatus(prev => ({ ...prev, [provider]: 'success' }));
-        toast.success(`Connected to ${provider === 'metamask' ? 'MetaMask' : 'WalletConnect'} successfully!`);
+        const providerName = provider === 'metamask' ? 'MetaMask' :
+                           provider === 'walletconnect' ? 'WalletConnect' :
+                           'JavaScript VM';
+        toast.success(`Connected to ${providerName} successfully!`);
         onConnect(provider);
         onClose();
       } else {
         setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
-        toast.error(`Failed to connect to ${provider === 'metamask' ? 'MetaMask' : 'WalletConnect'}`);
+        const providerName = provider === 'metamask' ? 'MetaMask' :
+                           provider === 'walletconnect' ? 'WalletConnect' :
+                           'JavaScript VM';
+        toast.error(`Failed to connect to ${providerName}`);
       }
     } catch (error) {
       console.error(`Failed to connect to ${provider}:`, error);
       setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
-      toast.error(`Failed to connect to ${provider === 'metamask' ? 'MetaMask' : 'WalletConnect'}`);
+      const providerName = provider === 'metamask' ? 'MetaMask' :
+                         provider === 'walletconnect' ? 'WalletConnect' :
+                         'JavaScript VM';
+      toast.error(`Failed to connect to ${providerName}`);
     } finally {
       setConnecting(prev => ({ ...prev, [provider]: false }));
     }
   };
 
   // Get status icon and color
-  const getStatusInfo = (provider: 'metamask' | 'walletconnect') => {
+  const getStatusInfo = (provider: 'metamask' | 'walletconnect' | 'javascriptvm') => {
     const status = connectionStatus[provider] || 'idle';
 
     switch (status) {
@@ -258,8 +283,12 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
                         </>
                       ) : (
                         <>
-                          <Smartphone size={14} className="mr-2" />
-                          Connect
+                          {option.id === 'javascriptvm' ? (
+                            <Zap size={14} className="mr-2" />
+                          ) : (
+                            <Smartphone size={14} className="mr-2" />
+                          )}
+                          {option.id === 'javascriptvm' ? 'Start VM' : 'Connect'}
                         </>
                       )}
                     </Button>
@@ -271,6 +300,22 @@ export const WalletSelector: React.FC<WalletSelectorProps> = ({
                       <div className="flex items-center gap-2 text-xs text-yellow-800 dark:text-yellow-200">
                         <AlertCircle size={12} />
                         {option.name} is not installed. Click "Install {option.name}" to get started.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* JavaScript VM specific information */}
+                  {option.id === 'javascriptvm' && (
+                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                      <div className="flex items-start gap-2 text-xs text-blue-800 dark:text-blue-200">
+                        <Zap size={12} className="mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium mb-1">JavaScript VM Ready!</p>
+                          <p>
+                            This built-in VM provides instant contract testing with pre-funded accounts.
+                            Perfect for development and testing without gas fees.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
